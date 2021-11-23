@@ -2,29 +2,6 @@
 
 namespace Tomate;
 
-public unsafe struct Block
-{
-    public int Offset;
-    public int Size;
-
-    public Span<T> ToSpan<T>(void* baseAddr) where T : unmanaged
-    {
-        return new Span<T>((byte*)baseAddr + Offset, Size/sizeof(T));
-    }
-}
-
-public unsafe struct MemoryBlock
-{
-    public byte* BaseAddr;
-    public int Size;
-
-    public Span<T> ToSpan<T>() where T : unmanaged => new(BaseAddr, Size / sizeof(T));
-    public static implicit operator Span<byte>(MemoryBlock block)
-    {
-        return new Span<byte>(block.BaseAddr, block.Size);
-    }
-}
-
 public static class BitMapHelpers
 {
     public static int FindFreeBitConcurrent(this Span<ulong> map)

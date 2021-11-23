@@ -32,6 +32,11 @@ This library provides thread-safe types, but not exclusively (because single-thr
 
 ### A memory manager
 
+Terminology:
+ - MemoryArraySegment : internal structure that stores one/many MemorySegment
+ - MemorySegment: address/size of a fixed memory segment
+ - MemoryBlock: indexed block inside a memory segment
+
 ### A set of collection types
 
 #### Single-threaded
