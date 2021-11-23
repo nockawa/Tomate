@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.31903.286
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tomate", "src\Tomate\Tomate.csproj", "{5F59AF32-B94C-45FA-808E-C599C67306CB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4B0D2557-68FC-4AE4-8BDA-2B416BDC16B1}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5F59AF32-B94C-45FA-808E-C599C67306CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F59AF32-B94C-45FA-808E-C599C67306CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F59AF32-B94C-45FA-808E-C599C67306CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F59AF32-B94C-45FA-808E-C599C67306CB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {374C287A-5DEA-4B1D-9A2E-0DFE78222A74}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+	  <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	  <PlatformTarget>AnyCPU</PlatformTarget>
+	  <BaseOutputPath>..\..\bin</BaseOutputPath>
+	  <Version>0.1.0-alpha</Version>
+	  <Authors>Loïc Baumann</Authors>
+	  <Company>$(Authors)</Company>
+	  <Copyright>$(Authors)</Copyright>
+	  <Description>🍅 Low level library for concurrent, low GC impact data storing</Description>
+	  <PackageProjectUrl>https://github.com/LoicBaumann/Tomate</PackageProjectUrl>
+	  <RepositoryUrl>https://github.com/LoicBaumann/Tomate</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>
