@@ -1,8 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace Tomate;
 
@@ -32,7 +29,7 @@ namespace Tomate;
 /// Segments are identified by their address, the PMB list and block lists are keep their entry sorted by address to allow binary search.
 /// </para>
 /// </remarks>
-public unsafe class MemoryManager : IDisposable
+public unsafe class MemoryManager : IDisposable, IMemoryManager
 {
     /// <summary>
     /// Will be incremented every time a new Pinned Memory Block is allocated
@@ -80,7 +77,7 @@ public unsafe class MemoryManager : IDisposable
     /// <summary>
     /// Allocate a Memory Segment
     /// </summary>
-    /// <param name="size">Size of the segment to allocate.</param>
+    /// <param name="size">Length of the segment to allocate.</param>
     /// <returns>The segment or an exception will be fired if we couldn't allocate one.</returns>
     /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
     /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>

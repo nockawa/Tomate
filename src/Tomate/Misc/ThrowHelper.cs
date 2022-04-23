@@ -17,4 +17,22 @@ internal static class ThrowHelper
     {
         throw new OutOfMemoryException(message);
     }
+
+    [DoesNotReturn]
+    internal static void OutOfRange(string message)
+    {
+        throw new IndexOutOfRangeException(message);
+    }
+
+    [DoesNotReturn]
+    internal static void StringTooBigForString64(string paramName, string source)
+    {
+        throw new ArgumentOutOfRangeException(paramName, $"The given string '{source}' is bigger than the maximum allowed size (63 bytes).");
+    }
+
+    [DoesNotReturn]
+    internal static void BlockSimpleDicDefKeyNotAllowed()
+    {
+        throw new ArgumentException("The key must not be of 'default(TKey)'", "key");
+    }
 }

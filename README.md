@@ -44,3 +44,8 @@ Terminology:
 #### Concurrent
 
 ### Low level synchronization types
+
+### Bonus: Memory Mapped File support
+A special type of MemoryManager allow one to manipulate memory through a Memory Mapped File (MMF). A view of a MMF also has a fixed memory address, so it's similar to the concepts of 🍅.
+
+So, other types: collections and synchronizations, can be used on a MMF the same way, allowing the user to easily interact with the file for data-exchange, and also have efficient synchronization between multiple processes.

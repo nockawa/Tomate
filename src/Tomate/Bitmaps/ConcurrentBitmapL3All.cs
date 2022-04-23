@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace Tomate;
 
@@ -28,8 +24,8 @@ namespace Tomate;
 /// As the BitMap may hold thousands of bits, looking for free ones, bit by bit, may take too much time as the occupancy rate increases. To alleviate this,
 /// we have two levels of aggregation that allow us to skips complete 64bits blocks (level 1) and compete 64^2 blocks (level 2) during our search.
 /// e.g. the first bit of the L1ALL map is set to 1 is all bit from [0-63] are set to 1.
-/// Finding an unset bit is concurrent friendly, many threads can execute such operation at the same time, but setting or clearing a bit has to be an exclusive operation, but it's
-/// fast so if another thread has started such operation (<see cref="TakeControl"/> is called), then we SpinWait until it can be our turn.
+/// Finding an unset bit is concurrent friendly, many threads can execute such operation at the same time, but setting or clearing a bit has to be an exclusive operation (because of
+/// resize), but it's fast so if another thread has started such operation (<see cref="TakeControl"/> is called), then we SpinWait until it can be our turn.
 /// </para>
 /// </remarks>
 public class ConcurrentBitmapL3All
