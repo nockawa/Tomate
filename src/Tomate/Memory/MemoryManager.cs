@@ -116,6 +116,24 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     }
 
     /// <summary>
+    /// Allocate a Memory Segment
+    /// </summary>
+    /// <typeparam name="T">The type of each item of the segment.</typeparam>
+    /// <param name="size">Length (in {T}) of the segment to allocate.</param>
+    /// <returns>The segment or an exception will be fired if we couldn't allocate one.</returns>
+    /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
+    /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>
+    /// <remarks>
+    /// The segment's address will always be aligned on 64 bytes, its size will also be padded on 64 bytes.
+    /// The segment's address is fixed, you can store it with the lifetime that suits you, it doesn't matter as the segment is part of a
+    /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{U}"/> with pinned set to true).
+    /// </remarks>
+    public MemorySegment<T> Allocate<T>(int size) where T : unmanaged
+    {
+        return Allocate(sizeof(T) * size).Cast<T>();
+    }
+
+    /// <summary>
     /// Free a previously allocated segment
     /// </summary>
     /// <param name="segment">The memory segment to free</param>

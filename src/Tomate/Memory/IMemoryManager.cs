@@ -29,7 +29,7 @@ public interface IMemoryManager
     /// <exception cref="ObjectDisposedException">Can't free if the instance is disposed, all segments have been released anyway.</exception>
     /// <remarks>
     /// This method won't prevent you against multiple free attempts on the same segment. If no other segment has been allocated with the same address, then it will return <c>false</c>.
-    /// But if you allocated another segment which turns out to have the same address and call <see cref="MemoryManager.Free"/> a second time, then it will free the second segment successfully.
+    /// But if you allocated another segment which turns out to have the same address and call <see cref="Free"/> a second time, then it will free the second segment successfully.
     /// </remarks>
     bool Free(MemorySegment segment);
 

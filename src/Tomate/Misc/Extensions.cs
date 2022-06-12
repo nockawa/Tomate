@@ -131,6 +131,44 @@ public static class PackExtensions
     public static void High(this ref ulong n, int val) => n = (ulong)val << 32 | (n & 0xFFFFFFFF);
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static void Low(this ref ulong n, int val) => n = (n & 0xFFFFFFFF00000000) | (uint)val;
+
+    // Byte level packing
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static byte ByteLevelSize(this uint n, bool writeZero=false)
+    {
+        if ((n & 0xFF000000) != 0) return 4;
+        if ((n & 0x00FF0000) != 0) return 3;
+        if ((n & 0x0000FF00) != 0) return 2;
+        if ((n & 0x000000FF) != 0) return 1;
+        return (byte)(writeZero ? 1 : 0);
+    }
+
+    public static unsafe int WriteByteLevel(this uint n, ref byte* dest, bool writeZero=false)
+    {
+        var s = n.ByteLevelSize(writeZero);
+        switch (s)
+        {
+            case 0:
+                return 0;
+            case 1:
+                *dest = (byte)n;
+                ++dest;
+                return 1;
+            case 2:
+                *((ushort*)dest) = (ushort)n;
+                dest += 2;
+                return 2;
+            case 3:
+                *((ushort*)dest) = (ushort)n;
+                dest[2] = (byte)(n >> 16);
+                dest += 3;
+                return 3;
+            default:
+                *((uint*)dest) = n;
+                dest += 4;
+                return 4;
+        }
+    }
 }
 
 public static class MathExtensions

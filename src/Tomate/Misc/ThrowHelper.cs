@@ -35,4 +35,16 @@ internal static class ThrowHelper
     {
         throw new ArgumentException("The key must not be of 'default(TKey)'", "key");
     }
+
+    [DoesNotReturn]
+    internal static void NeedNonNegIndex(string paramName)
+    {
+        throw new ArgumentOutOfRangeException(paramName, "Index can't be a negative value");
+    }
+
+    [DoesNotReturn]
+    internal static void EmptyStack()
+    {
+        throw new InvalidOperationException("Cannot perform operation, stack is empty");
+    }
 }

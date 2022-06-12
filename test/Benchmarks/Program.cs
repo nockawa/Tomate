@@ -1,4 +1,6 @@
 ﻿using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
@@ -7,6 +9,14 @@ using BenchmarkDotNet.Running;
 using Tomate;
 
 namespace Benchmarks;
+
+public struct TC
+{
+    public int A;
+    public float B;
+    public int C;
+    public float D;
+}
 
 public class Program
 {
@@ -21,6 +31,27 @@ public class Program
         //    b.GlobalCleanup();
         //}
 
+        var mm = new MemoryManager(1024 * 1024 * 64);
+        var ms = mm.Allocate(1024);
+
+
+        var mstc = ms.Cast<TC>();
+        int c = 0;
+        foreach (ref var i in mstc)
+        {
+            i.A = c;
+            i.B = (float)c;
+            i.C = c + 10;
+            i.D = (float)c + 10;
+
+            ++c;
+        }
+
+        var s = mstc.ToSpan();
+
+        int pipo = 0;
+
+        return;
         //BenchmarkRunner.Run<BenchmarkSegmentAccess>();
         BenchmarkRunner.Run<BitBenchark>();
     }
