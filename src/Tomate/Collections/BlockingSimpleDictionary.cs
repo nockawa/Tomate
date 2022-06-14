@@ -371,11 +371,12 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
     /// Remove a key/value from the dictionary
     /// </summary>
     /// <param name="key">The key.</param>
+    /// <param name="value">The value, is <c>default</c> if the call is unsuccessful.</param>
     /// <returns><c>true</c> if the key/value were removed, <c>false</c> if there were no key of the given value.</returns>
     /// <remarks>
     /// This operation relies on an exclusive access.
     /// </remarks>
-    public bool TryRemove(TKey key)
+    public bool TryRemove(TKey key, out TValue value)
     {
         try
         {
@@ -397,11 +398,13 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
                 if (_comparer.Equals(items->Key, key))
                 {
                     items->Key = default;
+                    value = items->Value;
                     --_header->Count;
                     return true;
                 }
             }
 
+            value = default;
             return false;
         }
         finally

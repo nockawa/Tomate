@@ -35,6 +35,8 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
 
     public MemorySegment UserDataArea => _rootAddr == null ? MemorySegment.Empty : new MemorySegment(_rootAddr + _header.AsRef().OffsetUserData, _header.AsRef().UserDataSize);
 
+    public bool RandomizeContentOnFree;
+
     private MemoryMappedFile _mmf;
     private readonly string _mmfFilePathName;
     private readonly string _mmfName;
@@ -209,6 +211,24 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
         var val = Interlocked.Decrement(ref _pageDirectory[blockId]);
         if ((val & 0xFFFF) == 0)
         {
+            if (RandomizeContentOnFree)
+            {
+                var start = (int*)segment.Address;
+                var end = (int*)segment.End;
+
+                while (start + 4 <= end)
+                {
+                    start[0] = QuickRand.Next();
+                    start[1] = QuickRand.Next();
+                    start[2] = QuickRand.Next();
+                    start[3] = QuickRand.Next();
+                    start += 4;
+                }
+                while (start + 1 <= end)
+                {
+                    *start++ = QuickRand.Next();
+                }
+            }
             var pageSize = val.HighS();
             Interlocked.Add(ref _allocatedPageCount, -pageSize);
             _pageBitfield.ToSpan().ClearBitsConcurrent(blockId, pageSize);
