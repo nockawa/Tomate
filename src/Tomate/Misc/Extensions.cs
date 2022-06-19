@@ -169,6 +169,53 @@ public static class PackExtensions
                 return 4;
         }
     }
+
+    public static void ReadByteLevel(this ref uint n, ref MemoryView<byte> src, int byteSize)
+    {
+        switch (byteSize)
+        {
+            case 1:
+                n = src.Fetch<byte>();
+                break;
+            case 2:
+                n = src.Fetch<ushort>();
+                break;
+            case 3:
+                n = src.Fetch<ushort>();
+                n |= (uint)(src.Fetch<byte>() << 16);
+                break;
+            case 4:
+                n = src.Fetch<uint>();
+                break;
+        }
+    }
+
+    public static void ReadByteLevel(this ref int n, ref MemoryView<byte> src, int byteSize)
+    {
+        switch (byteSize)
+        {
+            case 1:
+                n = src.Fetch<byte>();
+                break;
+            case 2:
+                n = src.Fetch<ushort>();
+                break;
+            case 3:
+                var low = src.Fetch<ushort>();
+                n = ((int)src.Fetch<byte>() << 16);
+                n |= low;
+                break;
+            case 4:
+                n = src.Fetch<int>();
+                break;
+        }
+    }
+
+}
+
+public static class MiscExtensions
+{
+    public static TimeSpan ToTimeSpan(this long v) => TimeSpan.FromTicks(v);
 }
 
 public static class MathExtensions

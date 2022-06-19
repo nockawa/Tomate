@@ -3,13 +3,16 @@ using System.Runtime.CompilerServices;
 
 namespace Tomate;
 
-public struct MemoryView<T> where T : unmanaged
+public unsafe struct MemoryView<T> where T : unmanaged
 {
+    private T* _cur;
+    private T* _end;
+
     public readonly MemorySegment<T> MemorySegment;
     public bool IsEmpty => MemorySegment.IsEmpty;
     public int Position
     {
-        get => _position;
+        get => (int)(((long)_cur - (long)MemorySegment.Address) / sizeof(T));
         set
         {
             if ((uint)value >= MemorySegment.Length)
@@ -17,14 +20,19 @@ public struct MemoryView<T> where T : unmanaged
                 ThrowHelper.OutOfRange($"The given value is out of range, max position allowed is {MemorySegment.Length-1}");
                 return;
             }
-            _position = value;
+            _cur = MemorySegment.Address + value;
         }
     }
 
-    public bool IsFull => _position >= MemorySegment.Length;
-    public int Count => _position;
+    public bool IsEndReached => _cur >= _end;
+    public int Count => Position;
 
-    public unsafe ref T this[int index]
+    /// <summary>
+    /// Random access, doesn't change <see cref="Position"/>
+    /// </summary>
+    /// <param name="index">Index of the item to access</param>
+    /// <returns>Reference to the item for read/write operations</returns>
+    public ref T this[int index]
     {
         get
         {
@@ -33,17 +41,17 @@ public struct MemoryView<T> where T : unmanaged
         }
     }
 
-    private int _position;
-
     public MemoryView(MemorySegment<T> memorySegment)
     {
         MemorySegment = memorySegment;
-        _position = 0;
+        _cur = MemorySegment.Address;
+        _end = _cur + MemorySegment.Length;
     }
 
     public void Reset()
     {
-        _position = 0;
+        _cur = MemorySegment.Address;
+        _end = _cur + MemorySegment.Length;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -59,50 +67,93 @@ public struct MemoryView<T> where T : unmanaged
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public unsafe bool Reserve(int length, out Span<T> storeArea)
+    public bool Reserve(int length, out Span<T> storeArea)
     {
-        if (_position + length > MemorySegment.Length)
+        if (_cur + length > _end)
         {
             storeArea = null;
             return false;
         }
 
-        storeArea = new Span<T>(MemorySegment.Address + _position, sizeof(T) * length);
-        _position += length;
+        storeArea = new Span<T>(_cur, sizeof(T) * length);
+        _cur += length;
         return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public bool Reserve(int length, out int index)
     {
-        if (_position + length > MemorySegment.Length)
+        if (_cur + length > _end)
         {
             index = -1;
             return false;
         }
 
-        index = _position;
-        _position += length;
+        index = Position;
+        _cur += length;
         return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public bool Reserve(out int index)
     {
-        if (_position + 1 > MemorySegment.Length)
+        if (_cur + 1 > _end)
         {
             index = -1;
             return false;
         }
 
-        index = _position;
-        ++_position;
+        index = Position;
+        ++_cur;
         return true;
     }
 
-    public bool Reserve<TD>(int length, out Span<TD> storeArea) where TD : unmanaged
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool Fetch(int length, out MemorySegment<T> readArea)
     {
-        storeArea = default;
+        if (_cur + length > _end)
+        {
+            readArea = default;
+            return false;
+        }
+
+        readArea = new MemorySegment<T>(_cur, length);
+        _cur += length;
+
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool Fetch<TD>(int length, out MemorySegment<TD> readArea) where TD : unmanaged
+    {
+        if (!Fetch(length * sizeof(TD), out var seg))
+        {
+            readArea = default;
+            return false;
+        }
+
+        readArea = seg.Cast<TD>();
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public TR Fetch<TR>() where TR : unmanaged
+    {
+        Debug.Assert((byte*)_cur + sizeof(TR) <= _end);
+
+        var res = *(TR*)_cur;
+        _cur = (T*)((byte*)_cur + sizeof(TR));
+        return res;
+    }
+
+    public bool Skip(int offset)
+    {
+        if (_cur + offset > _end)
+        {
+            return false;
+        }
+
+        _cur += offset;
         return true;
     }
 }

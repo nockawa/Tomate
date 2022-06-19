@@ -22,5 +22,4 @@ public static class QuickRand
 
         return randz;
     }
-
 }
