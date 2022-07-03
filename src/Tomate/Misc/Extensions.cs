@@ -190,6 +190,27 @@ public static class PackExtensions
         }
     }
 
+    public static unsafe void ReadByteLevel(this ref uint n, void* addr, int byteSize)
+    {
+        var cur = (byte*)addr;
+        switch (byteSize)
+        {
+            case 1:
+                n = *cur;
+                break;
+            case 2:
+                n = *(ushort*)cur;
+                break;
+            case 3:
+                n = *(ushort*)cur;
+                n |= (uint)(*(cur+2) << 16);
+                break;
+            case 4:
+                n = *(uint*)cur;
+                break;
+        }
+    }
+
     public static void ReadByteLevel(this ref int n, ref MemoryView<byte> src, int byteSize)
     {
         switch (byteSize)
