@@ -40,6 +40,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     /// Will be incremented every time a new memory segment is allocated
     /// </summary>
     public int MemorySegmentAllocationEpoch { get; private set; }
+    public int PinnedMemoryBlockSize { get; }
 
     /// <summary>
     /// Construct an instance of the memory manager
@@ -52,7 +53,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     /// </remarks>
     public MemoryManager(int pinnedMemoryBlockSize)
     {
-        _pinnedMemoryBlockSize = pinnedMemoryBlockSize;
+        PinnedMemoryBlockSize = pinnedMemoryBlockSize;
         _pinnedMemoryBlocks = new List<PinnedMemoryBlock>(16);
     }
 
@@ -102,7 +103,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
             }
         }
 
-        var memorySegment = new PinnedMemoryBlock(_pinnedMemoryBlockSize);
+        var memorySegment = new PinnedMemoryBlock(PinnedMemoryBlockSize);
         if (memorySegment.BiggestFreeSegment < size)
         {
             ThrowHelper.OutOfMemory($"The requested size ({size}) is too big to be allocated into a single block.");
@@ -178,7 +179,6 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
 
     private void UpdatePinnedMemoryBlockAddressMap() => _pinnedMemoryBlocks!.Sort((x, y) => (int)((long)y.SegmentAddress - (long)x.SegmentAddress));
 
-    private readonly int _pinnedMemoryBlockSize;
     private List<PinnedMemoryBlock> _pinnedMemoryBlocks;
 
     [DebuggerDisplay("Address: {SegmentAddress}, Biggest Free Segment: {BiggestFreeSegment}, Total Free: {TotalFree}")]

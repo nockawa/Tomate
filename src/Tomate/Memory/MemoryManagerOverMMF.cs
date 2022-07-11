@@ -42,6 +42,7 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
     private readonly string _mmfName;
     private readonly long _mmfSize;
     private readonly int _pageSize;
+    private readonly bool _shrinkOnDispose;
     private MemoryMappedViewAccessor _view;
 
     private byte* _rootAddr;
@@ -52,11 +53,11 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
 
     public bool IsDisposed => _mmf == null;
 
-    public static MemoryManagerOverMMF Create(string mmfFilePathName, string mmfName, long mmfSize, int pageSize)
+    public static MemoryManagerOverMMF Create(string mmfFilePathName, string mmfName, long mmfSize, int pageSize, bool shrinkOnDispose)
     {
         try
         {
-            return new MemoryManagerOverMMF(mmfFilePathName, mmfName, mmfSize, FileMode.CreateNew, pageSize);
+            return new MemoryManagerOverMMF(mmfFilePathName, mmfName, mmfSize, FileMode.CreateNew, pageSize, shrinkOnDispose);
         }
         catch (MemoryManagerOverMMFCreateException)
         {
@@ -68,7 +69,7 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
     {
         try
         {
-            return new MemoryManagerOverMMF(mmfFilePathName, mmfName, 0, FileMode.Open, 0);
+            return new MemoryManagerOverMMF(mmfFilePathName, mmfName, 0, FileMode.Open, 0, false);
         }
         catch (MemoryManagerOverMMFCreateException)
         {
@@ -80,7 +81,7 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
     {
         try
         {
-            return new(null, mmfName, 0, FileMode.Open, 0);
+            return new(null, mmfName, 0, FileMode.Open, 0, false);
         }
         catch (MemoryManagerOverMMFCreateException)
         {
@@ -88,7 +89,7 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
         }
     }
 
-    private MemoryManagerOverMMF(string mmfFilePathName, string mmfName, long mmfSize, FileMode fileMode, int pageSize)
+    private MemoryManagerOverMMF(string mmfFilePathName, string mmfName, long mmfSize, FileMode fileMode, int pageSize, bool shrinkOnDispose)
     {
         if ((mmfFilePathName == null) && (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) == false))
         {
@@ -106,6 +107,7 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
             if (mmfFilePathName != null)
             {
                 _mmf = MemoryMappedFile.CreateFromFile(_mmfFilePathName, fileMode, _mmfName, mmfSize);
+                _shrinkOnDispose = shrinkOnDispose;
             }
 
             // Memory-only
@@ -268,6 +270,12 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
             return;
         }
 
+        long maxSize = 0;
+        if (_shrinkOnDispose)
+        {
+            var bitIndex = _pageBitfield.ToSpan().FindMaxBitSet();
+            maxSize = (long)_pageSize * (bitIndex + 1);
+        }
         if (_rootAddr != null)
         {
             _view.SafeMemoryMappedViewHandle.ReleasePointer();
@@ -276,5 +284,11 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
         _view.Flush();
         this.DisposeAndNull(ref _view);
         this.DisposeAndNull(ref _mmf);
+
+        if (_shrinkOnDispose)
+        {
+            using var fs = File.Open(_mmfFilePathName, FileMode.Open, FileAccess.ReadWrite);
+            fs.SetLength(maxSize);
+        }
     }
 }

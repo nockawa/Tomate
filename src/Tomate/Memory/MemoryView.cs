@@ -10,22 +10,28 @@ public unsafe struct MemoryView<T> where T : unmanaged
 
     public readonly MemorySegment<T> MemorySegment;
     public bool IsEmpty => MemorySegment.IsEmpty;
+
+    /// <summary>
+    /// Get/set the position
+    /// </summary>
+    /// <remarks>
+    /// There is no bound check, if the new position is out of bound then <see cref="IsEndReached"/> will be return <c>true</c>
+    /// </remarks>
     public int Position
     {
         get => (int)(((long)_cur - (long)MemorySegment.Address) / sizeof(T));
         set
         {
-            if ((uint)value >= MemorySegment.Length)
+            if (value < 0)
             {
-                ThrowHelper.OutOfRange($"The given value is out of range, max position allowed is {MemorySegment.Length-1}");
-                return;
+                ThrowHelper.OutOfRange("Position can't be a negative value");
             }
             _cur = MemorySegment.Address + value;
         }
     }
 
     public bool IsEndReached => _cur >= _end;
-    public int Count => Position;
+    public int Length => MemorySegment.Length;
 
     /// <summary>
     /// Random access, doesn't change <see cref="Position"/>

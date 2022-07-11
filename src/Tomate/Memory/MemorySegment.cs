@@ -124,6 +124,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
 
     [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
     public Span<T> ToSpan() => new(Address, Length);
+    public Span<TU> ToSpan<TU>() where TU : unmanaged => new(Address, Length * sizeof(T) / sizeof(TU));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static implicit operator Span<T>(MemorySegment<T> segment)

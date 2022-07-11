@@ -60,6 +60,21 @@ public static class BitMapHelpers
         return -1;
     }
 
+    public static int FindMaxBitSet(this Span<ulong> map)
+    {
+        for (int i = map.Length - 1; i >= 0; i--)
+        {
+            var val = map[i];
+            if (val != 0)
+            {
+                var r = BitOperations.TrailingZeroCount(~val);
+                return i * 64 + r;
+            }
+        }
+
+        return -1;
+    }
+
     /// <summary>
     /// Switch a bit from 0 to 1, concurrent friendly.
     /// </summary>
