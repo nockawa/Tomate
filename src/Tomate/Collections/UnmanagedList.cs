@@ -95,6 +95,16 @@ public struct UnmanagedList<T> : IDisposable where T : unmanaged
         return res;
     }
 
+    public ref T AddInPlace()
+    {
+        if (_size == _dataSegment.Length)
+        {
+            Grow(_size + 1);
+        }
+
+        return ref _dataSegment[_size++];
+    }
+
     // Inserts an element into this list at a given index. The size of the list
     // is increased by one. If required, the capacity of the list is doubled
     // before inserting the new element.

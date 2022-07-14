@@ -165,6 +165,8 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
         return false;
     }
 
+    public bool Free<T>(MemorySegment<T> segment) where T : unmanaged => Free(segment.Cast());
+
     /// <summary>
     /// Release all the allocated segments, free the memory allocated through .net.
     /// </summary>

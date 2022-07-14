@@ -181,6 +181,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
         return new(Address + start, length);
     }
 
+    public MemorySegment Cast() => new MemorySegment((byte*)Address, Length * sizeof(T));
     public MemorySegment<TTo> Cast<TTo>() where TTo : unmanaged => new(Address, Length * sizeof(T) / sizeof(TTo));
 
     /// <summary>Gets an enumerator for this segment.</summary>

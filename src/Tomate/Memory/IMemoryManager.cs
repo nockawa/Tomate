@@ -49,6 +49,7 @@ public interface IMemoryManager
     /// But if you allocated another segment which turns out to have the same address and call <see cref="Free"/> a second time, then it will free the second segment successfully.
     /// </remarks>
     bool Free(MemorySegment segment);
+    bool Free<T>(MemorySegment<T> segment) where T : unmanaged;
 
     /// <summary>
     /// Release all the allocated segments, free the memory allocated through .net.

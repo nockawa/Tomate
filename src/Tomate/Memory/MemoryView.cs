@@ -101,6 +101,26 @@ public unsafe struct MemoryView<T> where T : unmanaged
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool BeginReserve(int maxSizeRequired, out Span<T> storeArea)
+    {
+        if (_cur + maxSizeRequired > _end)
+        {
+            storeArea = null;
+            return false;
+        }
+
+        storeArea = new Span<T>(_cur, sizeof(T) * maxSizeRequired);
+
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public void EndReserve(int writtenSize)
+    {
+        _cur += writtenSize;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public bool Reserve(out int index)
     {
         if (_cur + 1 > _end)
