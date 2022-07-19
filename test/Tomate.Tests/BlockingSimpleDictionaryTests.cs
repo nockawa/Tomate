@@ -53,15 +53,15 @@ public class BlockingSimpleDictionaryTests
         Assert.That(v, Is.EqualTo(456));
 
         // Remove non-existent
-        Assert.That(dic.TryRemove(124), Is.False);
+        Assert.That(dic.TryRemove(124, out _), Is.False);
         Assert.That(dic.Count, Is.EqualTo(2));
 
         // Remove first
-        Assert.That(dic.TryRemove(123), Is.True);
+        Assert.That(dic.TryRemove(123, out _), Is.True);
         Assert.That(dic.Count, Is.EqualTo(1));
 
         // Remove second
-        Assert.That(dic.TryRemove(12), Is.True);
+        Assert.That(dic.TryRemove(12, out _), Is.True);
         Assert.That(dic.Count, Is.EqualTo(0));
 
         // GetOrAdd new
@@ -118,7 +118,7 @@ public class BlockingSimpleDictionaryTests
         }
         Assert.That(it, Is.EqualTo(3));
 
-        dic.TryRemove(13);
+        dic.TryRemove(13, out _);
         it = 0;
         foreach (var kvp in dic)
         {

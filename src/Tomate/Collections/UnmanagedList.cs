@@ -1,8 +1,11 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Tomate;
 
+[DebuggerTypeProxy(typeof(UnmanagedList<>.DebugView))]
+[DebuggerDisplay("Count = {Count}")]
 public struct UnmanagedList<T> : IDisposable where T : unmanaged
 {
     private const int DefaultCapacity = 4;
@@ -130,6 +133,12 @@ public struct UnmanagedList<T> : IDisposable where T : unmanaged
     }
 
     // Non-inline from List.Add to improve its code quality as uncommon path
+    public void CopyTo(T[] items, int i)
+    {
+        var span = new Span<T>(items, i, items.Length - i);
+        _dataSegment.ToSpan().CopyTo(span);
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void AddWithResize(T item)
     {
@@ -165,7 +174,7 @@ public struct UnmanagedList<T> : IDisposable where T : unmanaged
 
         public Enumerator(UnmanagedList<T> owner)
         {
-            _span = owner._dataSegment.ToSpan();
+            _span = owner._dataSegment.Slice(0, owner.Count).ToSpan();
             _index = -1;
         }
         
@@ -205,5 +214,27 @@ public struct UnmanagedList<T> : IDisposable where T : unmanaged
     public void Clear()
     {
         _size = 0;
+    }
+
+    internal sealed class DebugView
+    {
+        private readonly MemorySegment<T> _data;
+
+        public DebugView(UnmanagedList<T> list)
+        {
+            _data = list.Content;
+        }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+        public T[] Items
+        {
+            get
+            {
+                T[] items = new T[_data.Length];
+                var dest = new Span<T>(items);
+                _data.ToSpan().CopyTo(dest);
+                return items;
+            }
+        }
     }
 }

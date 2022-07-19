@@ -14,6 +14,23 @@
 		<Description>🍅 Low level library for concurrent, low GC impact data storing</Description>
 		<PackageProjectUrl>https://github.com/LoicBaumann/Tomate</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/LoicBaumann/Tomate</RepositoryUrl>
+		<Configurations>Debug;Release;DebugAlloc</Configurations>
 	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugAlloc|AnyCPU'">
+	  <DefineConstants>$(DefineConstants)TRACE;DEBUGALLOC</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Serilog" Version="2.11.0" />
+	</ItemGroup>
 
 </Project>

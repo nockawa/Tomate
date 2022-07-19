@@ -1,4 +1,6 @@
-﻿namespace Tomate;
+﻿using System.Runtime.CompilerServices;
+
+namespace Tomate;
 
 public interface IMemoryManager
 {
@@ -21,7 +23,11 @@ public interface IMemoryManager
     /// The segment's address is fixed, you can store it with the lifetime that suits you, it doesn't matter as the segment is part of a
     /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{T}"/> with pinned set to true).
     /// </remarks>
+#if DEBUGALLOC
+    MemorySegment Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0);
+#else
     MemorySegment Allocate(int size);
+#endif
 
     /// <summary>
     /// Allocate a Memory Segment
@@ -36,7 +42,11 @@ public interface IMemoryManager
     /// The segment's address is fixed, you can store it with the lifetime that suits you, it doesn't matter as the segment is part of a
     /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{U}"/> with pinned set to true).
     /// </remarks>
+#if DEBUGALLOC
+    MemorySegment<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged;
+#else
     MemorySegment<T> Allocate<T>(int size) where T : unmanaged;
+#endif
 
     /// <summary>
     /// Free a previously allocated segment

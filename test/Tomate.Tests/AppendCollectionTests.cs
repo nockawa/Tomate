@@ -67,7 +67,5 @@ public class AppendCollectionTests
 
         col.AddString("Pipo");
         col.AddString("Pouet Tagada");
-
-
     }
 }
