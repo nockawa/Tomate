@@ -50,12 +50,12 @@ public struct ConcurrentBitmapL4
     private readonly MemorySegment<byte> _l2 => _data.Segment4;
     private readonly MemorySegment<byte> _l3 => _data.Segment5;
     private readonly int AggregationLevelCount;
-    private static readonly Vector256<byte> _64brocasted;
+    private static readonly Vector256<byte> _64broadcast;
 
     static ConcurrentBitmapL4()
     {
         var b = Vector128.CreateScalar((byte)64);
-        _64brocasted = Avx2.BroadcastScalarToVector256(b);
+        _64broadcast = Avx2.BroadcastScalarToVector256(b);
     }
 
     /// <summary>
@@ -298,8 +298,8 @@ public struct ConcurrentBitmapL4
             var curLevelBank = curLevelIndex & ~0x3F;
             var v1 = Avx.LoadVector256(prevLevel.Address + curLevelBank);        // Load 32 bytes
             var v2 = Avx.LoadVector256(prevLevel.Address + curLevelBank + 32);   //  and the rest
-            v1 = Avx2.Subtract(_64brocasted, v1);                                           // We want the max, but SIMD only does min on horizontal, so let's invert the values
-            v2 = Avx2.Subtract(_64brocasted, v2);
+            v1 = Avx2.Subtract(_64broadcast, v1);                                           // We want the max, but SIMD only does min on horizontal, so let's invert the values
+            v2 = Avx2.Subtract(_64broadcast, v2);
             var v = Avx2.Min(v1, v2);                                         // Min of the two 32 bytes lanes
 
             v = Avx2.Min(v, Avx2.ShiftRightLogical(v.AsInt16(), 8).AsByte());    // Nice trick to get the min of the remaining values and shifting from byte to short
