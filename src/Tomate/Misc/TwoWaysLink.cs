@@ -47,9 +47,14 @@ public struct TwoWaysLinkedList<T> where T : unmanaged
         _comparer = EqualityComparer<T>.Default;
     }
 
-    public T InsertFirst()
+    public T InsertNewFirst()
     {
-        var nodeId = Allocate();
+        return InsertFirst(Allocate());
+    }
+
+    public T InsertFirst(T nodeId)
+    {
+        CheckId(nodeId);
         ref var node = ref _accessor(nodeId);
 
         if (_count == 0)
@@ -75,15 +80,26 @@ public struct TwoWaysLinkedList<T> where T : unmanaged
         return _first;
     }
 
-    public T InsertLast()
+    public T InsertNewLast()
     {
         if (IsEmpty)
         {
-            return InsertFirst();
+            return InsertNewFirst();
         }
 
         var curId = Allocate();
+        return InsertLast(curId);
+    }
+
+    public T InsertLast(T curId)
+    {
+        CheckId(curId);
         ref var cur = ref _accessor(curId);
+
+        if (IsDefault(_first))
+        {
+            return InsertFirst(curId);
+        }
 
         ref var first = ref _accessor(_first);
         var lastId = first.Previous;
@@ -99,17 +115,28 @@ public struct TwoWaysLinkedList<T> where T : unmanaged
         return curId;
     }
 
-    public T Insert(T leftId)
+    public T InsertNew(T leftId)
     {
         // Insert first case
         if (IsDefault(leftId))
         {
-            return InsertFirst();
+            return InsertNewFirst();
         }
 
         var nodeId = Allocate();
-        ref var node = ref _accessor(nodeId);
+        return Insert(leftId, nodeId);
+    }
 
+    public T Insert(T leftId, T nodeId)
+    {
+        CheckId(nodeId);
+
+        if (IsDefault(leftId))
+        {
+            return InsertFirst(nodeId);
+        }
+
+        ref var node = ref _accessor(nodeId);
         ref var left = ref _accessor(leftId);
 
         node.Previous = leftId;
@@ -119,6 +146,10 @@ public struct TwoWaysLinkedList<T> where T : unmanaged
         {
             ref var next = ref _accessor(left.Next);
             next.Previous = nodeId;
+        }
+        else
+        {
+            _accessor(_first).Previous = nodeId;
         }
 
         left.Next = nodeId;
@@ -142,6 +173,7 @@ public struct TwoWaysLinkedList<T> where T : unmanaged
 
             _first = nextId;
 
+            first.Previous = first.Next = default;
             --_count;
         }
         else
@@ -163,6 +195,7 @@ public struct TwoWaysLinkedList<T> where T : unmanaged
                 _accessor(_first).Previous = prevId;
             }
 
+            cur.Previous = cur.Next = default;
             --_count;
         }
     }
@@ -211,10 +244,18 @@ public struct TwoWaysLinkedList<T> where T : unmanaged
         return _comparer.Equals(leftId, default(T));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private T Allocate()
     {
+        Debug.Assert(_allocator != null, "You must specify an Allocator lambda at construction time to use this API");
         var res = _allocator();
-        Debug.Assert(IsDefault(res) == false, "The allocator can't return an Id that is equal to the default value of <T>. Default is used to mark the absence of a link.");
+        CheckId(res);
         return res;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void CheckId(T id)
+    {
+        Debug.Assert(IsDefault(id) == false, "The allocator can't return an Id that is equal to the default value of <T>. Default is used to mark the absence of a link.");
     }
 }

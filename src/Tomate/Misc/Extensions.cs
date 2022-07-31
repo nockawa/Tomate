@@ -34,6 +34,18 @@ public static class PaddingExtensions
     public static unsafe int Pad<T>(this int v) where T : unmanaged => (v + sizeof(T) - 1) & -sizeof(T);
 }
 
+public static class AlignmentExtensions
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static unsafe void* Align(this ref int size, void* address, int alignment)
+    {
+        var a = (long)address;
+        var newAddress = ((long)address + (alignment - 1)) & -alignment;
+        size += (int)(newAddress - a);
+        return (void*)newAddress;
+    }
+}
+
 public static class StoreInExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
