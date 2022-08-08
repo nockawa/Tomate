@@ -4,9 +4,9 @@ public readonly struct BurnBabyBurn
 {
     private readonly DateTime _waitUntil;
 
-    public BurnBabyBurn(TimeSpan waitSpan)
+    public BurnBabyBurn(TimeSpan? waitSpan)
     {
-        _waitUntil = DateTime.UtcNow + waitSpan;
+        _waitUntil = (waitSpan != null) ? (DateTime.UtcNow + waitSpan.Value) : DateTime.MaxValue;
     }
 
     /// <summary>

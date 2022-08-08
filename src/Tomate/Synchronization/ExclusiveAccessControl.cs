@@ -18,9 +18,8 @@ public struct ExclusiveAccessControl
     {
         return Interlocked.CompareExchange(ref _data, 1, 0) == 0;
     }
-
     
-    public bool TakeControl(TimeSpan wait)
+    public bool TakeControl(TimeSpan? wait)
     {
         if (Interlocked.CompareExchange(ref _data, 1, 0) == 0)
         {

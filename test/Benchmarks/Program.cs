@@ -22,6 +22,8 @@ public class Program
 {
     public static unsafe void Main(string[] args)
     {
+        Console.WriteLine("Let's start");
+        //MemMgrTest.LinearAllocation_then_intertwineReallocation(0.5f);
         //var b = new BitBenchark();
 
         //for (int i = 0; i < 256; i++)
@@ -31,30 +33,105 @@ public class Program
         //    b.GlobalCleanup();
         //}
 
-        var mm = new MemoryManager(1024 * 1024 * 64);
-        var ms = mm.Allocate(1024);
+        var mm = new DefaultMemoryManager();
+        var rand = new Random(123);
 
-
-        var mstc = ms.Cast<TC>();
-        int c = 0;
-        foreach (ref var i in mstc)
+        for (int i = 0; i < 2_000_000; i++)
         {
-            i.A = c;
-            i.B = (float)c;
-            i.C = c + 10;
-            i.D = (float)c + 10;
-
-            ++c;
+            var size = rand.Next(8, 24);
+            mm.Allocate(size);
         }
 
-        var s = mstc.ToSpan();
-
-        int pipo = 0;
-
-        return;
-        //BenchmarkRunner.Run<BenchmarkSegmentAccess>();
-        BenchmarkRunner.Run<BitBenchark>();
+        // var mm = new MemoryManager(1024 * 1024 * 64);
+        // var ms = mm.Allocate(1024);
+        //
+        //
+        // var mstc = ms.Cast<TC>();
+        // int c = 0;
+        // foreach (ref var i in mstc)
+        // {
+        //     i.A = c;
+        //     i.B = (float)c;
+        //     i.C = c + 10;
+        //     i.D = (float)c + 10;
+        //
+        //     ++c;
+        // }
+        //
+        // var s = mstc.ToSpan();
+        //
+        // int pipo = 0;
+        //
+        // return;
+        // //BenchmarkRunner.Run<BenchmarkSegmentAccess>();
+        // BenchmarkRunner.Run<BitBenchark>();
     }
+}
+
+public static class MemMgrTest
+{
+        public static unsafe void LinearAllocation_then_intertwineReallocation(float commitSizeAmplification)
+    {
+        var mm = new DefaultMemoryManager();
+        var sbb = mm.GetThreadBlockSequence();
+
+        var headerSize = sizeof(DefaultMemoryManager.SmallBlock.SegmentHeader);
+        var allocSize = (16 + headerSize).Pad16() - headerSize;
+        var sbbSize = (int)(sbb.DebugInfo.TotalCommitted * commitSizeAmplification);
+
+        var segList = new List<MemorySegment>();
+        var curTotalAllocated = 0;
+        var curAllocSegCount = 0;
+        while (sbbSize > 0)
+        {
+            var s0 = mm.Allocate(allocSize);
+
+            if ((curAllocSegCount & 1) == 1)
+            {
+                segList.Add(s0);
+            }
+
+            curTotalAllocated += allocSize;
+            sbbSize -= allocSize + headerSize;
+            ++curAllocSegCount;
+        }
+
+        var maxTotalAllocated = curTotalAllocated;
+        var maxAllocSegCount = curAllocSegCount;
+
+        Console.WriteLine($"Reallocate {segList.Count} segments");
+
+        var step = segList.Count / 100.0f;
+        var curStep = 0;
+        // Free all the segments recorded
+        for (var i = 0; i < segList.Count; i++)
+        {
+            if (curStep++ == (int)step)
+            {
+                curStep = 0;
+                Console.Write(".");
+            }
+            var seg = segList[i];
+            mm.Free(seg);
+
+            var newSeg = mm.Allocate(allocSize);
+
+            curTotalAllocated -= allocSize;
+            --curAllocSegCount;
+        }
+
+        //for (var i = 0; i < segList.Count; i++)
+        //{
+        //    var s0 = mm.Allocate(allocSize);
+        //    Assert.That(s0, Is.EqualTo(segList[i]), $"Iteration {i}, over {segList.Count}");
+
+        //    var di = sbb.DebugInfo;
+        //    Assert.That(di.IsCoherent, Is.True, $"Seg Count: {curAllocSegCount}, Remaining Alloc Size: {sbbSize}");
+        //}
+
+        Console.WriteLine($"Allocated {curAllocSegCount} segments, total size {curTotalAllocated}");
+    }
+
 }
 
 public class TestClass

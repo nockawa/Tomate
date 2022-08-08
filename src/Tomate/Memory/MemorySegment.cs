@@ -16,12 +16,13 @@ namespace Tomate;
 /// Only work with this type if you are dealing with pinned memory block, otherwise rely on <see cref="Span{T}"/>
 /// </remarks>
 [DebuggerDisplay("Address: {Address}, Length: {Length}")]
-public readonly unsafe struct MemorySegment
+public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 {
     public readonly byte* Address;
     public readonly int Length;
 
     public static readonly MemorySegment Empty = new(null, 0);
+    public override string ToString() => $"Address: 0x{(ulong)Address:X}, Length: {Length}";
 
     public MemorySegment(byte* address, int length)
     {
@@ -57,6 +58,38 @@ public readonly unsafe struct MemorySegment
 
         return (new MemorySegment(Address, splitOffset), new MemorySegment(Address+splitOffset, Length-splitOffset));
     }
+
+    public static implicit operator void*(MemorySegment segment) => segment.Address;
+    public static implicit operator byte*(MemorySegment segment) => segment.Address;
+
+    #region GetHashCode & Equality
+
+    public bool Equals(MemorySegment other)
+    {
+        return Address == other.Address && Length == other.Length;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is MemorySegment other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(unchecked((int)(long)Address), Length);
+    }
+
+    public static bool operator ==(MemorySegment left, MemorySegment right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(MemorySegment left, MemorySegment right)
+    {
+        return !left.Equals(right);
+    }
+
+    #endregion
 }
 
 /// <summary>
