@@ -1,19 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>disable</Nullable>
-	  <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-	  <PlatformTarget>AnyCPU</PlatformTarget>
-	  <BaseOutputPath>..\..\bin</BaseOutputPath>
-	  <Version>0.1.0-alpha</Version>
-	  <Authors>Loïc Baumann</Authors>
-	  <Company>$(Authors)</Company>
-	  <Copyright>$(Authors)</Copyright>
-	  <Description>🍅 Low level library for concurrent, low GC impact data storing</Description>
-	  <PackageProjectUrl>https://github.com/LoicBaumann/Tomate</PackageProjectUrl>
-	  <RepositoryUrl>https://github.com/LoicBaumann/Tomate</RepositoryUrl>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>disable</Nullable>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<BaseOutputPath>..\..\bin</BaseOutputPath>
+		<Version>0.1.0-alpha</Version>
+		<Authors>Loïc Baumann</Authors>
+		<Company>$(Authors)</Company>
+		<Copyright>$(Authors)</Copyright>
+		<Description>🍅 Low level library for concurrent, low GC impact data storing</Description>
+		<PackageProjectUrl>https://github.com/LoicBaumann/Tomate</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/LoicBaumann/Tomate</RepositoryUrl>
+		<Configurations>Debug;Release;DebugAlloc</Configurations>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugAlloc|AnyCPU'">
+	  <DefineConstants>$(DefineConstants)TRACE;DEBUGALLOC</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Serilog" Version="2.11.0" />
+	</ItemGroup>
 
 </Project>

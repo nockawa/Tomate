@@ -10,11 +10,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "test\Benchmarks\Benchmarks.csproj", "{FAD37B03-20B5-42FD-A58F-A25C882B2AB8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks", "test\Benchmarks\Benchmarks.csproj", "{FAD37B03-20B5-42FD-A58F-A25C882B2AB8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Src", "Src", "{1645D76C-7101-4F1B-A9F5-0B25132FFB64}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{EA277D69-FADE-49A0-A3B1-B5D448F11AFE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tomate.Tests", "test\Tomate.Tests\Tomate.Tests.csproj", "{29700D39-D5E9-48B0-9D64-93C2320F2BBA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,6 +32,10 @@ Global
 		{FAD37B03-20B5-42FD-A58F-A25C882B2AB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FAD37B03-20B5-42FD-A58F-A25C882B2AB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FAD37B03-20B5-42FD-A58F-A25C882B2AB8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29700D39-D5E9-48B0-9D64-93C2320F2BBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29700D39-D5E9-48B0-9D64-93C2320F2BBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29700D39-D5E9-48B0-9D64-93C2320F2BBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29700D39-D5E9-48B0-9D64-93C2320F2BBA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -37,6 +43,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{5F59AF32-B94C-45FA-808E-C599C67306CB} = {1645D76C-7101-4F1B-A9F5-0B25132FFB64}
 		{FAD37B03-20B5-42FD-A58F-A25C882B2AB8} = {EA277D69-FADE-49A0-A3B1-B5D448F11AFE}
+		{29700D39-D5E9-48B0-9D64-93C2320F2BBA} = {EA277D69-FADE-49A0-A3B1-B5D448F11AFE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {374C287A-5DEA-4B1D-9A2E-0DFE78222A74}

@@ -3,6 +3,14 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Tomate;
 
+public class SegmentConstructException : Exception
+{
+    public SegmentConstructException(string message) : base(message)
+    {
+        
+    }
+}
+
 [StackTraceHidden]
 internal static class ThrowHelper
 {
@@ -16,5 +24,41 @@ internal static class ThrowHelper
     internal static void OutOfMemory(string message)
     {
         throw new OutOfMemoryException(message);
+    }
+
+    [DoesNotReturn]
+    internal static void OutOfRange(string message)
+    {
+        throw new IndexOutOfRangeException(message);
+    }
+
+    [DoesNotReturn]
+    internal static void StringTooBigForString64(string paramName, string source)
+    {
+        throw new ArgumentOutOfRangeException(paramName, $"The given string '{source}' is bigger than the maximum allowed size (63 bytes).");
+    }
+
+    [DoesNotReturn]
+    internal static void BlockSimpleDicDefKeyNotAllowed()
+    {
+        throw new ArgumentException("The key must not be of 'default(TKey)'", "key");
+    }
+
+    [DoesNotReturn]
+    internal static void NeedNonNegIndex(string paramName)
+    {
+        throw new ArgumentOutOfRangeException(paramName, "Index can't be a negative value");
+    }
+
+    [DoesNotReturn]
+    internal static void EmptyStack()
+    {
+        throw new InvalidOperationException("Cannot perform operation, stack is empty");
+    }
+
+    [DoesNotReturn]
+    internal static void TimeSegmentConstructError(long start, long end)
+    {
+        throw new SegmentConstructException($"Cannot construct TimeSegment instance because start ({start}) is greater than end ({end})");
     }
 }

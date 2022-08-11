@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading;
+using System.Text;
+using Serilog;
 
 namespace Tomate;
 
@@ -32,7 +32,7 @@ namespace Tomate;
 /// Segments are identified by their address, the PMB list and block lists are keep their entry sorted by address to allow binary search.
 /// </para>
 /// </remarks>
-public unsafe class MemoryManager : IDisposable
+public unsafe class MemoryManager : IDisposable, IMemoryManager
 {
     /// <summary>
     /// Will be incremented every time a new Pinned Memory Block is allocated
@@ -43,6 +43,12 @@ public unsafe class MemoryManager : IDisposable
     /// Will be incremented every time a new memory segment is allocated
     /// </summary>
     public int MemorySegmentAllocationEpoch { get; private set; }
+    public int MaxAllocationLength { get; }
+
+#if DEBUGALLOC
+    private string _sourceFile;
+    private int _lineNb;
+#endif
 
     /// <summary>
     /// Construct an instance of the memory manager
@@ -53,10 +59,25 @@ public unsafe class MemoryManager : IDisposable
     /// Level 1 being the object, which is typically grouped in Memory Segments, the level 2.
     /// You wont be able to allocate a Memory Segment bigger than a Pinned Memory Block.
     /// </remarks>
-    public MemoryManager(int pinnedMemoryBlockSize)
+    public MemoryManager(int pinnedMemoryBlockSize
+#if DEBUGALLOC
+        , [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0
+#endif
+    )
     {
-        _pinnedMemoryBlockSize = pinnedMemoryBlockSize;
+        MaxAllocationLength = pinnedMemoryBlockSize;
         _pinnedMemoryBlocks = new List<PinnedMemoryBlock>(16);
+#if DEBUGALLOC
+        _sourceFile = sourceFile;
+        _lineNb = lineNb;
+#endif
+    }
+
+    ~MemoryManager()
+    {
+#if DEBUGALLOC
+        DetectLeaks();
+#endif
     }
 
     /// <summary>
@@ -69,18 +90,70 @@ public unsafe class MemoryManager : IDisposable
     /// </summary>
     public void Dispose()
     {
+#if DEBUGALLOC
+        DetectLeaks();
+#endif
         foreach (var segment in _pinnedMemoryBlocks!)
         {
             segment.Dispose();
         }
 
         _pinnedMemoryBlocks = null;
+        GC.SuppressFinalize(this);
     }
+
+#if DEBUGALLOC
+    private void DetectLeaks()
+    {
+        var sb = new StringBuilder(4096);
+        var totalLeaks = 0;
+        foreach (var segment in _pinnedMemoryBlocks!)
+        {
+            totalLeaks += segment.DumpMemLeaks(sb);
+        }
+
+        if (totalLeaks > 0)
+        {
+            Log.Verbose($"Memory Manager allocated in {_sourceFile}:line {_lineNb} has {totalLeaks} leaked segments\r\n" + sb);
+        }
+    }
+#endif
+
+    public readonly struct ScopedMemorySegment : IDisposable
+    {
+        private readonly MemoryManager _owner;
+        private readonly MemorySegment _segment;
+
+        public ScopedMemorySegment(MemoryManager owner, MemorySegment segment)
+        {
+            _owner = owner;
+            _segment = segment;
+        }
+
+        public void Dispose()
+        {
+            _owner.Free(_segment);
+        }
+
+        public static implicit operator MemorySegment(ScopedMemorySegment source) => source._segment;
+    }
+
+#if DEBUGALLOC
+    public ScopedMemorySegment AllocateScoped(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
+    {
+        return new ScopedMemorySegment(this, Allocate(size, sourceFile, lineNb));
+    }
+#else
+    public ScopedMemorySegment AllocateScoped(int size)
+    {
+        return new ScopedMemorySegment(this, Allocate(size));
+    }
+#endif
 
     /// <summary>
     /// Allocate a Memory Segment
     /// </summary>
-    /// <param name="size">Size of the segment to allocate.</param>
+    /// <param name="size">Length of the segment to allocate.</param>
     /// <returns>The segment or an exception will be fired if we couldn't allocate one.</returns>
     /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
     /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>
@@ -89,7 +162,11 @@ public unsafe class MemoryManager : IDisposable
     /// The segment's address is fixed, you can store it with the lifetime that suits you, it doesn't matter as the segment is part of a
     /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{T}"/> with pinned set to true).
     /// </remarks>
+#if DEBUGALLOC
+    public MemorySegment Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
+#else
     public MemorySegment Allocate(int size)
+#endif
     {
         if (_pinnedMemoryBlocks == null)
         {
@@ -98,14 +175,18 @@ public unsafe class MemoryManager : IDisposable
 
         for (var i = 0; i < _pinnedMemoryBlocks.Count; i++)
         {
-            if (_pinnedMemoryBlocks[i].AllocateSegment(size, out var res))
+            if (_pinnedMemoryBlocks[i].AllocateSegment(size,
+#if DEBUGALLOC
+                    sourceFile, lineNb,
+#endif
+                    out var res))
             {
                 ++AllocationPinnedMemoryBlockEpoch;
                 return new MemorySegment(res, size);
             }
         }
 
-        var memorySegment = new PinnedMemoryBlock(_pinnedMemoryBlockSize);
+        var memorySegment = new PinnedMemoryBlock(MaxAllocationLength);
         if (memorySegment.BiggestFreeSegment < size)
         {
             ThrowHelper.OutOfMemory($"The requested size ({size}) is too big to be allocated into a single block.");
@@ -115,8 +196,37 @@ public unsafe class MemoryManager : IDisposable
         ++MemorySegmentAllocationEpoch;
         UpdatePinnedMemoryBlockAddressMap();
 
+#if DEBUGALLOC
+        return Allocate(size, sourceFile, lineNb);
+#else
         return Allocate(size);
+#endif
     }
+
+    /// <summary>
+    /// Allocate a Memory Segment
+    /// </summary>
+    /// <typeparam name="T">The type of each item of the segment.</typeparam>
+    /// <param name="size">Length (in {T}) of the segment to allocate.</param>
+    /// <returns>The segment or an exception will be fired if we couldn't allocate one.</returns>
+    /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
+    /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>
+    /// <remarks>
+    /// The segment's address will always be aligned on 64 bytes, its size will also be padded on 64 bytes.
+    /// The segment's address is fixed, you can store it with the lifetime that suits you, it doesn't matter as the segment is part of a
+    /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{U}"/> with pinned set to true).
+    /// </remarks>
+#if DEBUGALLOC
+    public MemorySegment<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
+    {
+        return Allocate(sizeof(T) * size, sourceFile, lineNb).Cast<T>();
+    }
+#else
+    public MemorySegment<T> Allocate<T>(int size) where T : unmanaged
+    {
+        return Allocate(sizeof(T) * size).Cast<T>();
+    }
+#endif
 
     /// <summary>
     /// Free a previously allocated segment
@@ -149,6 +259,8 @@ public unsafe class MemoryManager : IDisposable
         return false;
     }
 
+    public bool Free<T>(MemorySegment<T> segment) where T : unmanaged => Free(segment.Cast());
+
     /// <summary>
     /// Release all the allocated segments, free the memory allocated through .net.
     /// </summary>
@@ -163,7 +275,6 @@ public unsafe class MemoryManager : IDisposable
 
     private void UpdatePinnedMemoryBlockAddressMap() => _pinnedMemoryBlocks!.Sort((x, y) => (int)((long)y.SegmentAddress - (long)x.SegmentAddress));
 
-    private readonly int _pinnedMemoryBlockSize;
     private List<PinnedMemoryBlock> _pinnedMemoryBlocks;
 
     [DebuggerDisplay("Address: {SegmentAddress}, Biggest Free Segment: {BiggestFreeSegment}, Total Free: {TotalFree}")]
@@ -187,7 +298,11 @@ public unsafe class MemoryManager : IDisposable
             _segments.Clear();
         }
 
-        public bool AllocateSegment(int size, out byte* address)
+        public bool AllocateSegment(int size,
+#if DEBUGALLOC
+            string sourceFile, int lineNb,
+#endif
+            out byte* address)
         {
             size = (size + 63) & -64;
 
@@ -200,6 +315,10 @@ public unsafe class MemoryManager : IDisposable
                 // Update the current segment with its new size and status
                 segment.IsFree = false;
                 segment.Length = size;
+#if DEBUGALLOC
+                segment.SourceFile = sourceFile;
+                segment.LineNb = lineNb;
+#endif
                 _segments[i] = segment;
 
                 // Check if the segment was bigger than the requested size, allocate another one with the remaining space
@@ -247,6 +366,10 @@ public unsafe class MemoryManager : IDisposable
             }
 
             curSegment.IsFree = true;
+#if DEBUGALLOC
+            curSegment.SourceFile = null;
+            curSegment.LineNb = -1;
+#endif
 
             // Merge with adjacent segments if they are free
             var nextSegmentIndex = index + 1;
@@ -307,6 +430,22 @@ public unsafe class MemoryManager : IDisposable
             }
         }
 
+#if DEBUGALLOC
+        public int DumpMemLeaks(StringBuilder sb)
+        {
+            var totalLeaks = 0;
+            foreach (var segment in _segments)
+            {
+                if (segment.IsFree == false)
+                {
+                    sb.AppendLine($" - {segment.SourceFile}:line {segment.LineNb}, Address {(ulong)&SegmentAddress[segment.Offset]:X}, Length {segment.Length}");
+                    ++totalLeaks;
+                }
+            }
+
+            return totalLeaks;
+        }
+#endif
         // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
         private byte[] _data;
         private readonly byte* _alignedAddress;
@@ -320,6 +459,10 @@ public unsafe class MemoryManager : IDisposable
             {
                 Offset = offset;
                 _length = (length << 1) | (isFree ? 1 : 0);
+#if DEBUGALLOC
+                SourceFile = null;
+                LineNb = -1;
+#endif
             }
             public int Offset;
 
@@ -334,6 +477,11 @@ public unsafe class MemoryManager : IDisposable
                 get => (_length & 1) != 0;
                 set => _length = (Length << 1) | (value ? 1 : 0);
             }
+
+#if DEBUGALLOC
+            public string SourceFile { get; internal set; }
+            public int LineNb { get; internal set; }
+#endif
 
             private int _length;
         }
