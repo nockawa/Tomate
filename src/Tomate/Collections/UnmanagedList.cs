@@ -154,9 +154,9 @@ public struct UnmanagedList<T> : IDisposable where T : unmanaged
         var newCapacity = _dataSegment.Length == 0 ? DefaultCapacity : 2 * _dataSegment.Length;
 
         // Check if the new capacity exceed the size of the block we can allocate
-        if ((newCapacity * sizeof(T)) > _memoryManager.PinnedMemoryBlockSize)
+        if ((newCapacity * sizeof(T)) > _memoryManager.MaxAllocationLength)
         {
-            newCapacity = _memoryManager.PinnedMemoryBlockSize / sizeof(T);
+            newCapacity = _memoryManager.MaxAllocationLength / sizeof(T);
 
             if (newCapacity < capacity)
             {

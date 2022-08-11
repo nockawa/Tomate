@@ -7,6 +7,7 @@ using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
 using Tomate;
+using Tomate.Tests;
 
 namespace Benchmarks;
 
@@ -23,6 +24,10 @@ public class Program
     public static unsafe void Main(string[] args)
     {
         Console.WriteLine("Let's start");
+
+        var t = new DefaultMemoryManagerTests();
+        t.StressTest(0.5f, 32, null);
+
         //MemMgrTest.LinearAllocation_then_intertwineReallocation(0.5f);
         //var b = new BitBenchark();
 
@@ -33,14 +38,14 @@ public class Program
         //    b.GlobalCleanup();
         //}
 
-        var mm = new DefaultMemoryManager();
-        var rand = new Random(123);
+        //var mm = new DefaultMemoryManager();
+        //var rand = new Random(123);
 
-        for (int i = 0; i < 2_000_000; i++)
-        {
-            var size = rand.Next(8, 24);
-            mm.Allocate(size);
-        }
+        //for (int i = 0; i < 2_000_000; i++)
+        //{
+        //    var size = rand.Next(8, 24);
+        //    mm.Allocate(size);
+        //}
 
         // var mm = new MemoryManager(1024 * 1024 * 64);
         // var ms = mm.Allocate(1024);

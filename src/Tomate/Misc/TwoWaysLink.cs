@@ -239,6 +239,78 @@ public struct TwoWaysLinkedList<T> where T : unmanaged
         return n.Next;
     }
 
+    public bool CheckIntegrity()
+    {
+        var hashForward = new HashSet<T>(Count);
+        
+        // Forward link integrity test
+        var cur = _first;
+        var first = cur;
+        var last = cur;
+        while (IsDefault(cur) == false)
+        {
+            last = cur;
+            if (hashForward.Add(cur) == false)
+            {
+                return false;
+            }
+            ref var header = ref _accessor(cur);
+            cur = header.Next;
+        }
+
+        // Check last item is the first's previous
+        ref var firstHeader = ref _accessor(first);
+        if (_comparer.Equals(firstHeader.Previous, last) == false)
+        {
+            return false;
+        }
+
+        // Backward link integrity test
+        var hashBackward = new HashSet<T>(Count);
+        cur = firstHeader.Previous;
+        last = cur;
+        first = cur;
+        while (IsDefault(cur) == false)
+        {
+            first = cur;
+            if (hashBackward.Add(cur) == false)
+            {
+                return false;
+            }
+
+            if (_comparer.Equals(_first, cur))
+            {
+                cur = default;
+            }
+            else
+            {
+                ref var header = ref _accessor(cur);
+                cur = header.Previous;
+            }
+        }
+
+        // Check first
+        if (_comparer.Equals(_first, first) == false)
+        {
+            return false;
+        }
+
+        if (hashForward.Count != hashBackward.Count)
+        {
+            return false;
+        }
+
+        foreach (var e in hashForward)
+        {
+            if (hashBackward.Contains(e) == false)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private bool IsDefault(T leftId)
     {
         return _comparer.Equals(leftId, default(T));

@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using NUnit.Framework;
+using Tomate;
 
 namespace Tomate.Tests;
 
@@ -154,7 +155,7 @@ public class DefaultMemoryManagerTests
     [TestCase(5.0f)]
     public unsafe void LinearAllocation(float commitSizeAmplification)
     {
-        var mm = new DefaultMemoryManager();
+        using var mm = new DefaultMemoryManager();
         var bs = mm.GetThreadBlockSequence();
         var headerSize = sizeof(DefaultMemoryManager.SmallBlock.SegmentHeader);
         var allocSize = (16 + headerSize).Pad16() - headerSize;
@@ -202,7 +203,7 @@ public class DefaultMemoryManagerTests
     [TestCase(5.0f)]
     public unsafe void LinearAllocation_then_intertwineReallocation(float commitSizeAmplification)
     {
-        var mm = new DefaultMemoryManager();
+        using var mm = new DefaultMemoryManager();
         var bs = mm.GetThreadBlockSequence();
 
         var headerSize = sizeof(DefaultMemoryManager.SmallBlock.SegmentHeader);
@@ -215,6 +216,7 @@ public class DefaultMemoryManagerTests
         while (seqSize > 0)
         {
             var s0 = mm.Allocate(allocSize);
+            Assert.That(((long)s0.Address & 0xF) == 0, Is.True);
             FillSegment(s0, 1);
 
             if ((curAllocSegCount & 1) == 1)
@@ -255,7 +257,7 @@ public class DefaultMemoryManagerTests
     [Test]
     public unsafe void DefragmentFreeSegmentTest()
     {
-        var mm = new DefaultMemoryManager();
+        using var mm = new DefaultMemoryManager();
         var bs = mm.GetThreadBlockSequence();
 
         var headerSize = sizeof(DefaultMemoryManager.SmallBlock.SegmentHeader);
@@ -295,7 +297,7 @@ public class DefaultMemoryManagerTests
     [Test]
     public unsafe void FastAllocations()
     {
-        var mm = new DefaultMemoryManager();
+        using var mm = new DefaultMemoryManager();
         var rand = new Random(123);
 
         var count = 10_000_000;
@@ -328,23 +330,29 @@ public class DefaultMemoryManagerTests
     }
 
     [Test]
-    [TestCase(0.5f, 32)]
-    [TestCase(1.0f, 32)]
-    [TestCase(2.0f, 32)]
-    [TestCase(5.0f, 16)]
-    public void StressTest(float amp, int maxSegmentSize)
+    [TestCase(0.5f, 32, null)]
+    [TestCase(1.0f, 32, null)]
+    [TestCase(2.0f, 32, null)]
+    [TestCase(5.0f, 16, null)]
+
+    [TestCase(0.5f, 1024, 1024 * 1024)]
+
+    public void StressTest(float amp, int maxSegmentSize, int? opPerThread)
     {
-        var cpuCount = (int)(Environment.ProcessorCount * amp);
-        var opPerThread = 1024 * 1024 * 16;
+        var cpuCount = (Environment.ProcessorCount * amp);
+        opPerThread ??= 1024 * 1024 * 8;
+        var allocTableSize = 1024 * 2;
+        var bulkFreeCount = allocTableSize / 16;
+
         using var mm = new DefaultMemoryManager();
 
         var taskList = new List<Task>();
-        for (int i = 0; i < cpuCount; i++)
+        for (var i = 0; i < cpuCount; i++)
         {
             var id = i;
             var t = Task.Run(() =>
             {
-                var allocTable = new MemorySegment[1024];
+                var allocTable = new MemorySegment[allocTableSize];
                 var allocCount = 0;
 
                 var sw = new Stopwatch();
@@ -354,30 +362,42 @@ public class DefaultMemoryManagerTests
                 var rand = new Random(123 + id * 214);
                 var max = opPerThread;
 
-                long totalAllocated = 0;
-                long totalFree = 0;
+                var totalAllocated = 0L;
+                var totalFree = 0L;
                 var purgeCount = 0;
+                var totalAllocTicks = 0L;
+                var totalFreeTicks = 0L;
+                var totalAllocCount = 0;
+                var totalFreeCount = 0;
 
-                for (int j = 0; j < max; j++)
+                for (var j = 0; j < max; j++)
                 {
                     // Allocation
-                    if (rand.Next(0, 16) < 8)
+                    if (rand.Next(0, 16) < 10)
                     {
                         var size = rand.Next(8, maxSegmentSize);
-                        var seg = mm.Allocate(size);
 
-                        if (allocCount == 1024)
+                        var b = Stopwatch.GetTimestamp();
+                        var seg = mm.Allocate(size);
+                        totalAllocTicks += Stopwatch.GetTimestamp() - b;
+                        ++totalAllocCount; 
+
+                        if (allocCount == allocTableSize)
                         {
                             // Free 16 block to make some room
-                            for (int k = 1008; k < 1024; k++)
+                            allocCount = allocTableSize - bulkFreeCount;
+                            for (var k = allocCount; k < allocTableSize; k++)
                             {
                                 ref var s = ref allocTable[k];
+                                var b1 = Stopwatch.GetTimestamp();
                                 mm.Free(s);
+                                totalFreeTicks += Stopwatch.GetTimestamp() - b1;
+                                ++totalFreeCount;
+
                                 totalFree += s.Length;
                             }
 
                             ++purgeCount;
-                            allocCount = 1008;
                         }
 
                         allocTable[allocCount++] = seg;
@@ -393,14 +413,20 @@ public class DefaultMemoryManagerTests
                             if (index == allocCount - 1)
                             {
                                 ref var s = ref allocTable[index];
+                                var b1 = Stopwatch.GetTimestamp();
                                 mm.Free(s);
+                                totalFreeTicks += Stopwatch.GetTimestamp() - b1;
+                                ++totalFreeCount;
                                 --allocCount;
                                 totalFree += s.Length;
                             }
                             else
                             {
                                 ref var s = ref allocTable[index];
+                                var b1 = Stopwatch.GetTimestamp();
                                 mm.Free(s);
+                                totalFreeTicks += Stopwatch.GetTimestamp() - b1;
+                                ++totalFreeCount;
                                 allocTable[index] = allocTable[--allocCount];
                                 totalFree += s.Length;
                             }
@@ -412,12 +438,108 @@ public class DefaultMemoryManagerTests
                 sw.Stop();
                 var di = bs.DebugInfo;
                 Assert.That(di.IsCoherent, Is.True);
-                Console.WriteLine($"Total Allocated {totalAllocated.FriendlySize()}, Total Free: {totalFree.FriendlySize()}, Purge count: {purgeCount} in {opPerThread.FriendlySize()} ops, in {sw.Elapsed.TotalSeconds.FriendlyTime(false)}");
+                Console.WriteLine($"Total Blocks: {di.TotalBlockCount}, Total Allocated {totalAllocated.FriendlySize()}, Total Free: {totalFree.FriendlySize()}, Scan Free List Count: {di.ScanFreeListCount.FriendlySize()}, Defrag count: {di.FreeSegmentDefragCount.FriendlySize()} in {opPerThread.Value.FriendlySize()} ops, in {sw.Elapsed.TotalSeconds.FriendlyTime(false)}");
+                var freeTicks = Math.Max(1, (long)(totalFreeTicks / (double)totalFreeCount));
+                Console.WriteLine($"Average Alloc Time {TimeSpan.FromTicks(totalAllocTicks / totalAllocCount).TotalSeconds.FriendlyTime(true)}, Average Free Time {TimeSpan.FromTicks(freeTicks).TotalSeconds.FriendlyTime(true)}, ");
             });
 
             taskList.Add(t);
         }
 
         Task.WaitAll(taskList.ToArray());
+    }
+
+    [Test]
+    [TestCase(0.5f)]
+    [TestCase(1.0f)]
+    [TestCase(2.0f)]
+    [TestCase(5.0f)]
+    public unsafe void LinearBigAllocation(float commitSizeAmplification)
+    {
+        using var mm = new DefaultMemoryManager();
+        var bs = mm.GetThreadBlockSequence();
+        var headerSize = sizeof(DefaultMemoryManager.LargeBlock.SegmentHeader);
+        var allocSize = 65536 - headerSize;
+        var seqSize = (int)(DefaultMemoryManager.LargeBlockMinSize * 16 * commitSizeAmplification);
+
+        var segs = new List<(MemorySegment, byte)>();
+        byte curIndex = 1;
+        var curTotalAllocated = 0;
+        var curAllocSegCount = 0;
+        while (seqSize > 0)
+        {
+            var s0 = mm.Allocate(allocSize);
+            FillSegment(s0, curIndex);
+            segs.Add((s0, curIndex));
+
+            curTotalAllocated += allocSize;
+            ++curAllocSegCount;
+
+            var di = bs.DebugInfo;
+            Assert.That(di.IsCoherent, Is.True, $"Seg Count: {curAllocSegCount}, Remaining Alloc Size: {seqSize}");
+            Assert.That(di.TotalAllocatedMemory, Is.EqualTo(curTotalAllocated));
+            Assert.That(di.AllocatedSegmentCount, Is.EqualTo(curAllocSegCount));
+
+            seqSize -= allocSize + headerSize;
+            ++curIndex;
+        }
+
+        foreach (var tuple in segs)
+        {
+            var ms = tuple.Item1.Cast<byte>();
+            var v = tuple.Item2;
+            Assert.That(_masks[v].Check(ms), Is.True);
+        }
+
+        Console.WriteLine($"Allocated {curAllocSegCount} segments, total size {curTotalAllocated.FriendlySize()}, Native Blocks Count: {mm.NativeBlockCount} Total Size: {mm.NativeBlockTotalSize.FriendlySize()}");
+    }
+
+    [Test]
+    public void BlockRecycleTest()
+    {
+        using var mm = new DefaultMemoryManager();
+        var bs = mm.GetThreadBlockSequence();
+
+        var size = DefaultMemoryManager.SmallBlock.SegmentHeader.MaxSegmentSize;
+
+        // Small Block test
+
+        {
+            var seg = mm.Allocate(size);
+            var di = bs.DebugInfo;
+            var curBlockCount = di.TotalBlockCount;
+            var count = 0;
+            while (di.TotalBlockCount == curBlockCount)
+            {
+                seg = mm.Allocate(size);
+                di = bs.DebugInfo;
+                count++;
+            }
+
+            mm.Free(seg);
+
+            di = bs.DebugInfo;
+            Assert.That(di.TotalBlockCount, Is.EqualTo(curBlockCount));
+            
+        }
+
+        // Large Block test
+        {
+            var seg = mm.Allocate(size * 2);
+            var di = bs.DebugInfo;
+            var count = 0;
+            var curBlockCount = di.TotalBlockCount;
+            while (di.TotalBlockCount == curBlockCount)
+            {
+                seg = mm.Allocate(size * 2);
+                di = bs.DebugInfo;
+                count++;
+            }
+
+            mm.Free(seg);
+
+            di = bs.DebugInfo;
+            Assert.That(di.TotalBlockCount, Is.EqualTo(curBlockCount));
+        }
     }
 }

@@ -43,7 +43,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     /// Will be incremented every time a new memory segment is allocated
     /// </summary>
     public int MemorySegmentAllocationEpoch { get; private set; }
-    public int PinnedMemoryBlockSize { get; }
+    public int MaxAllocationLength { get; }
 
 #if DEBUGALLOC
     private string _sourceFile;
@@ -65,7 +65,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
 #endif
     )
     {
-        PinnedMemoryBlockSize = pinnedMemoryBlockSize;
+        MaxAllocationLength = pinnedMemoryBlockSize;
         _pinnedMemoryBlocks = new List<PinnedMemoryBlock>(16);
 #if DEBUGALLOC
         _sourceFile = sourceFile;
@@ -186,7 +186,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
             }
         }
 
-        var memorySegment = new PinnedMemoryBlock(PinnedMemoryBlockSize);
+        var memorySegment = new PinnedMemoryBlock(MaxAllocationLength);
         if (memorySegment.BiggestFreeSegment < size)
         {
             ThrowHelper.OutOfMemory($"The requested size ({size}) is too big to be allocated into a single block.");

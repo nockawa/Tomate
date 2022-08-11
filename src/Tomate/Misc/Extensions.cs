@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Tomate;
@@ -256,8 +257,27 @@ public static class MathExtensions
     public static bool IsPowerOf2(this int x) => (x & (x - 1)) == 0;
     public static bool IsPowerOf2(this long x) => (x & (x - 1)) == 0;
 
+    /// <summary>
+    /// Return the next power of 2 of the given value
+    /// </summary>
+    /// <param name="v">The value</param>
+    /// <returns>The next power of 2</returns>
+    /// <remarks>
+    /// If the given value is already a power of 2, this method will return the next one.
+    /// </remarks>
+    public static int NextPowerOf2(this int v)
+    {
+        v |= v >> 1;         v |= v >> 2;
+        v |= v >> 4;         v |= v >> 8;
+        v |= v >> 16;
+        v++;
+        return v;
+    }
+
     public static double TotalSeconds(this int ticks) => TimeSpan.FromTicks(ticks).TotalSeconds;
     public static double TotalSeconds(this long ticks) => TimeSpan.FromTicks(ticks).TotalSeconds;
+
+    private static readonly CultureInfo DefaultCulture = new("en-us");
 
     public static string FriendlyTime(this double elapsed, bool displayRate = true)
     {
@@ -288,11 +308,11 @@ public static class MathExtensions
 
                 f /= 1000;
             }
-            return $"{e:0.###}{scalesE[iE]} ({f:0.###}{scalesF[iF]}/sec)";
+            return string.Create(DefaultCulture, $"{e:0.###}{scalesE[iE]} ({f:0.###}{scalesF[iF]}/sec)");
         }
         else
         {
-            return $"{e:0.###}{scalesE[iE]}";
+            return string.Create(DefaultCulture, $"{e:0.###}{scalesE[iE]}");
         }
     }
     public static string FriendlySize(this long val)
@@ -309,7 +329,7 @@ public static class MathExtensions
 
             f /= 1024;
         }
-        return $"{f:0.###}{scalesF[iF]}";
+        return string.Create(DefaultCulture, $"{f:0.###}{scalesF[iF]}");
     }
 
     public static string FriendlySize(this int val)
@@ -326,7 +346,7 @@ public static class MathExtensions
 
             f /= 1024;
         }
-        return $"{f:0.###}{scalesF[iF]}";
+        return string.Create(DefaultCulture, $"{f:0.###}{scalesF[iF]}");
     }
 
     public static string FriendlySize(this double val)
@@ -343,16 +363,16 @@ public static class MathExtensions
 
             f /= 1024;
         }
-        return $"{f:0.###}{scalesF[iF]}";
+        return string.Create(DefaultCulture, $"{f:0.###}{scalesF[iF]}");
     }
 
     public static string Bandwidth(int size, double elapsed)
     {
-        return $"{(size / elapsed).FriendlySize()}/sec";
+        return string.Create(DefaultCulture, $"{(size / elapsed).FriendlySize()}/sec");
     }
 
     public static string Bandwidth(long size, double elapsed)
     {
-        return $"{(size / elapsed).FriendlySize()}/sec";
+        return string.Create(DefaultCulture, $"{(size / elapsed).FriendlySize()}/sec");
     }
 }

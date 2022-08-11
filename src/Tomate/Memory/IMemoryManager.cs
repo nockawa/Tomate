@@ -9,7 +9,7 @@ public interface IMemoryManager
     /// </summary>
     bool IsDisposed { get; }
 
-    int PinnedMemoryBlockSize { get; }
+    int MaxAllocationLength { get; }
 
     /// <summary>
     /// Allocate a Memory Segment
