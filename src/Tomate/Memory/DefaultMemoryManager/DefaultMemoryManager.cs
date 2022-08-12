@@ -181,13 +181,21 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         });
     }
 
+#if DEBUGALLOC
+    public MemorySegment Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
+#else
     public MemorySegment Allocate(int size)
+#endif
     {
         var blockSequence = _assignedBlockSequence.Value;
         return blockSequence!.Allocate(size);
     }
 
+#if DEBUGALLOC
+    public unsafe MemorySegment<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
+#else
     public unsafe MemorySegment<T> Allocate<T>(int size) where T : unmanaged
+#endif
     {
         return Allocate(size * sizeof(T)).Cast<T>();
     }
