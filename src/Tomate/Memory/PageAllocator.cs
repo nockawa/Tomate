@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Tomate;
 
@@ -17,8 +19,8 @@ public unsafe class PageAllocator : IDisposable, IPageAllocator
     {
         PageSize = pageSize;
         PageCount = pageCount;
-        _dataSegment = MemorySegment<byte>.AllocateHeapPinnedArray(pageSize * pageCount);
-        _bitmapSegment = MemorySegment<byte>.AllocateHeapPinnedArray(ConcurrentBitmapL4.ComputeRequiredSize(pageCount));
+        _dataSegment = AllocateHeapPinnedArray(pageSize * pageCount);
+        _bitmapSegment = AllocateHeapPinnedArray(ConcurrentBitmapL4.ComputeRequiredSize(pageCount));
         _occupancyMap = ConcurrentBitmapL4.Create(pageCount, _bitmapSegment);
     }
 
@@ -37,8 +39,8 @@ public unsafe class PageAllocator : IDisposable, IPageAllocator
             return;
         }
 
-        MemorySegment<byte>.FreeHeapPinnedArray(_bitmapSegment);
-        MemorySegment<byte>.FreeHeapPinnedArray(_dataSegment);
+        FreeHeapPinnedArray(_bitmapSegment);
+        FreeHeapPinnedArray(_dataSegment);
 
         IsDisposed = true;
     }
@@ -87,4 +89,19 @@ public unsafe class PageAllocator : IDisposable, IPageAllocator
     {
         throw new NotImplementedException();
     }
+
+    private static MemorySegment<byte> AllocateHeapPinnedArray(int length)
+    {
+        var a = GC.AllocateUninitializedArray<byte>(length, true);
+        var addr = Marshal.UnsafeAddrOfPinnedArrayElement(a, 0).ToPointer();
+
+        // We need to keep a reference on the array, otherwise it will be GCed and the address we have will corrupt things
+        _allocatedArrays.TryAdd(new IntPtr(addr), a);
+
+        return new(addr, length);
+    }
+
+    public static bool FreeHeapPinnedArray(MemorySegment<byte> segment) => _allocatedArrays.TryRemove(new IntPtr(segment.Address), out _);
+
+    private static readonly ConcurrentDictionary<IntPtr, byte[]> _allocatedArrays  = new();
 }

@@ -1,9 +1,23 @@
-﻿using System.Diagnostics;
+﻿using Serilog;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using static Tomate.MemoryManager;
+using System.Text;
+using System.Runtime.Intrinsics;
 
 namespace Tomate;
+
+public class BlockOverrunException : Exception
+{
+    public MemoryBlock Block { get; }
+
+    public BlockOverrunException(MemoryBlock block, string msg) : base(msg)
+    {
+        Block = block;
+    }
+}
 
 /// <summary>
 /// General purpose Memory Manager
@@ -22,36 +36,36 @@ namespace Tomate;
 ///
 /// The MemoryManager has several sub-types :
 ///  - <seealso cref="NativeBlockInfo"/> which is responsible of making OS level allocation, a given Native Block will then serve memory allocation
-///    requests for many <seealso cref="SmallBlock"/> and or <seealso cref="LargeBlock"/> instances.
-///  - <seealso cref="BlockSequence"/>, there are many instances of this type, the number is determined during the manager construction and depending
+///    requests for many <seealso cref="SmallBlockAllocator"/> and or <seealso cref="LargeBlockAllocator"/> instances.
+///  - <seealso cref="BlockAllocatorSequence"/>, there are many instances of this type, the number is determined during the manager construction and depending
 ///    on the CPU core number. Then each Thread is assigned a given instance (we assign them in round-robin fashion). The Block Sequence contains two chained
-///    lists, one for <seealso cref="SmallBlock"/> and the other for <seealso cref="LargeBlock"/>.
-///  - <seealso cref="SmallBlock"/> is responsible of making small ( less than 32 KiB) <seealso cref="MemorySegment"/> allocations. It uses a slab of a
+///    lists, one for <seealso cref="SmallBlockAllocator"/> and the other for <seealso cref="LargeBlockAllocator"/>.
+///  - <seealso cref="SmallBlockAllocator"/> is responsible of making small ( >= 65526 bytes) <seealso cref="MemorySegment"/> allocations. It uses a slab of a
 ///    given <seealso cref="NativeBlockInfo"/> instance.
-///    Instances of <seealso cref="SmallBlock"/> are operating concurrently: two different threads using different instance won't compete for Allocation/Free.
-///  - <seealso cref="LargeBlock"/> take care of Allocations greater than 32 KiB and will hold a Native Memory block of at least 64 MiB or sized with the
+///    Instances of <seealso cref="SmallBlockAllocator"/> are operating concurrently: two different threads using different instance won't compete for Allocation/Free.
+///  - <seealso cref="LargeBlockAllocator"/> take care of Allocations greater than 65526 bytes and will hold a Native Memory block of at least 64 MiB or sized with the
 ///    next power of 2 of the allocation that triggered it.
 ///
 ///  Allocated <seealso cref="MemorySegment"/> are guaranteed to be 16 bytes address-aligned. <seealso cref="MemorySegment"/> that was allocated by
-///  <seealso cref="SmallBlock"/> have a 8 bytes header that precedes each instance, for <seealso cref="LargeBlock"/> the header is 14 bytes. These are the
+///  <seealso cref="SmallBlockAllocator"/> have a 14 bytes header that precedes each instance, for <seealso cref="LargeBlockAllocator"/> the header is 20 bytes. These are the
 ///  only overhead that is dependent of each Segment allocation.
 /// 
-///  <seealso cref="SmallBlock"/> and <seealso cref="LargeBlock"/> have defragmentation routines that are called when free segment fragmentation is too high
+///  <seealso cref="SmallBlockAllocator"/> and <seealso cref="LargeBlockAllocator"/> have defragmentation routines that are called when free segment fragmentation is too high
 ///  to merge adjacent free segments.
 ///
-///  <seealso cref="BlockSequence"/> will release empty Blocks (Small and Large), they will be added to a dedicated pool on the Memory Manager and reassigned
+///  <seealso cref="BlockAllocatorSequence"/> will release empty Blocks (Small and Large), they will be added to a dedicated pool on the Memory Manager and reassigned
 ///   when possible to other Block Sequence that are requested memory. Which means the allocated Native Memory is never released, but reused. If you want
 ///   to release is, the only way is to call <seealso cref="DefaultMemoryManager.Clear"/>.
 /// </para>
 /// </remarks>
 public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 {
-    public static int BlockInitialCount { get; }
-    public static int BlockGrowCount = 64;
+    public static readonly int BlockInitialCount = Environment.ProcessorCount * 4;
+    public static readonly int BlockGrowCount = 64;
     public static readonly int SmallBlockSize = 1024 * 1024;
     public static readonly int LargeBlockMinSize = 4 * 1024 * 1024;
     public static readonly int LargeBlockMaxSize = 256 * 1024 * 1024;
-    public static readonly int MemorySegmentMaxSizeForSmallBlock = SmallBlock.SegmentHeader.MaxSegmentSize;
+    public static readonly int MemorySegmentMaxSizeForSmallBlock = SmallBlockAllocator.SegmentHeader.MaxSegmentSize;
     public static readonly int MinSegmentSize = 16;
 
     /// <summary>
@@ -62,63 +76,136 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     /// The memory will be freed when the process will exit.
     /// If you need control over the lifetime, create and use your own instance.
     /// </remarks>
-    public static readonly DefaultMemoryManager GlobalInstance = new(true);
-
-    static DefaultMemoryManager()
-    {
-        BlockInitialCount = Environment.ProcessorCount * 4;
-    }
+    public static readonly DefaultMemoryManager GlobalInstance = new(false, true);
 
     private readonly List<NativeBlockInfo> _nativeBlockList;
     private ExclusiveAccessControl _nativeBlockListAccess;
     private NativeBlockInfo _curNativeBlockInfo;
 
-    private readonly BlockSequence[] _blockSequences;
+    private readonly BlockAllocatorSequence[] _blockAllocatorSequences;
     private int _blockSequenceCounter;
 
-    private readonly List<SmallBlock> _smallBlockList;
-    private readonly Stack<SmallBlock> _pooledSmallBlockList;
+    private readonly Stack<SmallBlockAllocator> _pooledSmallBlockList;
     private ExclusiveAccessControl _smallBlockListAccess;
 
-    private readonly List<LargeBlock> _largeBlockList;
-    private readonly List<LargeBlock> _pooledLargeBlockList;
-    private ExclusiveAccessControl _largeBlockListAccess;
+    private readonly List<LargeBlockAllocator> _pooledLargeBlockList;
+    private ExclusiveAccessControl _largeBlockAccess;
     private int _largeBlockMinSize;
 
     private readonly bool _isGlobal;
 
+#if DEBUGALLOC
+    private static readonly int BlockMargingSize = 1024;                    // MUST BE A MULTIPLE OF 32 BYTES !!!
+    private static readonly ulong MargingFillPattern = 0xfdfdfdfdfdfdfdfd;
+    private readonly string _sourceFile;
+    private readonly int _lineNb;
+    private readonly bool _blockOverrunDetection;
+    private readonly Vector256<byte> _blockCheckPattern;
+#endif
+
+#if DEBUGALLOC
+    [DebuggerDisplay("Size: {Size}, Source File: {SourceFile}, Line # {LineNb}")]
+#else
+    [DebuggerDisplay("Size: {Size}")]
+#endif
+    internal readonly struct MemoryBlockInfo
+    {
+#if DEBUGALLOC
+        public MemoryBlockInfo(int s, string sourceFileName, int sourceLinNb)
+        {
+            Size = s;
+            SourceFile = sourceFileName;
+            LineNb = sourceLinNb;
+        }
+#else
+        public MemoryBlockInfo(int s)
+        {
+            Size = s;
+        }
+#endif
+        public readonly int Size;
+#if DEBUGALLOC
+        public readonly string SourceFile;
+        public readonly int LineNb;
+#endif
+    }
+
+    /// <summary>
+    /// Debugging feature to initialize the MemoryBlock's content upon allocation (available in DEBUGALlOC only)
+    /// </summary>
+    public enum DebugMemoryInit
+    {
+        /// Default behavior: the memory is not touched upon allocation
+        None,
+        /// Memory is cleared
+        Zero,
+        /// Memory is set to 0xde pattern
+        Pattern
+    }
+
+    /// <summary>
+    /// This property only works in DEBUGALLOC mode, it is primarily used to initialize the content of newly allocated block,
+    ///  for debugging/troubleshooting purposes.
+    /// </summary>
+    public DebugMemoryInit MemoryBlockContentInitialization
+    {
+#if DEBUGALLOC
+        get;
+        set;
+#else
+        get => DebugMemoryInit.None;
+        // ReSharper disable once ValueParameterNotUsed
+        set {}
+#endif
+    }
+
+    
     // Note: seems like ThreadLocal doesn't release data allocated for a given thread when this one is destroyed.
     // Which means if the program create/destroy thousand of threads, this won't be good for us...
-    private ThreadLocal<BlockSequence> _assignedBlockSequence;
+    private ThreadLocal<BlockAllocatorSequence> _assignedBlockSequence;
 
-    public DefaultMemoryManager() : this(false)
+#if DEBUGALLOC
+    public DefaultMemoryManager(bool enableBlockOverrunDetection = false) : this(enableBlockOverrunDetection, false)
+#else
+    public DefaultMemoryManager() : this(false, false)
+#endif
     {
     }
 
-    private DefaultMemoryManager(bool isGlobal)
+    private DefaultMemoryManager(bool enableBlockOverrunDetection, bool isGlobal
+#if DEBUGALLOC
+        , [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0
+#endif
+    )
     {
+#if DEBUGALLOC
+        _sourceFile = sourceFile;
+        _lineNb = lineNb;
+        _blockOverrunDetection = enableBlockOverrunDetection;
+        _blockCheckPattern = Vector256.Create((byte)MargingFillPattern);
+
+        MemoryBlockContentInitialization = DebugMemoryInit.None;
+#endif
         _isGlobal = isGlobal;
         _nativeBlockList = new List<NativeBlockInfo>(16);
         _curNativeBlockInfo = new NativeBlockInfo(SmallBlockSize, BlockInitialCount);
         _nativeBlockList.Add(_curNativeBlockInfo);
 
-        _blockSequences = new BlockSequence[BlockInitialCount];
-        _smallBlockList = new List<SmallBlock>(BlockInitialCount + BlockGrowCount);
-        _pooledSmallBlockList = new Stack<SmallBlock>(32);
-        _largeBlockList = new List<LargeBlock>(BlockInitialCount + BlockGrowCount);
-        _pooledLargeBlockList = new List<LargeBlock>(32);
+        _blockAllocatorSequences = new BlockAllocatorSequence[BlockInitialCount];
+        _pooledSmallBlockList = new Stack<SmallBlockAllocator>(32);
+        _pooledLargeBlockList = new List<LargeBlockAllocator>(32);
         _largeBlockMinSize = LargeBlockMinSize;
 
-        for (var i = 0; i < _blockSequences.Length; i++)
+        for (var i = 0; i < _blockAllocatorSequences.Length; i++)
         {
-            _blockSequences[i] = new BlockSequence(this);
+            _blockAllocatorSequences[i] = new BlockAllocatorSequence(this);
         }
 
         _blockSequenceCounter = -1;
-        _assignedBlockSequence = new ThreadLocal<BlockSequence>(() =>
+        _assignedBlockSequence = new ThreadLocal<BlockAllocatorSequence>(() =>
         {
             var v = Interlocked.Increment(ref _blockSequenceCounter);
-            return _blockSequences[v % _blockSequences.Length];
+            return _blockAllocatorSequences[v % _blockAllocatorSequences.Length];
         });
     }
 
@@ -134,18 +221,35 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
             throw new InvalidOperationException("Can't dispose the Global instance of the memory manager. Use your own if you need control on its lifetime.");
         }
 
+#if DEBUGALLOC
+        DumpLeaks();
+#endif
         foreach (var nbi in _nativeBlockList)
         {
             nbi.Dispose();
         }
 
+        foreach (var bs in _blockAllocatorSequences)
+        {
+            bs.Dispose();
+        }
+
+        foreach (var ba in _pooledSmallBlockList)
+        {
+            BlockReferential.ReleaseAllocator(ba.BlockIndex);
+        }
+
+        foreach (var ba in _pooledLargeBlockList)
+        {
+            BlockReferential.ReleaseAllocator(ba.BlockIndex);
+        }
+
         _nativeBlockList.Clear();
-        _smallBlockList.Clear();
         _assignedBlockSequence.Dispose();
     }
 
     public bool IsDisposed => _nativeBlockList.Count == 0;
-    public int MaxAllocationLength => LargeBlock.SegmentHeader.MaxSegmentSize;
+    public int MaxAllocationLength => LargeBlockAllocator.SegmentHeader.MaxSegmentSize;
 
     public void Clear()
     {
@@ -158,75 +262,183 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         {
             nbi.Dispose();
         }
+        foreach (var bs in _blockAllocatorSequences)
+        {
+            bs.Dispose();
+        }
+
+        foreach (var ba in _pooledSmallBlockList)
+        {
+            BlockReferential.ReleaseAllocator(ba.BlockIndex);
+        }
+
+        foreach (var ba in _pooledLargeBlockList)
+        {
+            BlockReferential.ReleaseAllocator(ba.BlockIndex);
+        }
+
         _nativeBlockList.Clear();
         _curNativeBlockInfo = new NativeBlockInfo(SmallBlockSize, BlockInitialCount);
         _nativeBlockList.Add(_curNativeBlockInfo);
 
-        _smallBlockList.Clear();
         _pooledSmallBlockList.Clear();
-        _largeBlockList.Clear();
         _pooledLargeBlockList.Clear();
         _largeBlockMinSize = LargeBlockMinSize;
 
-        for (var i = 0; i < _blockSequences.Length; i++)
+        for (var i = 0; i < _blockAllocatorSequences.Length; i++)
         {
-            _blockSequences[i] = new BlockSequence(this);
+            _blockAllocatorSequences[i] = new BlockAllocatorSequence(this);
         }
 
         _blockSequenceCounter = -1;
-        _assignedBlockSequence = new ThreadLocal<BlockSequence>(() =>
+        _assignedBlockSequence = new ThreadLocal<BlockAllocatorSequence>(() =>
         {
             var v = Interlocked.Increment(ref _blockSequenceCounter);
-            return _blockSequences[v % _blockSequences.Length];
+            return _blockAllocatorSequences[v % _blockAllocatorSequences.Length];
         });
     }
 
 #if DEBUGALLOC
-    public MemorySegment Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
+    private void DumpLeaks()
+    {
+        var sb = new StringBuilder(4096);
+        var totalLeaks = 0;
+
+        foreach (var bsa in _blockAllocatorSequences)
+        {
+            bsa.DumpLeaks(sb, ref totalLeaks);
+        }
+
+        if (totalLeaks > 0)
+        {
+            Log.Verbose($"Memory Manager allocated in {_sourceFile}:line {_lineNb} has {totalLeaks} leaked segments\r\n" + sb);
+        }
+    }
+#endif
+
+
+#if DEBUGALLOC
+    public unsafe MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
 #else
-    public MemorySegment Allocate(int size)
+    public MemoryBlock Allocate(int size)
 #endif
     {
         var blockSequence = _assignedBlockSequence.Value;
-        return blockSequence!.Allocate(size);
+
+#if DEBUGALLOC
+        if (_blockOverrunDetection)
+        {
+            size += BlockMargingSize * 2;
+        }
+        var sai = new MemoryBlockInfo(size, sourceFile, lineNb);
+#else
+        var sai = new MemoryBlockInfo(size);
+#endif
+        var res = blockSequence!.Allocate(ref sai);
+
+#if DEBUGALLOC
+        if (_blockOverrunDetection)
+        {
+            res.MemorySegment.Slice(0, BlockMargingSize).ToSpan<ulong>().Fill(MargingFillPattern);
+            res.MemorySegment.Slice(-BlockMargingSize, BlockMargingSize).ToSpan<ulong>().Fill(MargingFillPattern);
+
+            res = new MemoryBlock(res.MemorySegment.Address + BlockMargingSize, res.MemorySegment.Length - (BlockMargingSize * 2));
+        }
+
+        switch (MemoryBlockContentInitialization)
+        {
+            case DebugMemoryInit.Zero:
+                res.MemorySegment.ToSpan<byte>().Clear();
+                break;
+            case DebugMemoryInit.Pattern:
+                if ((size & 0x7) == 0)
+                {
+                    res.MemorySegment.ToSpan<ulong>().Fill(0xdededededededede);
+                }
+                if ((size & 0x3) == 0)
+                {
+                    res.MemorySegment.ToSpan<uint>().Fill(0xdededede);
+                }
+                else
+                {
+                    res.MemorySegment.ToSpan<byte>().Fill(0xde);
+                }
+                break;
+        }
+#endif
+
+        return res;
     }
 
 #if DEBUGALLOC
-    public unsafe MemorySegment<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
+    public unsafe MemoryBlock<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
 #else
-    public unsafe MemorySegment<T> Allocate<T>(int size) where T : unmanaged
+    public unsafe MemoryBlock<T> Allocate<T>(int size) where T : unmanaged
 #endif
     {
+#if DEBUGALLOC
+        // ReSharper disable ExplicitCallerInfoArgument
+        return Allocate(size * sizeof(T), sourceFile, lineNb).Cast<T>();
+        // ReSharper restore ExplicitCallerInfoArgument
+#else
         return Allocate(size * sizeof(T)).Cast<T>();
+#endif
     }
 
-    public unsafe bool Free(MemorySegment segment)
+#if DEBUGALLOC
+    private unsafe bool OverrunCheck(MemorySegment<byte> segment)
     {
-        // First check which type of block owns the segment we're freeing
-        ref var sbh = ref Unsafe.AsRef<SmallBlock.SegmentHeader>(segment.Address - sizeof(SmallBlock.SegmentHeader));
-
-        if (sbh.IsOwnedBySmallBlock)
+        var cur = segment.Address;
+        var end = cur + segment.Length;
+        while (cur < end)
         {
-            var smallBlock = _smallBlockList[sbh.SmallBlockId];
-            return smallBlock.Free(ref sbh);
+            var remaining = (int)(end - cur);
+            if (remaining >= 32)
+            {
+                var v = Vector256.Load(cur);
+                if (v != _blockCheckPattern)
+                {
+                    return false;
+                }
+                cur += 32;
+            }
         }
 
-        ref var lbh = ref Unsafe.AsRef<LargeBlock.SegmentHeader>(segment.Address - sizeof(LargeBlock.SegmentHeader));
-        var largeBlock = _largeBlockList[lbh.LargeBlockId];
-        return largeBlock.Free(ref lbh);
+        return true;
     }
+#endif
 
-    public bool Free<T>(MemorySegment<T> segment) where T : unmanaged
+public unsafe bool Free(MemoryBlock block)
     {
-        return Free((MemorySegment)segment);
+#if DEBUGALLOC
+        if (_blockOverrunDetection)
+        {
+            var realBlock = new MemoryBlock(block.MemorySegment.Address - BlockMargingSize, block.MemorySegment.Length + (2 * BlockMargingSize));
+
+            var debugSeg = realBlock.MemorySegment.Cast<byte>();
+            if (OverrunCheck(debugSeg.Slice(0, BlockMargingSize)) == false ||
+                OverrunCheck(debugSeg.Slice(-BlockMargingSize, BlockMargingSize)) == false)
+            {
+                throw new BlockOverrunException(block, "Block was corrupted by write overrun");
+            }
+
+            return BlockReferential.Free(realBlock);
+        }
+#endif
+        return BlockReferential.Free(block);
     }
 
-    internal void RecycleBlock(SmallBlock block)
+    public bool Free<T>(MemoryBlock<T> block) where T : unmanaged
+    {
+        return BlockReferential.Free(block);
+    }
+
+    internal void RecycleBlock(SmallBlockAllocator blockAllocator)
     {
         try
         {
             _smallBlockListAccess.TakeControl(null);
-            _pooledSmallBlockList.Push(block);
+            _pooledSmallBlockList.Push(blockAllocator);
         }
         finally
         {
@@ -234,16 +446,16 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         }
     }
 
-    internal void RecycleBlock(LargeBlock block)
+    internal void RecycleBlock(LargeBlockAllocator blockAllocator)
     {
         try
         {
-            _largeBlockListAccess.TakeControl(null);
-            _pooledLargeBlockList.Add(block);
+            _largeBlockAccess.TakeControl(null);
+            _pooledLargeBlockList.Add(blockAllocator);
         }
         finally
         {
-            _largeBlockListAccess.ReleaseControl();
+            _largeBlockAccess.ReleaseControl();
         }
     }
 
@@ -318,68 +530,65 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         }
     }
 
-    private SmallBlock AllocateSmallBlock(BlockSequence owner)
+    private SmallBlockAllocator AllocateSmallBlockAllocator(BlockAllocatorSequence owner)
     {
         try
         {
             _smallBlockListAccess.TakeControl(null);
-            var smallBlockIndex = _smallBlockList.Count;
-            SmallBlock smallBlock;
+            SmallBlockAllocator smallBlockAllocator;
             if (_pooledSmallBlockList.Count > 0)
             {
-                smallBlock = _pooledSmallBlockList.Pop();
-                smallBlock.Reassign(owner);
+                smallBlockAllocator = _pooledSmallBlockList.Pop();
+                smallBlockAllocator.Reassign(owner);
             }
             else
             {
-                smallBlock = new SmallBlock(owner, (ushort)smallBlockIndex);
+                smallBlockAllocator = new SmallBlockAllocator(owner);
             }
-            _smallBlockList.Add(smallBlock);
-            return smallBlock;
+            return smallBlockAllocator;
         }
         finally
         {
             _smallBlockListAccess.ReleaseControl();
         }
     }
-    private LargeBlock AllocateLargeBlock(BlockSequence owner, int minimumSize)
+    private LargeBlockAllocator AllocateLargeBlockAlloctor(BlockAllocatorSequence owner, int minimumSize)
     {
         try
         {
-            _largeBlockListAccess.TakeControl(null);
-            LargeBlock largeBlock = null;
+            _largeBlockAccess.TakeControl(null);
+            LargeBlockAllocator largeBlockAllocator = null;
             for (var i = 0; i < _pooledLargeBlockList.Count; i++)
             {
                 if (_pooledLargeBlockList[i].Data.Length >= minimumSize)
                 {
-                    largeBlock = _pooledLargeBlockList[i];
-                    largeBlock.Reassign(owner);
+                    largeBlockAllocator = _pooledLargeBlockList[i];
+                    largeBlockAllocator.Reassign(owner);
                     _pooledLargeBlockList.RemoveAt(i);
                     break;
                 }
             }
 
             // If we didn't find a suitable bloc, allocate a new one
-            if (largeBlock == null)
+            if (largeBlockAllocator == null)
             {
-                largeBlock = new LargeBlock(owner, (ushort)_largeBlockList.Count, minimumSize);
-                _largeBlockList.Add(largeBlock);
+                largeBlockAllocator = new LargeBlockAllocator(owner, minimumSize);
             }
-            return largeBlock;
+            return largeBlockAllocator;
         }
         finally
         {
-            _largeBlockListAccess.ReleaseControl();
+            _largeBlockAccess.ReleaseControl();
         }
     }
 
-    #region Debug Features
+#region Debug Features
 
-    internal BlockSequence GetThreadBlockSequence() => _assignedBlockSequence.Value;
+    internal BlockAllocatorSequence GetThreadBlockAllocatorSequence() => _assignedBlockSequence.Value;
 
-    internal unsafe ref SmallBlock.SegmentHeader GetSegmentHeader(void* segmentAddress)
+    internal unsafe ref SmallBlockAllocator.SegmentHeader GetSegmentHeader(void* segmentAddress)
     {
-        return ref Unsafe.AsRef<SmallBlock.SegmentHeader>((byte*)segmentAddress - sizeof(SmallBlock.SegmentHeader));
+        return ref Unsafe.AsRef<SmallBlockAllocator.SegmentHeader>((byte*)segmentAddress - sizeof(SmallBlockAllocator.SegmentHeader));
     }
 
     internal int NativeBlockCount => _nativeBlockList.Count;
@@ -406,5 +615,5 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         }
     }
 
-    #endregion
+#endregion
 }

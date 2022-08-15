@@ -1,4 +1,7 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Net;
+using System.Runtime.CompilerServices;
+using static Tomate.DefaultMemoryManager.SmallBlockAllocator.TwoWaysLinkedList;
+using static Tomate.MemoryManager;
 
 namespace Tomate;
 
@@ -12,54 +15,48 @@ public interface IMemoryManager
     int MaxAllocationLength { get; }
 
     /// <summary>
-    /// Allocate a Memory Segment
+    /// Allocate a Memory Block
     /// </summary>
-    /// <param name="size">Length of the segment to allocate.</param>
-    /// <returns>The segment or an exception will be fired if we couldn't allocate one.</returns>
+    /// <param name="size">Length of the block to allocate.</param>
+    /// <returns>The block or an exception will be fired if we couldn't allocate one.</returns>
     /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
     /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>
     /// <remarks>
-    /// The segment's address will always be aligned on 64 bytes, its size will also be padded on 64 bytes.
-    /// The segment's address is fixed, you can store it with the lifetime that suits you, it doesn't matter as the segment is part of a
-    /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{T}"/> with pinned set to true).
+    /// The block's address will always be aligned on at least 16 bytes.
+    /// The block's address is fixed.
     /// </remarks>
 #if DEBUGALLOC
-    MemorySegment Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0);
+     MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0);
 #else
-    MemorySegment Allocate(int size);
+    MemoryBlock Allocate(int size);
 #endif
 
     /// <summary>
-    /// Allocate a Memory Segment
+    /// Allocate a Memory Block
     /// </summary>
-    /// <typeparam name="T">The type of each item of the segment.</typeparam>
+    /// <typeparam name="T">The type of each item of the segment assigned to the block.</typeparam>
     /// <param name="size">Length (in {T}) of the segment to allocate.</param>
     /// <returns>The segment or an exception will be fired if we couldn't allocate one.</returns>
     /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
     /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>
     /// <remarks>
-    /// The segment's address will always be aligned on 64 bytes, its size will also be padded on 64 bytes.
-    /// The segment's address is fixed, you can store it with the lifetime that suits you, it doesn't matter as the segment is part of a
-    /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{U}"/> with pinned set to true).
+    /// The segment's address will always be aligned on 16 bytes, its size will also be padded on 16 bytes.
+    /// The segment's address is fixed.
     /// </remarks>
 #if DEBUGALLOC
-    MemorySegment<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged;
+    MemoryBlock<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged;
 #else
-    MemorySegment<T> Allocate<T>(int size) where T : unmanaged;
+    MemoryBlock<T> Allocate<T>(int size) where T : unmanaged;
 #endif
 
     /// <summary>
-    /// Free a previously allocated segment
+    /// Free a previously allocated block
     /// </summary>
-    /// <param name="segment">The memory segment to free</param>
-    /// <returns><c>true</c> if the segment was successfully released, <c>false</c> otherwise.</returns>
-    /// <exception cref="ObjectDisposedException">Can't free if the instance is disposed, all segments have been released anyway.</exception>
-    /// <remarks>
-    /// This method won't prevent you against multiple free attempts on the same segment. If no other segment has been allocated with the same address, then it will return <c>false</c>.
-    /// But if you allocated another segment which turns out to have the same address and call <see cref="Free"/> a second time, then it will free the second segment successfully.
-    /// </remarks>
-    bool Free(MemorySegment segment);
-    bool Free<T>(MemorySegment<T> segment) where T : unmanaged;
+    /// <param name="block">The memory block to free</param>
+    /// <returns><c>true</c> if the block was successfully released, <c>false</c> otherwise.</returns>
+    /// <exception cref="ObjectDisposedException">Can't free if the instance is disposed, all blocks have been released anyway.</exception>
+    bool Free(MemoryBlock block);
+    bool Free<T>(MemoryBlock<T> block) where T : unmanaged;
 
     /// <summary>
     /// Release all the allocated segments, free the memory allocated through .net.
@@ -76,4 +73,10 @@ public interface IPageAllocator
     bool FreePages(MemorySegment pages);
     unsafe int ToBlockId(MemorySegment segment);
     unsafe MemorySegment FromBlockId(int blockId);
+}
+
+public interface IBlockAllocator : IDisposable
+{
+    int BlockIndex { get; }
+    bool Free(MemoryBlock memoryBlock);
 }

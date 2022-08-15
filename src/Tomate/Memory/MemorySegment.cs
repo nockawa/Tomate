@@ -45,8 +45,15 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 
     public MemorySegment Slice(int start, int length)
     {
-        if ((start < 0) || (start + length) > Length)
+        if (start < 0)
+        {
+            start = Length + start;
+        }
+
+        if ((start + length) > Length)
+        {
             ThrowHelper.OutOfRange($"The given index ({start}) and length ({length}) are out of range. Segment length limit is {Length}, slice's end is {start + length}.");
+        }
 
         return new MemorySegment(Address + start, length);
     }
@@ -124,23 +131,6 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
 
     public static implicit operator MemorySegment(MemorySegment<T> source) => new((byte*)source.Address, sizeof(T)*source.Length);
 
-    public static MemorySegment<T> AllocateHeapPinnedArray(int length)
-    {
-        var a = GC.AllocateUninitializedArray<T>(length, true);
-        var addr = Marshal.UnsafeAddrOfPinnedArrayElement(a, 0).ToPointer();
-
-        // We need to keep a reference on the array, otherwise it will be GCed and the address we have will corrupt things
-        _allocatedArrays.TryAdd(new IntPtr(addr), a);
-        
-        return new(addr, length);
-    }
-
-    public static bool FreeHeapPinnedArray(MemorySegment<T> segment) => _allocatedArrays.TryRemove(new IntPtr(segment.Address), out _);
-
-    private static readonly ConcurrentDictionary<IntPtr, T[]> _allocatedArrays;
-    static MemorySegment() => _allocatedArrays = new();
-
-
     /// <summary>
     /// Construct an instance of a Memory Segment
     /// </summary>
@@ -208,8 +198,15 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public MemorySegment<T> Slice(int start, int length)
     {
-        if ((start < 0) || (start+length) > Length)
+        if (start < 0)
+        {
+            start = Length + start;
+        }
+
+        if ((start + length) > Length)
+        {
             ThrowHelper.OutOfRange($"The given index ({start}) and length ({length}) are out of range. Segment length limit is {Length}, slice's end is {start+length}.");
+        }
 
         return new(Address + start, length);
     }

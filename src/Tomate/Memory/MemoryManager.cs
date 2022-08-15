@@ -32,7 +32,7 @@ namespace Tomate;
 /// Segments are identified by their address, the PMB list and block lists are keep their entry sorted by address to allow binary search.
 /// </para>
 /// </remarks>
-public unsafe class MemoryManager : IDisposable, IMemoryManager
+public unsafe class MemoryManager : IMemoryManager, IDisposable
 {
     /// <summary>
     /// Will be incremented every time a new Pinned Memory Block is allocated
@@ -76,7 +76,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     ~MemoryManager()
     {
 #if DEBUGALLOC
-        DetectLeaks();
+        DumpLeaks();
 #endif
     }
 
@@ -91,7 +91,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     public void Dispose()
     {
 #if DEBUGALLOC
-        DetectLeaks();
+        DumpLeaks();
 #endif
         foreach (var segment in _pinnedMemoryBlocks!)
         {
@@ -103,7 +103,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     }
 
 #if DEBUGALLOC
-    private void DetectLeaks()
+    private void DumpLeaks()
     {
         var sb = new StringBuilder(4096);
         var totalLeaks = 0;
@@ -132,7 +132,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
 
         public void Dispose()
         {
-            _owner.Free(_segment);
+            _owner.Free(new(_segment));
         }
 
         public static implicit operator MemorySegment(ScopedMemorySegment source) => source._segment;
@@ -163,9 +163,9 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{T}"/> with pinned set to true).
     /// </remarks>
 #if DEBUGALLOC
-    public MemorySegment Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
+    public MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
 #else
-    public MemorySegment Allocate(int size)
+    public MemoryBlock Allocate(int size)
 #endif
     {
         if (_pinnedMemoryBlocks == null)
@@ -182,7 +182,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
                     out var res))
             {
                 ++AllocationPinnedMemoryBlockEpoch;
-                return new MemorySegment(res, size);
+                return new MemoryBlock(res, size);
             }
         }
 
@@ -217,12 +217,12 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{U}"/> with pinned set to true).
     /// </remarks>
 #if DEBUGALLOC
-    public MemorySegment<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
+    public MemoryBlock<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
     {
         return Allocate(sizeof(T) * size, sourceFile, lineNb).Cast<T>();
     }
 #else
-    public MemorySegment<T> Allocate<T>(int size) where T : unmanaged
+    public MemoryBlock<T> Allocate<T>(int size) where T : unmanaged
     {
         return Allocate(sizeof(T) * size).Cast<T>();
     }
@@ -238,13 +238,14 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
     /// This method won't prevent you against multiple free attempts on the same segment. If no other segment has been allocated with the same address, then it will return <c>false</c>.
     /// But if you allocated another segment which turns out to have the same address and call <see cref="Free"/> a second time, then it will free the second segment successfully.
     /// </remarks>
-    public bool Free(MemorySegment segment)
+    public bool Free(MemoryBlock block)
     {
         if (_pinnedMemoryBlocks == null)
         {
             ThrowHelper.ObjectDisposed(null, "Memory Manager is disposed, can't free a block");
         }
 
+        var segment = block.MemorySegment;
         var address = segment.Address;
         if (address == null) return false;
 
@@ -259,7 +260,7 @@ public unsafe class MemoryManager : IDisposable, IMemoryManager
         return false;
     }
 
-    public bool Free<T>(MemorySegment<T> segment) where T : unmanaged => Free(segment.Cast());
+    public bool Free<T>(MemoryBlock<T> segment) where T : unmanaged => Free(segment);
 
     /// <summary>
     /// Release all the allocated segments, free the memory allocated through .net.

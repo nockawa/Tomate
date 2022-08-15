@@ -1,8 +1,11 @@
-﻿namespace Tomate;
+﻿using System.Diagnostics;
+using System.Text;
+
+namespace Tomate;
 
 public partial class DefaultMemoryManager
 {
-    internal class BlockSequence
+    internal class BlockAllocatorSequence : IDisposable
     {
         internal struct DebugData
         {
@@ -21,25 +24,53 @@ public partial class DefaultMemoryManager
         }
 
         private ExclusiveAccessControl _control;
-        private SmallBlock _firstSmallBlock;
-        private LargeBlock _firstLargeBlock;
+        private SmallBlockAllocator _firstSmallBlockAllocator;
+        private LargeBlockAllocator _firstLargeBlockAllocator;
 
-        public DefaultMemoryManager Owner { get; }
+        public DefaultMemoryManager Owner { get; private set; }
         internal DebugData DebugInfo;
 
-        public BlockSequence(DefaultMemoryManager owner)
+        public BlockAllocatorSequence(DefaultMemoryManager owner)
         {
             Owner = owner;
             _control = new ExclusiveAccessControl();
-            _firstSmallBlock = owner.AllocateSmallBlock(this);
+            _firstSmallBlockAllocator = owner.AllocateSmallBlockAllocator(this);
             DebugInfo.TotalBlockCount = 1;
         }
 
-        public MemorySegment Allocate(int size)
+        public bool IsDisposed => Owner == null;
+
+        public void Dispose()
         {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            {
+                var block = _firstSmallBlockAllocator;
+                while (block != null)
+                {
+                    block.Dispose();
+                    block = block.NextBlockAllocator;
+                }
+            }
+            {
+                var block = _firstLargeBlockAllocator;
+                while (block != null)
+                {
+                    block.Dispose();
+                    block = block.NextBlockAllocator;
+                }
+            }
+        }
+
+        public MemoryBlock Allocate(ref MemoryBlockInfo info)
+        {
+            var size = info.Size;
             if (size > MemorySegmentMaxSizeForSmallBlock)
             {
-                var curBlock = _firstLargeBlock;
+                var curBlock = _firstLargeBlockAllocator;
                 while (true)
                 {
                     // No block, create one...but under a lock
@@ -53,10 +84,10 @@ public partial class DefaultMemoryManager
                             // Another thread may have beaten us, so check if it's the case or not
                             if (curBlock == null)
                             {
-                                var newBlock = Owner.AllocateLargeBlock(this, size);
-                                var next = _firstLargeBlock;
-                                _firstLargeBlock = newBlock;
-                                newBlock.NextBlock = next;
+                                var newBlock = Owner.AllocateLargeBlockAlloctor(this, size);
+                                var next = _firstLargeBlockAllocator;
+                                _firstLargeBlockAllocator = newBlock;
+                                newBlock.NextBlockAllocator = next;
 
                                 curBlock = newBlock;
 
@@ -69,20 +100,20 @@ public partial class DefaultMemoryManager
                         }
                     }
 
-                    if (curBlock.DoAllocate(size, ref DebugInfo, out var seg))
+                    if (curBlock.DoAllocate(ref info, ref DebugInfo, out var seg))
                     {
                         return seg;
                     }
 
-                    curBlock = curBlock.NextBlock;
+                    curBlock = curBlock.NextBlockAllocator;
                 }
             }
             else
             {
-                var curBlock = _firstSmallBlock;
+                var curBlock = _firstSmallBlockAllocator;
                 while (true)
                 {
-                    if (curBlock.DoAllocate(size, ref DebugInfo, out var seg))
+                    if (curBlock.DoAllocate(ref info, ref DebugInfo, out var seg))
                     {
                         return seg;
                     }
@@ -91,7 +122,7 @@ public partial class DefaultMemoryManager
                     //  this must be made under a lock. Let's use the double-check lock pattern to avoid locking every-time there's already a block next.
 
                     // No block, create one...but under a lock
-                    if (curBlock.NextBlock == null)
+                    if (curBlock.NextBlockAllocator == null)
                     {
                         try
                         {
@@ -99,12 +130,12 @@ public partial class DefaultMemoryManager
                             _control.TakeControl(null);
 
                             // Another thread may have beaten us, so check if it's the case or not
-                            if (curBlock.NextBlock == null)
+                            if (curBlock.NextBlockAllocator == null)
                             {
-                                var newBlock = Owner.AllocateSmallBlock(this);
-                                var next = _firstSmallBlock;
-                                _firstSmallBlock = newBlock;
-                                newBlock.NextBlock = next;
+                                var newBlock = Owner.AllocateSmallBlockAllocator(this);
+                                var next = _firstSmallBlockAllocator;
+                                _firstSmallBlockAllocator = newBlock;
+                                newBlock.NextBlockAllocator = next;
 
                                 curBlock = newBlock;
 
@@ -113,7 +144,7 @@ public partial class DefaultMemoryManager
                             else
                             {
                                 // If a concurrent thread already made the allocation, take its block as the new one
-                                curBlock = curBlock.NextBlock;
+                                curBlock = curBlock.NextBlockAllocator;
                             }
                         }
                         finally
@@ -123,48 +154,48 @@ public partial class DefaultMemoryManager
                     }
                     else
                     {
-                        curBlock = curBlock.NextBlock;
+                        curBlock = curBlock.NextBlockAllocator;
                     }
                 }
             }
         }
 
-        internal void RecycleBlock(SmallBlock block)
+        internal void RecycleBlock(SmallBlockAllocator blockAllocator)
         {
             try
             {
                 _control.TakeControl(null);
 
                 // If we're removing the first block of the linked list
-                if (_firstSmallBlock == block)
+                if (_firstSmallBlockAllocator == blockAllocator)
                 {
                     // Only release the first block if there's one after, otherwise there wouldn't be any block and there's no point to that
-                    if (_firstSmallBlock.NextBlock == null)
+                    if (_firstSmallBlockAllocator.NextBlockAllocator == null)
                     {
                         return;
                     }
-                    _firstSmallBlock = _firstSmallBlock.NextBlock;
+                    _firstSmallBlockAllocator = _firstSmallBlockAllocator.NextBlockAllocator;
                 }
                 else
                 {
                     // Find the block in the linked list and remove it
-                    var curBlock = _firstSmallBlock;
+                    var curBlock = _firstSmallBlockAllocator;
                     while (curBlock != null)
                     {
-                        if (curBlock.NextBlock == block)
+                        if (curBlock.NextBlockAllocator == blockAllocator)
                         {
-                            curBlock.NextBlock = curBlock.NextBlock.NextBlock;
+                            curBlock.NextBlockAllocator = curBlock.NextBlockAllocator.NextBlockAllocator;
                             break;
                         }
 
-                        curBlock = curBlock.NextBlock;
+                        curBlock = curBlock.NextBlockAllocator;
                     }
                 }
 
                 --DebugInfo.TotalBlockCount;
 
-                block.Recycle();
-                Owner.RecycleBlock(block);
+                blockAllocator.Recycle();
+                Owner.RecycleBlock(blockAllocator);
             }
             finally
             {
@@ -172,34 +203,35 @@ public partial class DefaultMemoryManager
             }
         }
 
-        internal void RecycleBlock(LargeBlock block)
+        internal void RecycleBlock(LargeBlockAllocator blockAllocator)
         {
             try
             {
                 _control.TakeControl(null);
 
                 // If we're removing the first block of the linked list
-                if (_firstLargeBlock == block)
+                if (_firstLargeBlockAllocator == blockAllocator)
                 {
                     // Only release the first block if there's one after, otherwise there wouldn't be any block and there's no point to that
-                    if (_firstLargeBlock.NextBlock != null)
+                    if (_firstLargeBlockAllocator.NextBlockAllocator == null)
                     {
-                        _firstLargeBlock = _firstLargeBlock.NextBlock;
+                        return;
                     }
+                    _firstLargeBlockAllocator = _firstLargeBlockAllocator.NextBlockAllocator;
                 }
                 else
                 {
                     // Find the block in the linked list and remove it
-                    var curBlock = _firstLargeBlock;
+                    var curBlock = _firstLargeBlockAllocator;
                     while (curBlock != null)
                     {
-                        if (curBlock.NextBlock == block)
+                        if (curBlock.NextBlockAllocator == blockAllocator)
                         {
-                            curBlock.NextBlock = curBlock.NextBlock.NextBlock;
+                            curBlock.NextBlockAllocator = curBlock.NextBlockAllocator.NextBlockAllocator;
                             break;
                         }
 
-                        curBlock = curBlock.NextBlock;
+                        curBlock = curBlock.NextBlockAllocator;
                     }
                 }
 
@@ -210,8 +242,8 @@ public partial class DefaultMemoryManager
                 _control.ReleaseControl();
             }
 
-            block.Recycle();
-            Owner.RecycleBlock(block);
+            blockAllocator.Recycle();
+            Owner.RecycleBlock(blockAllocator);
         }
 
         internal void DefragmentFreeSegments()
@@ -220,12 +252,12 @@ public partial class DefaultMemoryManager
             {
                 _control.TakeControl(null);
 
-                var curBlock = _firstSmallBlock;
+                var curBlock = _firstSmallBlockAllocator;
                 while (curBlock != null)
                 {
                     curBlock.DefragmentFreeSegments(ref DebugInfo);
 
-                    curBlock = curBlock.NextBlock;
+                    curBlock = curBlock.NextBlockAllocator;
                 }
             }
             finally
@@ -233,5 +265,28 @@ public partial class DefaultMemoryManager
                 _control.ReleaseControl();
             }
         }
+
+#if DEBUGALLOC
+        public void DumpLeaks(StringBuilder sb, ref int totalLeakCount)
+        {
+            {
+                var block = _firstSmallBlockAllocator;
+                while (block != null)
+                {
+                    block.DumpLeaks(sb, ref totalLeakCount);
+                    block = block.NextBlockAllocator;
+                }
+            }
+
+            {
+                var block = _firstLargeBlockAllocator;
+                while (block != null)
+                {
+                    block.DumpLeaks(sb, ref totalLeakCount);
+                    block = block.NextBlockAllocator;
+                }
+            }
+        }
+#endif
     }
 }

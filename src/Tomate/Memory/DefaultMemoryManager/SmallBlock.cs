@@ -1,37 +1,27 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Tomate;
 
 public partial class DefaultMemoryManager
 {
-    internal class SmallBlock
+    internal class SmallBlockAllocator : IBlockAllocator
     {
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential, Pack = 2)]
         public struct SegmentHeader
         {
-            public static readonly unsafe int MaxSegmentSize = 0x8000 - sizeof(SegmentHeader);
+            public static readonly unsafe int MaxSegmentSize = 0x10000 - sizeof(SegmentHeader);
 
+            // 0-4
             public TwoWaysLinkedList.Link Link;
-            public ushort SmallBlockId;
-            // It's very important for this field to be the last of the struct, we use its first bit to determine if we're dealing with a SmallBlock Segment 
-            //  or a LargeBlock one.
-            private ushort _data;
-
-            public ushort SegmentSize
-            {
-                [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-                get => (ushort)(_data >> 1);
-                [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-                set
-                {
-                    Debug.Assert(value <= MaxSegmentSize, $"requested size is too big, max is {MaxSegmentSize}");
-                    _data = (ushort)(value << 1 | 1);
-                }
-            }
-
-            public bool IsOwnedBySmallBlock => (_data & 1) == 1;
+            
+            // 4-6
+            public ushort SegmentSize;
+            
+            // 6-14
+            public BlockReferential.GenBlockHeader GenHeader;
         }
 
         public struct TwoWaysLinkedList
@@ -40,6 +30,11 @@ public partial class DefaultMemoryManager
             {
                 public ushort Previous;
                 public ushort Next;
+
+                public void Clear()
+                {
+                    Previous = Next = 0;
+                }
             }
 
             public int Count => _count;
@@ -142,7 +137,7 @@ public partial class DefaultMemoryManager
 
                     _first = nextId;
 
-                    first.Previous = first.Next = default;
+                    first.Clear();
                     --_count;
                 }
                 else
@@ -164,7 +159,7 @@ public partial class DefaultMemoryManager
                         _accessor(_first).Previous = prevId;
                     }
 
-                    cur.Previous = cur.Next = default;
+                    cur.Clear();
                     --_count;
                 }
             }
@@ -258,31 +253,39 @@ public partial class DefaultMemoryManager
             }
         }
 
-        public volatile SmallBlock NextBlock;
+        public volatile SmallBlockAllocator NextBlockAllocator;
 
-        private BlockSequence _owner;
+        private BlockAllocatorSequence _owner;
         private readonly MemorySegment _data;
         private ExclusiveAccessControl _control;
-        private TwoWaysLinkedList _freeSegmentList;
+        private TwoWaysLinkedList _occupiedSegmentList;
+        private TwoWaysLinkedList _freedSegmentList;
         private int _totalAllocatedSegments;
         private int _totalFreeSegments;
         private int _countBetweenDefrag;
-        private readonly ushort _smallBlockId;
+        private readonly int _blockId;
 
-        public unsafe SmallBlock(BlockSequence owner, ushort smallBlockId)
+#if DEBUGALLOC
+        private readonly Dictionary<int, MemoryBlockInfo> _allocatedBlocks = new();
+#endif
+
+        public int BlockIndex => _blockId;
+
+        public unsafe SmallBlockAllocator(BlockAllocatorSequence owner)
         {
             var data = owner.Owner.AllocateNativeBlockDataSegment();
             _owner = owner;
-            _smallBlockId = smallBlockId;
+            _blockId = BlockReferential.RegisterAllocator(this);
             _data = data;
-            _freeSegmentList = new TwoWaysLinkedList(data.Address);
-            NextBlock = null;
+            _occupiedSegmentList = new TwoWaysLinkedList(data.Address);
+            _freedSegmentList = new TwoWaysLinkedList(data.Address);
+            NextBlockAllocator = null;
             ref var debugInfo = ref owner.DebugInfo;
             Debug.Assert(debugInfo.IsCoherent);
             debugInfo.TotalCommitted += data.Length;
 
             // Setup the main & free list with empty segments that span the whole region. Each segment can be up to 64KiB - 16, that's why we need more than one
-            var curOffset = 16;
+            var curOffset = sizeof(SegmentHeader).Pad16();
             debugInfo.TotalPaddingSize += curOffset - sizeof(SegmentHeader);
             var remainingLength = _data.Length - curOffset;
             while (remainingLength > 0)
@@ -293,9 +296,10 @@ public partial class DefaultMemoryManager
                 var size = Math.Min(remainingLength, SegmentHeader.MaxSegmentSize);
                 Debug.Assert((segId << 4) + size <= data.Length);
 
-                header.SmallBlockId = _smallBlockId;
+                header.GenHeader.IsFree = true;
+                header.GenHeader.BlockId = _blockId;
                 header.SegmentSize = (ushort)size;
-                _freeSegmentList.InsertLast(segId);
+                _freedSegmentList.InsertLast(segId);
 
                 debugInfo.TotalFreeMemory += size;
                 debugInfo.TotalHeaderSize += sizeof(SegmentHeader);
@@ -308,12 +312,16 @@ public partial class DefaultMemoryManager
             Debug.Assert(debugInfo.IsCoherent);
         }
 
+        public void Dispose()
+        {
+        }
+
         public void Recycle()
         {
             _owner = null;
         }
 
-        public void Reassign(BlockSequence newOwner)
+        public void Reassign(BlockAllocatorSequence newOwner)
         {
             _owner = newOwner;
         }
@@ -330,10 +338,11 @@ public partial class DefaultMemoryManager
             return ref Unsafe.AsRef<TwoWaysLinkedList.Link>(_data.Address + id * 16 - sizeof(SegmentHeader));
         }
 
-        internal unsafe bool DoAllocate(int size, ref BlockSequence.DebugData debugInfo, out MemorySegment segment)
+        internal unsafe bool DoAllocate(ref MemoryBlockInfo info, ref BlockAllocatorSequence.DebugData debugInfo, out MemoryBlock block)
         {
             try
             {
+                var size = info.Size;
                 _control.TakeControl(null);
 
                 ++_countBetweenDefrag;
@@ -347,7 +356,7 @@ public partial class DefaultMemoryManager
 
                 var found = false;
 
-                var curSegId = _freeSegmentList.FirstId;
+                var curSegId = _freedSegmentList.FirstId;
                 var headerSize = sizeof(SegmentHeader);
                 byte* segAddress = default;
                 while (curSegId != 0)
@@ -362,17 +371,15 @@ public partial class DefaultMemoryManager
                         break;
                     }
                     ++debugInfo.ScanFreeListCount;
-                    curSegId = _freeSegmentList.Next(curSegId);
+                    curSegId = _freedSegmentList.Next(curSegId);
                 }
 
                 // Not found? We need another SmallBlock
                 if (!found)
                 {
-                    segment = default;
+                    block = default;
                     return false;
                 }
-
-                // Found, split the segment
 
                 {
                     ref var curSegHeader = ref SegmentHeaderAccessor(curSegId);
@@ -382,8 +389,11 @@ public partial class DefaultMemoryManager
                     var requiredSize = (size + headerSize).Pad16() - headerSize;                    // Required size that is ensuring the next segment is aligned
                     if (curSegHeader.SegmentSize < requiredSize + MinSegmentSize)
                     {
-                        // Remove the segment from the free list
-                        _freeSegmentList.Remove(curSegId);
+                        // Remove the segment from the freed list and add it to the occupied one
+                        _freedSegmentList.Remove(curSegId);
+                        _occupiedSegmentList.InsertLast(curSegId);
+                        curSegHeader.GenHeader.IsFree = false;
+                        curSegHeader.GenHeader.RefCounter = 1;
 
                         // Update stats
                         debugInfo.TotalFreeMemory -= curSegHeader.SegmentSize;
@@ -392,6 +402,10 @@ public partial class DefaultMemoryManager
                         ++debugInfo.AllocatedSegmentCount;
                         --_totalFreeSegments;
                         ++_totalAllocatedSegments;
+
+#if DEBUGALLOC
+                        _allocatedBlocks.Add(curSegId, info);
+#endif
                     }
 
                     // We can split the free segment into one free (with the remaining size) and one allocated
@@ -403,8 +417,11 @@ public partial class DefaultMemoryManager
 
                         var allocatedSegId = (ushort)(curSegId + (remainingSize >> 4));
                         ref var allocatedSegHeader = ref SegmentHeaderAccessor(allocatedSegId);
-                        allocatedSegHeader.SmallBlockId = curSegHeader.SmallBlockId;
+                        allocatedSegHeader.GenHeader.BlockId = curSegHeader.GenHeader.BlockId;
                         allocatedSegHeader.SegmentSize = (ushort)requiredSize;
+                        allocatedSegHeader.GenHeader.IsFree = false;
+                        allocatedSegHeader.GenHeader.RefCounter = 1;
+                        _occupiedSegmentList.InsertLast(allocatedSegId);
 
                         debugInfo.TotalFreeMemory += remainingSize - headerSize - prevFreeSize;
                         debugInfo.TotalHeaderSize += headerSize;
@@ -412,11 +429,16 @@ public partial class DefaultMemoryManager
                         ++debugInfo.AllocatedSegmentCount;
                         ++_totalAllocatedSegments;
 
+#if DEBUGALLOC
+                        _allocatedBlocks.Add(allocatedSegId, info);
+#endif
+
                         segAddress = (byte*)Unsafe.AsPointer(ref allocatedSegHeader) + headerSize;
                     }
 
                     Debug.Assert(debugInfo.IsCoherent);
-                    segment = new MemorySegment(segAddress, size);
+                    block = new MemoryBlock(segAddress, size);
+                    Debug.Assert(segAddress>=_data.Address && segAddress+size<=_data.End);
                     return true;
                 }
             }
@@ -428,14 +450,27 @@ public partial class DefaultMemoryManager
 
         public unsafe bool Free(ref SegmentHeader header)
         {
+            if (Interlocked.Decrement(ref header.GenHeader.RefCounter) > 0)
+            {
+                return false;
+            }
+
             try
             {
                 _control.TakeControl(null);
 
+                Debug.Assert(header.GenHeader.IsFree == false, "This block was already freed");
+
                 // Get the id of the segment we're freeing
                 var segId = (ushort)((byte*)Unsafe.AsPointer(ref header) + sizeof(SegmentHeader) - _data.Address >> 4);
+#if DEBUGALLOC
+                var res = _allocatedBlocks.Remove(segId);
+                Debug.Assert(res, "The block is no longer in the debug allocated block list but still considered occupied in the block chain...");
+#endif
 
-                _freeSegmentList.InsertLast(segId);
+                header.GenHeader.IsFree = true;
+                _occupiedSegmentList.Remove(segId);
+                _freedSegmentList.InsertLast(segId);
 
                 ref var debugInfo = ref _owner.DebugInfo;
                 --debugInfo.AllocatedSegmentCount;
@@ -459,18 +494,24 @@ public partial class DefaultMemoryManager
             }
         }
 
-        // Must be executed under instance's lock
-        internal unsafe void DefragmentFreeSegments(ref BlockSequence.DebugData debugInfo)
+        public unsafe bool Free(MemoryBlock block)
         {
-            var startFreeSegCount = _freeSegmentList.Count;
+            ref var sbh = ref Unsafe.AsRef<SegmentHeader>(block.MemorySegment.Address - sizeof(SegmentHeader));
+            return Free(ref sbh);
+        }
+
+        // Must be executed under instance's lock
+        internal unsafe void DefragmentFreeSegments(ref BlockAllocatorSequence.DebugData debugInfo)
+        {
+            var startFreeSegCount = _freedSegmentList.Count;
             if (startFreeSegCount < 2)
             {
                 return;
             }
 
             var headerSize = sizeof(SegmentHeader);
-            var freeSegments = new (ushort, ushort)[_freeSegmentList.Count];
-            var curSegId = _freeSegmentList.FirstId;
+            var freeSegments = new (ushort, ushort)[_freedSegmentList.Count];
+            var curSegId = _freedSegmentList.FirstId;
             var i = 0;
             while (curSegId != default)
             {
@@ -478,7 +519,7 @@ public partial class DefaultMemoryManager
                 var length = (ushort)(header.SegmentSize + headerSize >> 4);
                 freeSegments[i++] = (curSegId, length);
 
-                curSegId = _freeSegmentList.Next(curSegId);
+                curSegId = _freedSegmentList.Next(curSegId);
             }
 
             Array.Sort(freeSegments, (a, b) => a.Item1 - b.Item1);
@@ -498,7 +539,7 @@ public partial class DefaultMemoryManager
                 {
                     ref var aHeader = ref SegmentHeaderAccessor(a.start);
                     aHeader.SegmentSize += (ushort)(b.length << 4);
-                    _freeSegmentList.Remove(b.start);
+                    _freedSegmentList.Remove(b.start);
 
                     --debugInfo.FreeSegmentCount;
                     --_totalFreeSegments;
@@ -515,8 +556,22 @@ public partial class DefaultMemoryManager
         #region Debug Features
 
         internal MemorySegment Data => _data;
-        internal ref TwoWaysLinkedList FreeList => ref _freeSegmentList;
+        internal ref TwoWaysLinkedList FreeList => ref _freedSegmentList;
 
         #endregion
+
+#if DEBUGALLOC
+        public unsafe void DumpLeaks(StringBuilder sb, ref int totalLeakCount)
+        {
+            foreach (var kvp in _allocatedBlocks)
+            {
+                var segId = kvp.Key;
+                var i = kvp.Value;
+                var address = (ulong)_data.Address + (ulong)(16 * segId);
+                sb.AppendLine($" - {i.SourceFile}:line {i.LineNb}, Address {address:X}, Length {i.Size}");
+                ++totalLeakCount;
+            }
+        }
+#endif
     }
 }

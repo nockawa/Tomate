@@ -25,8 +25,13 @@ public class Program
     {
         Console.WriteLine("Let's start");
 
-        var t = new DefaultMemoryManagerTests();
-        t.StressTest(0.5f, 32, null);
+        var t = new UnmanagedListTests();
+        t.PerfTest();
+
+        Console.WriteLine("done");
+
+        //var t = new DefaultMemoryManagerTests();
+        //t.StressTest(0.5f, 32, null);
 
         //MemMgrTest.LinearAllocation_then_intertwineReallocation(0.5f);
         //var b = new BitBenchark();
@@ -75,16 +80,16 @@ public class Program
 
 public static class MemMgrTest
 {
-        public static unsafe void LinearAllocation_then_intertwineReallocation(float commitSizeAmplification)
+    public static unsafe void LinearAllocation_then_intertwineReallocation(float commitSizeAmplification)
     {
         var mm = new DefaultMemoryManager();
-        var sbb = mm.GetThreadBlockSequence();
+        var sbb = mm.GetThreadBlockAllocatorSequence();
 
-        var headerSize = sizeof(DefaultMemoryManager.SmallBlock.SegmentHeader);
+        var headerSize = sizeof(DefaultMemoryManager.SmallBlockAllocator.SegmentHeader);
         var allocSize = (16 + headerSize).Pad16() - headerSize;
         var sbbSize = (int)(sbb.DebugInfo.TotalCommitted * commitSizeAmplification);
 
-        var segList = new List<MemorySegment>();
+        var segList = new List<MemoryBlock>();
         var curTotalAllocated = 0;
         var curAllocSegCount = 0;
         while (sbbSize > 0)
@@ -335,7 +340,7 @@ public unsafe class BenchmarkSegmentAccess
     public void GlobalSetup()
     {
         _mm = new MemoryManager(1 * 1024 * 1024 * 1024);
-        _mbRaw = _mm.Allocate(BlockSize).Address;
+        _mbRaw = _mm.Allocate(BlockSize).MemorySegment.Address;
         _mb = new MemorySegment(_mbRaw, BlockSize);
         _lb = new LogicalMemorySegment(0, BlockSize);
     }

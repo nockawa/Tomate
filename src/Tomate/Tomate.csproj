@@ -22,7 +22,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugAlloc|AnyCPU'">
-	  <DefineConstants>$(DefineConstants)TRACE;DEBUGALLOC</DefineConstants>
+	  <DefineConstants>$(DefineConstants)TRACE;DEBUGALLOC;DEBUG;TRACE</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

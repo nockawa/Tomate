@@ -16,28 +16,32 @@ namespace Tomate;
 /// </remarks>
 [DebuggerTypeProxy(typeof(UnmanagedStack<>.DebugView))]
 [DebuggerDisplay("Count = {Count}")]
-public struct UnmanagedStack<T> : IDisposable where T : unmanaged
+public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
 {
     private readonly IMemoryManager _memoryManager;
-    private MemorySegment<T> _data;
+    private MemoryBlock<T> _memoryBlock;
     private int _size;
+    private int _capacity;
+    private T* _buffer;
 
     private const int DefaultCapacity = 8;
 
-    public UnmanagedStack(IMemoryManager memoryManager, int capacity)
+    public UnmanagedStack(IMemoryManager memoryManager=null, int capacity=DefaultCapacity)
     {
         if (capacity < 0)
         {
             ThrowHelper.NeedNonNegIndex(nameof(capacity));
         }
-        _memoryManager = memoryManager;
-        _data = default;
+        _memoryManager = memoryManager ?? DefaultMemoryManager.GlobalInstance;
+        _memoryBlock = default;
         if (capacity > 0)
         {
-            _data = _memoryManager.Allocate<T>(capacity);
+            _memoryBlock = _memoryManager.Allocate<T>(capacity);
         }
 
+        _buffer = _memoryBlock.MemorySegment.Address;
         _size = 0;
+        _capacity = _memoryBlock.MemorySegment.Length;
     }
     public int Count => _size;
 
@@ -46,7 +50,7 @@ public struct UnmanagedStack<T> : IDisposable where T : unmanaged
         get
         {
             Debug.Assert((uint)index < _size);
-            return ref _data[index];
+            return ref _buffer[index];
         }
     }
     public bool IsEmpty => _memoryManager == null;
@@ -57,85 +61,23 @@ public struct UnmanagedStack<T> : IDisposable where T : unmanaged
         _size = 0;
     }
 
-    // Returns the top object on the stack without removing it.  If the stack
-    // is empty, Peek throws an InvalidOperationException.
-    public ref T Peek()
-    {
-        int size = _size - 1;
-
-        if ((uint)size >= (uint)_data.Length)
-        {
-            ThrowForEmptyStack();
-        }
-
-        return ref _data[size];
-    }
-
-    public bool TryPeek(ref T result)
-    {
-        int size = _size - 1;
-
-        if ((uint)size >= (uint)_data.Length)
-        {
-            result = default!;
-            return false;
-        }
-        result = ref _data[size];
-        return true;
-    }
-
-    // Pops an item from the top of the stack.  If the stack is empty, Pop
-    // throws an InvalidOperationException.
-    public ref T Pop()
-    {
-        int size = _size - 1;
-
-        // if (_size == 0) is equivalent to if (size == -1), and this case
-        // is covered with (uint)size, thus allowing bounds check elimination
-        // https://github.com/dotnet/coreclr/pull/9773
-        if ((uint)size >= (uint)_data.Length)
-        {
-            ThrowForEmptyStack();
-        }
-
-        _size = size;
-        return ref _data[size];
-    }
-
-    public bool TryPop(out T result)
-    {
-        int size = _size - 1;
-
-        if ((uint)size >= (uint)_data.Length)
-        {
-            result = default!;
-            return false;
-        }
-
-        _size = size;
-        result = _data[size];
-        return true;
-    }
-
     public ref T Push()
     {
-        if (_size >= _data.Length)
+        if (_size >= _capacity)
         {
             Grow(_size + 1);
         }
 
-        return ref _data[_size++];
+        return ref _buffer[_size++];
     }
 
     // Pushes an item to the top of the stack.
     public void Push(ref T item)
     {
-        int size = _size;
-
-        if ((uint)size < (uint)_data.Length)
+        if ((uint)_size < (uint)_capacity)
         {
-            _data[size] = item;
-            _size = size + 1;
+            _buffer[_size] = item;
+            ++_size;
         }
         else
         {
@@ -145,12 +87,10 @@ public struct UnmanagedStack<T> : IDisposable where T : unmanaged
 
     public void Push(T item)
     {
-        int size = _size;
-
-        if ((uint)size < (uint)_data.Length)
+        if ((uint)_size < (uint)_capacity)
         {
-            _data[size] = item;
-            _size = size + 1;
+            _buffer[_size] = item;
+            ++_size;
         }
         else
         {
@@ -162,15 +102,71 @@ public struct UnmanagedStack<T> : IDisposable where T : unmanaged
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void PushWithResize(ref T item)
     {
-        Debug.Assert(_size == _data.Length);
+        Debug.Assert(_size == _capacity);
         Grow(_size + 1);
-        _data[_size] = item;
+        _buffer[_size] = item;
         _size++;
     }
 
-    private unsafe void Grow(int capacity)
+    // Returns the top object on the stack without removing it.  If the stack
+    // is empty, Peek throws an InvalidOperationException.
+    public ref T Pop()
     {
-        var newCapacity = _data.Length == 0 ? DefaultCapacity : 2 * _data.Length;
+        --_size;
+
+        if ((uint)_size >= (uint)_capacity)
+        {
+            ThrowForEmptyStack();
+        }
+
+        return ref _buffer[_size];
+    }
+
+    public bool TryPop(out T result)
+    {
+        --_size;
+
+        if ((uint)_size >= (uint)_capacity)
+        {
+            result = default;
+            return false;
+        }
+
+        result = _buffer[_size];
+        return true;
+    }
+
+    public ref T Peek()
+    {
+        int size = _size - 1;
+
+        if ((uint)size >= (uint)_capacity)
+        {
+            ThrowForEmptyStack();
+        }
+
+        return ref _buffer[size];
+    }
+
+    public bool TryPeek(ref T result)
+    {
+        int size = _size - 1;
+
+        if ((uint)size >= (uint)_capacity)
+        {
+            result = default!;
+            return false;
+        }
+        result = ref _buffer[size];
+        return true;
+    }
+
+    // Pops an item from the top of the stack.  If the stack is empty, Pop
+    // throws an InvalidOperationException.
+
+    private void Grow(int capacity)
+    {
+        var newCapacity = _capacity == 0 ? DefaultCapacity : 2 * _capacity;
 
         // Check if the new capacity exceed the size of the block we can allocate
         if ((newCapacity * sizeof(T)) > _memoryManager.MaxAllocationLength)
@@ -188,10 +184,10 @@ public struct UnmanagedStack<T> : IDisposable where T : unmanaged
         }
 
         var newItems = _memoryManager.Allocate<T>(newCapacity);
-        _data.Slice(0, _size).ToSpan().CopyTo(newItems.ToSpan());
+        _memoryBlock.MemorySegment.Slice(0, _size).ToSpan().CopyTo(newItems.MemorySegment.ToSpan());
 
-        _memoryManager.Free(_data);
-        _data = newItems;
+        _memoryManager.Free(_memoryBlock);
+        _memoryBlock = newItems;
     }
 
     // Copies the Stack to an array, in the same order Pop would return the items.
@@ -206,7 +202,7 @@ public struct UnmanagedStack<T> : IDisposable where T : unmanaged
         int i = 0;
         while (i < _size)
         {
-            objArray[i] = _data[_size - i - 1];
+            objArray[i] = _buffer[_size - i - 1];
             i++;
         }
         return objArray;
@@ -232,7 +228,7 @@ public struct UnmanagedStack<T> : IDisposable where T : unmanaged
         {
             get
             {
-                var src = _stack._data.Slice(0, _stack.Count).ToSpan();
+                var src = _stack._memoryBlock.MemorySegment.Slice(0, _stack.Count).ToSpan();
                 var dst = new T[src.Length];
                 src.CopyTo(dst);
                 Array.Reverse(dst);
@@ -247,8 +243,8 @@ public struct UnmanagedStack<T> : IDisposable where T : unmanaged
         {
             return;
         }
-        _memoryManager.Free(_data);
-        _data = default;
+        _memoryManager.Free(_memoryBlock);
+        _memoryBlock = default;
         _size = -1;
     }
 }
