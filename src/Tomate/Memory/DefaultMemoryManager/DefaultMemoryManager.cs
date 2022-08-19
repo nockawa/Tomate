@@ -186,6 +186,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 
         MemoryBlockContentInitialization = DebugMemoryInit.None;
 #endif
+        MemoryManagerId = IMemoryManager.AllocMemoryManagerId(this);
         _isGlobal = isGlobal;
         _nativeBlockList = new List<NativeBlockInfo>(16);
         _curNativeBlockInfo = new NativeBlockInfo(SmallBlockSize, BlockInitialCount);
@@ -250,6 +251,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 
     public bool IsDisposed => _nativeBlockList.Count == 0;
     public int MaxAllocationLength => LargeBlockAllocator.SegmentHeader.MaxSegmentSize;
+    public int MemoryManagerId { get; }
 
     public void Clear()
     {

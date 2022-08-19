@@ -9,7 +9,7 @@ public unsafe struct MemoryView<T> where T : unmanaged
     private T* _end;
 
     public readonly MemorySegment<T> MemorySegment;
-    public bool IsEmpty => MemorySegment.IsEmpty;
+    public bool IsDefault => MemorySegment.IsDefault;
 
     /// <summary>
     /// Get/set the position

@@ -31,7 +31,8 @@ public struct MemoryBlock : IDisposable
         }
     }
 
-    public bool IsDisposed => MemorySegment.IsEmpty;
+    public bool IsDefault => MemorySegment.IsDefault;
+    public bool IsDisposed => MemorySegment.IsDefault;
 
     public void Dispose()
     {
@@ -74,7 +75,8 @@ public struct MemoryBlock<T> : IDisposable where T : unmanaged
         }
     }
 
-    public bool IsDisposed => MemorySegment.IsEmpty;
+    public bool IsDefault => MemorySegment.IsDefault;
+    public bool IsDisposed => MemorySegment.IsDefault;
 
     public void Dispose()
     {

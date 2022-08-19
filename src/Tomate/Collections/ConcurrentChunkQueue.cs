@@ -86,7 +86,7 @@ public unsafe struct ConcurrentChunkQueue
         /// </summary>
         public void Dispose()
         {
-            if (_memorySegment.IsEmpty == false)
+            if (_memorySegment.IsDefault == false)
             {
                 var header = (ushort*)_memorySegment.Address - 2;
                 header[0] |= 0x4000;
@@ -106,7 +106,7 @@ public unsafe struct ConcurrentChunkQueue
         /// <summary>
         /// Will be <c>true</c> if the chunk failed to be enqueued
         /// </summary>
-        public bool IsEmpty => _memorySegment.IsEmpty;
+        public bool IsDefault => _memorySegment.IsDefault;
 
         /// <summary>
         /// Indexer accessor to the chunk's data
@@ -131,7 +131,7 @@ public unsafe struct ConcurrentChunkQueue
         /// <summary>
         /// If there was no chunk to dequeue, will be <c>true</c>
         /// </summary>
-        public bool IsEmpty => ChunkId == 0;
+        public bool IsDefault => ChunkId == 0;
 
         /// <summary>
         /// Memory Segment spanning the chunk's data
@@ -151,7 +151,7 @@ public unsafe struct ConcurrentChunkQueue
         /// </summary>
         public void Dispose()
         {
-            if (_memorySegment.IsEmpty == false)
+            if (_memorySegment.IsDefault == false)
             {
                 var header = (ushort*)_memorySegment.Address - 2;
                 header[0] &= 0x3FFF;

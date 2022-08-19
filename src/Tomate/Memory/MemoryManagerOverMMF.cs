@@ -251,7 +251,7 @@ public unsafe class MemoryManagerOverMMF : IPageAllocator, IDisposable
         return Interlocked.Increment(ref _pageDirectory[blockId]).Low();
     }
 
-    public int ToBlockId(MemorySegment segment) => segment.IsEmpty ? -1 : (int)((segment.Address - _rootAddr) / _pageSize);
+    public int ToBlockId(MemorySegment segment) => segment.IsDefault ? -1 : (int)((segment.Address - _rootAddr) / _pageSize);
 
     public MemorySegment FromBlockId(int blockId) =>
         blockId < 0 || blockId >= _pageDirectory.Length

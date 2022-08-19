@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Net;
 using System.Runtime.CompilerServices;
 using static Tomate.DefaultMemoryManager.SmallBlockAllocator.TwoWaysLinkedList;
 using static Tomate.MemoryManager;
@@ -13,6 +14,29 @@ public interface IMemoryManager
     bool IsDisposed { get; }
 
     int MaxAllocationLength { get; }
+    int MemoryManagerId { get; }
+
+    static IMemoryManager()
+    {
+        _memoryManagerById = new ConcurrentDictionary<int, IMemoryManager>();
+        _curMemoryManagerId = 0;
+    }
+
+    private static ConcurrentDictionary<int, IMemoryManager> _memoryManagerById;
+    private static int _curMemoryManagerId;
+
+    public static int AllocMemoryManagerId(IMemoryManager memoryManager)
+    {
+        var id = Interlocked.Increment(ref _curMemoryManagerId);
+        _memoryManagerById.TryAdd(id, memoryManager);
+        return id;
+    }
+
+    public static IMemoryManager GetMemoryManager(int id)
+    {
+        _memoryManagerById.TryGetValue(id, out var memoryManager);
+        return memoryManager;
+    }
 
     /// <summary>
     /// Allocate a Memory Block

@@ -10,7 +10,9 @@ public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
 {
     private const int DefaultCapacity = 4;
 
-    private readonly IMemoryManager _memoryManager;
+    // We Store and integer instead of a IMemoryManager instance to keep UnmanagedList<T>...unmanaged.
+    // This way you can make UnmanagedDictionary<int, UnmanagedList<int>> for instance.
+    private readonly int _memoryManagerId;
     private MemoryBlock<T> _memoryBlock;
     private int _size;
     private uint _capacity;
@@ -23,11 +25,12 @@ public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
         {
             ThrowHelper.OutOfRange("Initial Capacity can't be a negative number");
         }
-        _memoryManager = memoryManager ?? DefaultMemoryManager.GlobalInstance;
+        memoryManager ??= DefaultMemoryManager.GlobalInstance;
+        _memoryManagerId = memoryManager.MemoryManagerId;
         _memoryBlock = default;
         if (initialCapacity > 0)
         {
-            _memoryBlock = _memoryManager.Allocate<T>(initialCapacity);
+            _memoryBlock = memoryManager.Allocate<T>(initialCapacity);
         }
         _size = 0;
         _buffer = _memoryBlock.MemorySegment.Address;
@@ -47,13 +50,14 @@ public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
             {
                 if (value > 0)
                 {
-                    var newItems = _memoryManager.Allocate<T>(value);
+                    var memoryManager = IMemoryManager.GetMemoryManager(_memoryManagerId);
+                    var newItems = memoryManager.Allocate<T>(value);
                     if (_size > 0)
                     {
                         _memoryBlock.MemorySegment.Slice(0, _size).ToSpan().CopyTo(newItems.MemorySegment.ToSpan());
                     }
 
-                    _memoryManager.Free(_memoryBlock);
+                    memoryManager.Free(_memoryBlock);
                     _memoryBlock = newItems;
                     _buffer = _memoryBlock.MemorySegment.Address;
                     _capacity = (uint)_memoryBlock.MemorySegment.Length;
@@ -83,7 +87,7 @@ public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
 
     public MemorySegment<T> Content => _memoryBlock.MemorySegment.Slice(0, _size);
 
-    public bool IsEmpty => _memoryManager == null;
+    public bool IsDefault => _memoryManagerId == 0;
     public bool IsDisposed => _size < 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -150,6 +154,119 @@ public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
         ++_size;
     }
 
+    public void RemoveAt(int index)
+    {
+        if ((uint)index >= (uint)_size)
+        {
+            ThrowHelper.OutOfRange($"Can't remove, given index {index} is greater than Count {_size}.");
+        }
+        _size--;
+        if (index < _size)
+        {
+            var span = _memoryBlock.MemorySegment.ToSpan();
+            span.Slice(index + 1).CopyTo(span.Slice(index));
+        }
+    }
+
+    public int IndexOf(T item)
+    {
+        if (typeof(T) == typeof(int))
+        {
+            var src = Unsafe.As<T, int>(ref item);
+            var buffer = (int*)_memoryBlock.MemorySegment.Address;
+
+            var l = _size;
+            for (int i = 0; i < l; i++)
+            {
+                if (buffer[i] == src)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        if (typeof(T) == typeof(long))
+        {
+            var src = Unsafe.As<T, long>(ref item);
+            var buffer = (long*)_memoryBlock.MemorySegment.Address;
+
+            var l = _size;
+            for (int i = 0; i < l; i++)
+            {
+                if (buffer[i] == src)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        if (typeof(T) == typeof(short))
+        {
+            var src = Unsafe.As<T, short>(ref item);
+            var buffer = (short*)_memoryBlock.MemorySegment.Address;
+
+            var l = _size;
+            for (int i = 0; i < l; i++)
+            {
+                if (buffer[i] == src)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        if (typeof(T) == typeof(byte))
+        {
+            var src = Unsafe.As<T, byte>(ref item);
+            var buffer = (byte*)_memoryBlock.MemorySegment.Address;
+
+            var l = _size;
+            for (int i = 0; i < l; i++)
+            {
+                if (buffer[i] == src)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        {
+            var src = MemoryMarshal.CreateReadOnlySpan(ref item, 1);
+            var span = _memoryBlock.MemorySegment.ToSpan();
+            var l = _size;
+
+            for (var i = 0; i < l; i++)
+            {
+                if (span.Slice(i, 1).SequenceEqual(src))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+    }
+
+    public bool Remove(T item)
+    {
+        int index = IndexOf(item);
+        if (index >= 0)
+        {
+            RemoveAt(index);
+            return true;
+        }
+
+        return false;
+    }
+
     // Non-inline from List.Add to improve its code quality as uncommon path
     public void CopyTo(T[] items, int i)
     {
@@ -172,9 +289,10 @@ public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
         var newCapacity = _capacity == 0 ? DefaultCapacity : (int)(2 * _capacity);
 
         // Check if the new capacity exceed the size of the block we can allocate
-        if ((newCapacity * sizeof(T)) > _memoryManager.MaxAllocationLength)
+        var memoryManager = IMemoryManager.GetMemoryManager(_memoryManagerId);
+        if ((newCapacity * sizeof(T)) > memoryManager.MaxAllocationLength)
         {
-            newCapacity = _memoryManager.MaxAllocationLength / sizeof(T);
+            newCapacity = memoryManager.MaxAllocationLength / sizeof(T);
 
             if (newCapacity < capacity)
             {
@@ -220,11 +338,12 @@ public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
 
     public void Dispose()
     {
-        if (IsEmpty || IsDisposed)
+        if (IsDefault || IsDisposed)
         {
             return;
         }
-        _memoryManager.Free(_memoryBlock);
+        var memoryManager = IMemoryManager.GetMemoryManager(_memoryManagerId);
+        memoryManager.Free(_memoryBlock);
         _memoryBlock = default;
         _size = -1;
     }

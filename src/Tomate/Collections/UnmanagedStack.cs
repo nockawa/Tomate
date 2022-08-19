@@ -53,7 +53,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             return ref _buffer[index];
         }
     }
-    public bool IsEmpty => _memoryManager == null;
+    public bool IsDefault => _memoryManager == null;
     public bool IsDisposed => _size < 0;
 
     public void Clear()
@@ -239,7 +239,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
 
     public void Dispose()
     {
-        if (IsEmpty)
+        if (IsDefault)
         {
             return;
         }

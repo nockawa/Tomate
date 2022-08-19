@@ -27,7 +27,7 @@ public class ConcurrentChunkStackTests
 
             {
                 using var h = stack.TryDequeue();
-                Assert.That(h.IsEmpty, Is.True);
+                Assert.That(h.IsDefault, Is.True);
             }
 
             {
@@ -39,7 +39,7 @@ public class ConcurrentChunkStackTests
 
             {
                 using var h = stack.TryDequeue();
-                Assert.That(h.IsEmpty, Is.False);
+                Assert.That(h.IsDefault, Is.False);
 
                 var hl = h.MemorySegment.Cast<long>();
                 Assert.That(hl[0] == 123);
@@ -49,7 +49,7 @@ public class ConcurrentChunkStackTests
 
             {
                 using var h = stack.TryDequeue();
-                Assert.That(h.IsEmpty, Is.True);
+                Assert.That(h.IsDefault, Is.True);
             }
         }
         finally
@@ -92,7 +92,7 @@ public class ConcurrentChunkStackTests
                 {
                     var size = (ushort)rand.Next(1, 10);
                     var h = stack.Enqueue<int>(1, size, wait);
-                    while (h.IsEmpty)
+                    while (h.IsDefault)
                     {
                         h.Dispose();
                         h = stack.Enqueue<int>(1, size, wait);
@@ -117,7 +117,7 @@ public class ConcurrentChunkStackTests
                 for (int opCount = 0; opCount < consOpCount && TestContext.CurrentContext.Result.Outcome.Status == TestStatus.Inconclusive; opCount++)
                 {
                     var h = stack.TryDequeue();
-                    while (h.IsEmpty)
+                    while (h.IsDefault)
                     {
                         spin.SpinOnce(0);
                         h.Dispose();

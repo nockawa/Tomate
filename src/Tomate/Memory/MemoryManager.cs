@@ -44,6 +44,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
     /// </summary>
     public int MemorySegmentAllocationEpoch { get; private set; }
     public int MaxAllocationLength { get; }
+    public int MemoryManagerId { get; }
 
 #if DEBUGALLOC
     private string _sourceFile;
@@ -65,6 +66,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
 #endif
     )
     {
+        MemoryManagerId = IMemoryManager.AllocMemoryManagerId(this);
         MaxAllocationLength = pinnedMemoryBlockSize;
         _pinnedMemoryBlocks = new List<PinnedMemoryBlock>(16);
 #if DEBUGALLOC

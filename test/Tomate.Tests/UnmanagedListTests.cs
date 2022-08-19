@@ -6,6 +6,32 @@ namespace Tomate.Tests;
 public class UnmanagedListTests
 {
     [Test]
+    public void RemoveAtTest()
+    {
+        using var mm = new DefaultMemoryManager();
+        using var ul = new UnmanagedList<int>(mm);
+
+        ul.Add(10);
+        ul.Add(11);
+        ul.Add(12);
+        ul.Add(13);
+        ul.Add(14);
+        ul.Add(15);
+
+        ul.RemoveAt(2);
+
+        Assert.That(ul.Count, Is.EqualTo(5));
+        Assert.That(ul[0], Is.EqualTo(10));
+        Assert.That(ul[1], Is.EqualTo(11));
+        Assert.That(ul[2], Is.EqualTo(13));
+        Assert.That(ul[3], Is.EqualTo(14));
+        Assert.That(ul[4], Is.EqualTo(15));
+
+        var i = ul.IndexOf(14);
+        Assert.That(i, Is.EqualTo(3));
+    }
+
+    [Test]
     public void PerfTest()
     {
         var count = 256 * 1024;

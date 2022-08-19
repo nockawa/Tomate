@@ -30,7 +30,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
         Length = length;
     }
 
-    public bool IsEmpty => Address == null;
+    public bool IsDefault => Address == null;
     public byte* End => Address + Length;
 
     public Span<T> ToSpan<T>() where T : unmanaged => new(Address, Length / sizeof(T));
@@ -142,7 +142,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
         Length = length;
     }
 
-    public bool IsEmpty => Address == null;
+    public bool IsDefault => Address == null;
     public static readonly MemorySegment<T> Empty = new(null, 0);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
