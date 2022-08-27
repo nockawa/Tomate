@@ -1,7 +1,34 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Tomate;
 
+/// <summary>
+/// Append-only collection on a Page Allocator
+/// </summary>
+/// <typeparam name="T">Type of each item of the collection</typeparam>
+/// <remarks>
+/// <para>
+/// Usage:
+///  This is a pretty simple type: the user creates an instance by passing an allocator and a capacity (the maximum number of pages that
+///  will be allocated). Each page can stores up to x items (<c>x = <seealso cref="IPageAllocator.PageSize"/> / sizeof(T)</c>).
+/// The user then allocates a set of x items by calling <seealso cref="Reserve"/> an ID is returned and used for access to the <seealso cref="MemorySegment"/>
+///  addressing these items later by calling <seealso cref="Get"/>.
+/// Allocated items can't be freed: it's an append-only collection.
+/// </para>
+/// <para>
+/// Implementation:
+///  The collection stores a Page Directory inside the first page, this directory contains for each page  its offset from the base address of the allocator.
+///  The ID returned by <seealso cref="Reserve"/> is a linear offset into the collection and we use the Page Directory to determine in which page is stored
+///   the given set of items.
+///  You can't allocate a set of item that exceed the number of items a given page can hold because each set is a contiguous space of data. If when calling
+/// <seealso cref="Reserve"/> the current page can't hold the requested number of items, the remaining space in this page is simply wasted and another one
+///  is allocated. Which means you could end up with a big fragmentation and poor usage ratio if you always allocate sets of items that are bigger than half
+///  of a <seealso cref="IPageAllocator.PageSize"/>, so choose the Page Size of the allocator accordingly !
+/// This type can address a very big space of data, way above 4GiB.
+///  The limit is <c><seealso cref="IPageAllocator.PageSize"/> * <seealso cref="AppendCollection{T}.Capacity"/> * sizeof(T)</c>
+/// </para>
+/// </remarks>
 public unsafe struct AppendCollection<T> : IDisposable where T : unmanaged
 {
     private readonly IPageAllocator _allocator;
@@ -16,16 +43,39 @@ public unsafe struct AppendCollection<T> : IDisposable where T : unmanaged
     private T* _curAddress;
     private T* _endAddress;
 
+#if DEBUGALLOC
+    private long _totalAllocated;
+#endif
+
     public int RootPageId { get; }
+    public int PageSize => _allocator.PageSize;
+    public int Capacity => _header->PageCapacity;
+    public int AllocatedPageCount => _header->AllocatedPageCount;
+    public int MaxItemCountPerPage => _entriesPerPage;
+
+    public (long totalAllocatedByte, float efficiency) AllocationStats
+    {
+        get
+        {
+#if DEBUGALLOC
+            var totalPagedSize = _header->AllocatedPageCount * _allocator.PageSize;
+            return (_totalAllocated, _totalAllocated / (float)totalPagedSize);
+#else
+            return (0, 1);
+#endif
+        }
+    }
 
     public static AppendCollection<T> Create(IPageAllocator allocator, int pageCapacity) => new(allocator, pageCapacity, true);
     public static AppendCollection<T> Map(IPageAllocator allocator, int rootPageId) => new(allocator, rootPageId, false);
 
+    [StructLayout(LayoutKind.Sequential)]
     private struct Header
     {
         public int PageCapacity;
         public int AllocatedPageCount;
         public int CurOffset;
+        private readonly int _padding0;
     }
 
     private AppendCollection(IPageAllocator allocator, int pageCapacityOrRootId, bool create)
@@ -38,6 +88,12 @@ public unsafe struct AppendCollection<T> : IDisposable where T : unmanaged
         if (create)
         {
             pageCapacity = pageCapacityOrRootId;
+
+            if (sizeof(Header) + (pageCapacity * sizeof(long)) > _pageSize)
+            {
+                ThrowHelper.AppendCollectionCapacityTooBig(pageCapacity, (_pageSize-sizeof(Header) / sizeof(long)));
+            }
+
             rootPage = allocator.AllocatePages(1);
             RootPageId = allocator.ToBlockId(rootPage);
             _header = (Header*)rootPage.Address;
@@ -65,6 +121,10 @@ public unsafe struct AppendCollection<T> : IDisposable where T : unmanaged
             _pageDirectory = (long*)(_header + 1);
             _curAddress = _endAddress = null;
             GetBoundariesFromOffset(_header->CurOffset, out _curAddress, out _endAddress);
+
+#if DEBUGALLOC
+            _totalAllocated = _header->AllocatedPageCount * _allocator.PageSize;
+#endif
         }
     }
 
@@ -95,6 +155,10 @@ public unsafe struct AppendCollection<T> : IDisposable where T : unmanaged
 
     public MemorySegment<T> Reserve(int length, out int id)
     {
+        if (length > _entriesPerPage)
+        {
+            ThrowHelper.AppendCollectionItemSetTooBig(length, _entriesPerPage);
+        }
         if (_curAddress + length > _endAddress)
         {
             if (_header->AllocatedPageCount == _header->PageCapacity)
@@ -108,6 +172,10 @@ public unsafe struct AppendCollection<T> : IDisposable where T : unmanaged
             _pageDirectory[_header->AllocatedPageCount++] = newPage.Address - _baseAddress;
             GetBoundariesFromOffset(_header->CurOffset, out _curAddress, out _endAddress);
         }
+
+#if DEBUGALLOC
+        _totalAllocated += length * sizeof(T);
+#endif
 
         id = _header->CurOffset;
         _header->CurOffset += length;

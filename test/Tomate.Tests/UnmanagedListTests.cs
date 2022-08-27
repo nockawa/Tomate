@@ -9,7 +9,7 @@ public class UnmanagedListTests
     public void RemoveAtTest()
     {
         using var mm = new DefaultMemoryManager();
-        using var ul = new UnmanagedList<int>(mm);
+        using var ul = new UnmanagedList<int>();
 
         ul.Add(10);
         ul.Add(11);

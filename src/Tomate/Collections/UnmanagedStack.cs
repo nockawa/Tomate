@@ -26,6 +26,11 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
 
     private const int DefaultCapacity = 8;
 
+    public UnmanagedStack() : this(null)
+    {
+        
+    }
+
     public UnmanagedStack(IMemoryManager memoryManager=null, int capacity=DefaultCapacity)
     {
         if (capacity < 0)
@@ -178,6 +183,8 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
                 ThrowHelper.OutOfMemory($"The requested capacity {capacity} is greater than the maximum allowed capacity {newCapacity}. Use a Memory Manager with a greater PMB size");
             }
         }
+        
+        if (newCapacity < capacity) newCapacity = capacity;
         if (newCapacity < _size)
         {
             ThrowHelper.OutOfRange($"New Capacity {newCapacity} can't be less than actual Count {_size}");
@@ -188,6 +195,8 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
 
         _memoryManager.Free(_memoryBlock);
         _memoryBlock = newItems;
+        _capacity = _memoryBlock.MemorySegment.Length;
+        _buffer = _memoryBlock.MemorySegment.Address;
     }
 
     // Copies the Stack to an array, in the same order Pop would return the items.

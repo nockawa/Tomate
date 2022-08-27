@@ -11,6 +11,22 @@ public class SegmentConstructException : Exception
     }
 }
 
+public class ItemSetTooBigException : Exception
+{
+    public ItemSetTooBigException(string message) : base(message)
+    {
+
+    }
+}
+
+public class CapacityTooBigException : Exception
+{
+    public CapacityTooBigException(string message) : base(message)
+    {
+
+    }
+}
+
 [StackTraceHidden]
 internal static class ThrowHelper
 {
@@ -60,5 +76,17 @@ internal static class ThrowHelper
     internal static void TimeSegmentConstructError(long start, long end)
     {
         throw new SegmentConstructException($"Cannot construct TimeSegment instance because start ({start}) is greater than end ({end})");
+    }
+
+    [DoesNotReturn]
+    internal static void AppendCollectionItemSetTooBig(int requestedSize, int maxAllowed)
+    {
+        throw new ItemSetTooBigException($"Can't allocate the requested item number ({requestedSize}), the maximum allowed is {maxAllowed}");
+    }
+
+    [DoesNotReturn]
+    internal static void AppendCollectionCapacityTooBig(int requestedCapacity, int maxAllowed)
+    {
+        throw new CapacityTooBigException($"Can't create an AppendCollection withe the given capacity ({requestedCapacity}), the maximum allowed is {maxAllowed}");
     }
 }

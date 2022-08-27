@@ -5,6 +5,11 @@ namespace Tomate;
 [DebuggerDisplay("[{Begin},{End}")]
 public readonly struct TimeSegment
 {
+    public override string ToString()
+    {
+        return $"Begin: {Begin}, End: {End}";
+    }
+
     public long BeginTicks { get; }
     public long EndTicks { get; }
 

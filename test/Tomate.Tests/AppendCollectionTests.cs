@@ -61,6 +61,35 @@ public class AppendCollectionTests
     }
 
     [Test]
+    public void CantAllocateSetBiggerThanMaxAllowedTest()
+    {
+        using var col = AppendCollection<long>.Create(_allocator, 16);
+
+        var maxPerPage = col.MaxItemCountPerPage;
+        Assert.That(maxPerPage, Is.EqualTo(_allocator.PageSize / sizeof(long)));
+
+        Assert.Throws<ItemSetTooBigException>(() =>
+        {
+            col.Reserve(maxPerPage + 1, out _);
+        });
+
+        Assert.DoesNotThrow(() =>
+        {
+            col.Reserve(maxPerPage, out _);
+        });
+    }
+
+    [Test]
+    public void CantAllocateCapacityBiggerThanMaxAllowedTest()
+    {
+
+        Assert.Throws<CapacityTooBigException>(() =>
+        {
+            using var col = AppendCollection<long>.Create(_allocator, (_allocator.PageSize / 4));
+        });
+    }
+
+    [Test]
     public void StringTableTest()
     {
         using var col = StringTable.Create(_allocator, 16);

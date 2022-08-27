@@ -128,6 +128,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
 
     public readonly T* Address;
     public readonly int Length;
+    public T* End => Address + Length;
 
     public static implicit operator MemorySegment(MemorySegment<T> source) => new((byte*)source.Address, sizeof(T)*source.Length);
 

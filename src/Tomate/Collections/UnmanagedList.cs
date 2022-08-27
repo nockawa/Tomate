@@ -18,6 +18,10 @@ public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
     private uint _capacity;
     private T* _buffer;
 
+    public UnmanagedList() : this(null)
+    {
+        
+    }
 
     public UnmanagedList(IMemoryManager memoryManager = null, int initialCapacity = DefaultCapacity)
     {
