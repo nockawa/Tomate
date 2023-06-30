@@ -366,6 +366,8 @@ public static class MathExtensions
         return string.Create(DefaultCulture, $"{f:0.###}{scalesF[iF]}");
     }
 
+    public static double TicksToSeconds(this long ticks) => ((double)ticks / TimeSpan.TicksPerSecond);
+
     public static string Bandwidth(int size, double elapsed)
     {
         return string.Create(DefaultCulture, $"{(size / elapsed).FriendlySize()}/sec");

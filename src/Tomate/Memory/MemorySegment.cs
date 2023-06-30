@@ -1,9 +1,9 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace Tomate;
+
+public delegate TResult BinarySearchComp<T1, T2, out TResult>(ref T1 arg1, ref T2 arg2) where T1 : unmanaged where T2 : unmanaged;
 
 /// <summary>
 /// Define a memory segment stored at a fixed address
@@ -215,6 +215,47 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
     public MemorySegment Cast() => new MemorySegment((byte*)Address, Length * sizeof(T));
     public MemorySegment<TTo> Cast<TTo>() where TTo : unmanaged => new(Address, Length * sizeof(T) / sizeof(TTo));
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int BinarySearch<TKey>(TKey key, BinarySearchComp<T, TKey, long> f) where TKey : unmanaged
+    {
+        var length = Length;
+        var span = ToSpan();
+        
+        int lo = 0;
+        int hi = length - 1;
+        // If length == 0, hi == -1, and loop will not be entered
+        while (lo <= hi)
+        {
+            // PERF: `lo` or `hi` will never be negative inside the loop,
+            //       so computing median using uints is safe since we know
+            //       `length <= int.MaxValue`, and indices are >= 0
+            //       and thus cannot overflow an uint.
+            //       Saves one subtraction per loop compared to
+            //       `int i = lo + ((hi - lo) >> 1);`
+            var i = (int)(((uint)hi + (uint)lo) >> 1);
+            var c = f(ref span[i], ref key);
+            
+            if (c == 0)
+            {
+                return i;
+            }
+
+            if (c > 0)
+            {
+                lo = i + 1;
+            }
+            else
+            {
+                hi = i - 1;
+            }
+        }
+        // If none found, then a negative number that is the bitwise complement
+        // of the index of the next element that is larger than or, if there is
+        // no larger element, the bitwise complement of `length`, which
+        // is `lo` at this point.
+        return ~lo;
+    }
+    
     /// <summary>Gets an enumerator for this segment.</summary>
     public Enumerator GetEnumerator() => new(this);
 
