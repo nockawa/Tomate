@@ -12,6 +12,7 @@ public readonly struct TimeSegment
 
     public long BeginTicks { get; }
     public long EndTicks { get; }
+    public long DeltaTick => EndTicks - BeginTicks;
 
     public TimeSpan Begin => new(BeginTicks);
     public TimeSpan End => new(EndTicks);
