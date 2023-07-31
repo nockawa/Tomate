@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
@@ -12,8 +11,9 @@ namespace Tomate;
 /// <remarks>
 /// This class is heavily based from the <see cref="Stack{T}"/> type of the .net framework.
 /// Designed for single thread usage only.
-/// <see cref="TryPeek"/> and <see cref="Peek"/> return <code>ref of {T}</code>, so don't use this reference after a <see cref="Push"/> or <see cref="Pop"/> operation.
+/// <see cref="TryPeek"/> and <see cref="Peek"/> return <code>ref of {T}</code>, so don't use this reference after a <see cref="Push(ref T)"/> or <see cref="Pop"/> operation.
 /// </remarks>
+[PublicAPI]
 [DebuggerTypeProxy(typeof(UnmanagedStack<>.DebugView))]
 [DebuggerDisplay("Count = {Count}")]
 public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
@@ -153,6 +153,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         return ref _buffer[size];
     }
 
+    // ReSharper disable once RedundantAssignment
     public bool TryPeek(ref T result)
     {
         int size = _size - 1;

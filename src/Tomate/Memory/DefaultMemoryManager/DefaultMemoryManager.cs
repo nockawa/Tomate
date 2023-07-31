@@ -35,27 +35,27 @@ public class BlockOverrunException : Exception
 /// Being thread-safe impose a lot of special care to behave correctly regarding perf and contention. 
 ///
 /// The MemoryManager has several sub-types :
-///  - <seealso cref="NativeBlockInfo"/> which is responsible of making OS level allocation, a given Native Block will then serve memory allocation
-///    requests for many <seealso cref="SmallBlockAllocator"/> and or <seealso cref="LargeBlockAllocator"/> instances.
-///  - <seealso cref="BlockAllocatorSequence"/>, there are many instances of this type, the number is determined during the manager construction and depending
+///  - <see cref="NativeBlockInfo"/> which is responsible of making OS level allocation, a given Native Block will then serve memory allocation
+///    requests for many <see cref="SmallBlockAllocator"/> and or <see cref="LargeBlockAllocator"/> instances.
+///  - <see cref="BlockAllocatorSequence"/>, there are many instances of this type, the number is determined during the manager construction and depending
 ///    on the CPU core number. Then each Thread is assigned a given instance (we assign them in round-robin fashion). The Block Sequence contains two chained
-///    lists, one for <seealso cref="SmallBlockAllocator"/> and the other for <seealso cref="LargeBlockAllocator"/>.
-///  - <seealso cref="SmallBlockAllocator"/> is responsible of making small ( >= 65526 bytes) <seealso cref="MemorySegment"/> allocations. It uses a slab of a
-///    given <seealso cref="NativeBlockInfo"/> instance.
-///    Instances of <seealso cref="SmallBlockAllocator"/> are operating concurrently: two different threads using different instance won't compete for Allocation/Free.
-///  - <seealso cref="LargeBlockAllocator"/> take care of Allocations greater than 65526 bytes and will hold a Native Memory block of at least 64 MiB or sized with the
+///    lists, one for <see cref="SmallBlockAllocator"/> and the other for <see cref="LargeBlockAllocator"/>.
+///  - <see cref="SmallBlockAllocator"/> is responsible of making small ( >= 65526 bytes) <see cref="MemorySegment"/> allocations. It uses a slab of a
+///    given <see cref="NativeBlockInfo"/> instance.
+///    Instances of <see cref="SmallBlockAllocator"/> are operating concurrently: two different threads using different instance won't compete for Allocation/Free.
+///  - <see cref="LargeBlockAllocator"/> take care of Allocations greater than 65526 bytes and will hold a Native Memory block of at least 64 MiB or sized with the
 ///    next power of 2 of the allocation that triggered it.
 ///
-///  Allocated <seealso cref="MemorySegment"/> are guaranteed to be 16 bytes address-aligned. <seealso cref="MemorySegment"/> that was allocated by
-///  <seealso cref="SmallBlockAllocator"/> have a 14 bytes header that precedes each instance, for <seealso cref="LargeBlockAllocator"/> the header is 20 bytes. These are the
+///  Allocated <see cref="MemorySegment"/> are guaranteed to be 16 bytes address-aligned. <see cref="MemorySegment"/> that was allocated by
+///  <see cref="SmallBlockAllocator"/> have a 14 bytes header that precedes each instance, for <see cref="LargeBlockAllocator"/> the header is 20 bytes. These are the
 ///  only overhead that is dependent of each Segment allocation.
 /// 
-///  <seealso cref="SmallBlockAllocator"/> and <seealso cref="LargeBlockAllocator"/> have defragmentation routines that are called when free segment fragmentation is too high
+///  <see cref="SmallBlockAllocator"/> and <see cref="LargeBlockAllocator"/> have defragmentation routines that are called when free segment fragmentation is too high
 ///  to merge adjacent free segments.
 ///
-///  <seealso cref="BlockAllocatorSequence"/> will release empty Blocks (Small and Large), they will be added to a dedicated pool on the Memory Manager and reassigned
+///  <see cref="BlockAllocatorSequence"/> will release empty Blocks (Small and Large), they will be added to a dedicated pool on the Memory Manager and reassigned
 ///   when possible to other Block Sequence that are requested memory. Which means the allocated Native Memory is never released, but reused. If you want
-///   to release is, the only way is to call <seealso cref="DefaultMemoryManager.Clear"/>.
+///   to release is, the only way is to call <see cref="DefaultMemoryManager.Clear"/>.
 /// </para>
 /// </remarks>
 public partial class DefaultMemoryManager : IDisposable, IMemoryManager

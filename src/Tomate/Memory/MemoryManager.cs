@@ -32,6 +32,7 @@ namespace Tomate;
 /// Segments are identified by their address, the PMB list and block lists are keep their entry sorted by address to allow binary search.
 /// </para>
 /// </remarks>
+[Obsolete("Use DefaultMemoryManager instead")]
 public unsafe class MemoryManager : IMemoryManager, IDisposable
 {
     /// <summary>

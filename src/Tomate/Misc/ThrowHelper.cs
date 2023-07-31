@@ -73,6 +73,12 @@ internal static class ThrowHelper
     }
 
     [DoesNotReturn]
+    internal static void EmptyQueue()
+    {
+        throw new InvalidOperationException("Cannot perform operation, queue is empty");
+    }
+
+    [DoesNotReturn]
     internal static void TimeSegmentConstructError(long start, long end)
     {
         throw new SegmentConstructException($"Cannot construct TimeSegment instance because start ({start}) is greater than end ({end})");

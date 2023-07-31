@@ -115,6 +115,20 @@ public unsafe struct MemoryView<T> where T : unmanaged
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool GetReservedArea(int maxLength, out Span<T> area)
+    {
+        if (_cur + maxLength > _end)
+        {
+            area = default;
+            return false;
+        }
+
+        area = new Span<T>(_cur, sizeof(T) * maxLength);
+
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void EndReserve(int writtenSize)
     {
         _cur += writtenSize;
