@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>disable</Nullable>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -15,23 +15,26 @@
 		<PackageProjectUrl>https://github.com/LoicBaumann/Tomate</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/LoicBaumann/Tomate</RepositoryUrl>
 		<Configurations>Debug;Release;DebugAlloc</Configurations>
+		<LangVersion>default</LangVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-	  <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+	  <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugAlloc|AnyCPU'">
-	  <DefineConstants>$(DefineConstants)TRACE;DEBUGALLOC;DEBUG;TRACE</DefineConstants>
+	  <DefineConstants>$(DefineConstants);TRACE;DEBUGALLOC;DEBUG</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-	  <DefineConstants>$(DefineConstants)TRACE</DefineConstants>
+	  <DefineConstants>$(DefineConstants);TRACE</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="JetBrains.Annotations" Version="2022.3.1" />
 	  <PackageReference Include="Serilog" Version="2.11.0" />
 	</ItemGroup>
+
+
 
 </Project>

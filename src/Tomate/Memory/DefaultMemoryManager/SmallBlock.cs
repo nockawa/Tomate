@@ -1,7 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
+#if DEBUGALLOC
 using System.Text;
+#endif
 
 namespace Tomate;
 
@@ -209,7 +212,6 @@ public partial class DefaultMemoryManager
                 // Backward link integrity test
                 var hashBackward = new HashSet<ushort>(Count);
                 cur = firstHeader.Previous;
-                last = cur;
                 first = cur;
                 while (cur != 0)
                 {
@@ -262,6 +264,7 @@ public partial class DefaultMemoryManager
         private TwoWaysLinkedList _freedSegmentList;
         private int _totalAllocatedSegments;
         private int _totalFreeSegments;
+        // ReSharper disable once NotAccessedField.Local
         private int _countBetweenDefrag;
         private readonly int _blockId;
 
@@ -297,7 +300,7 @@ public partial class DefaultMemoryManager
                 Debug.Assert((segId << 4) + size <= data.Length);
 
                 header.GenHeader.IsFree = true;
-                header.GenHeader.BlockId = _blockId;
+                header.GenHeader.BlockIndex = _blockId;
                 header.SegmentSize = (ushort)size;
                 _freedSegmentList.InsertLast(segId);
 
@@ -330,12 +333,6 @@ public partial class DefaultMemoryManager
         private unsafe ref SegmentHeader SegmentHeaderAccessor(ushort id)
         {
             return ref Unsafe.AsRef<SegmentHeader>(_data.Address + id * 16 - sizeof(SegmentHeader));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private unsafe ref TwoWaysLinkedList.Link SegmentHeaderLinkAccessor(ushort id)
-        {
-            return ref Unsafe.AsRef<TwoWaysLinkedList.Link>(_data.Address + id * 16 - sizeof(SegmentHeader));
         }
 
         internal unsafe bool DoAllocate(ref MemoryBlockInfo info, ref BlockAllocatorSequence.DebugData debugInfo, out MemoryBlock block)
@@ -417,7 +414,7 @@ public partial class DefaultMemoryManager
 
                         var allocatedSegId = (ushort)(curSegId + (remainingSize >> 4));
                         ref var allocatedSegHeader = ref SegmentHeaderAccessor(allocatedSegId);
-                        allocatedSegHeader.GenHeader.BlockId = curSegHeader.GenHeader.BlockId;
+                        allocatedSegHeader.GenHeader.BlockIndex = curSegHeader.GenHeader.BlockIndex;
                         allocatedSegHeader.SegmentSize = (ushort)requiredSize;
                         allocatedSegHeader.GenHeader.IsFree = false;
                         allocatedSegHeader.GenHeader.RefCounter = 1;
@@ -448,7 +445,7 @@ public partial class DefaultMemoryManager
             }
         }
 
-        public unsafe bool Free(ref SegmentHeader header)
+        private unsafe bool Free(ref SegmentHeader header)
         {
             if (Interlocked.Decrement(ref header.GenHeader.RefCounter) > 0)
             {

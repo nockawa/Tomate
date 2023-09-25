@@ -1,7 +1,7 @@
-﻿using System.Data.SqlTypes;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
@@ -14,13 +14,15 @@ namespace Tomate;
 /// There can be multiple concurrent RO operations, but any RW operation will be exclusive and block any other RO/RW operations.
 /// You can enumerate the dictionary content, but only to evaluate it. Any call to ro/rw operations would lead to a deadlock.
 /// </remarks>
+[PublicAPI]
 public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanaged where TValue : unmanaged
 {
     private readonly Header* _header;
     private KeyValuePair* _items;
     private readonly EqualityComparer<TKey> _comparer;
 
-    private static readonly TKey _defaultKey = default;
+    // ReSharper disable once RedundantDefaultMemberInitializer
+    private static readonly TKey DefaultKey = default;
 
     /// <summary>
     /// Number of KVP items the dictionary can hold
@@ -83,6 +85,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
     /// Construct the dictionary over the given memory segment
     /// </summary>
     /// <param name="segment">The memory area used to store the dictionary</param>
+    /// <param name="create"><c>true</c> to create a new instance, <c>false</c> to map the struct to an existing instance</param>
     /// <remarks>
     /// <para>
     /// The memory segment can be a shared memory (through the use of a <see cref="MemoryManagerOverMMF"/> instance) area for the dictionary to be shared among
@@ -129,7 +132,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             var items = _items;
             for (int i = 0; i < capacity && curCount < count; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     continue;
                 }
@@ -171,7 +174,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             var items = _items;
             for (int i = 0; i < capacity && curCount < count; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     continue;
                 }
@@ -203,7 +206,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
     {
         try
         {
-            if (_comparer.Equals(key, _defaultKey))
+            if (_comparer.Equals(key, DefaultKey))
             {
                 ThrowHelper.BlockSimpleDicDefKeyNotAllowed();
             }
@@ -223,7 +226,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             var items = _items;
             for (int i = 0; i < capacity && curCount < count; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     continue;
                 }
@@ -239,7 +242,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             items = _items;
             for (int i = 0; i < capacity; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     items->Key = key;
                     items->Value = value;
@@ -266,7 +269,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
     {
         try
         {
-            if (_comparer.Equals(key, _defaultKey))
+            if (_comparer.Equals(key, DefaultKey))
             {
                 ThrowHelper.BlockSimpleDicDefKeyNotAllowed();
             }
@@ -280,7 +283,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             var items = _items;
             for (int i = 0; i < capacity && curCount < count; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     continue;
                 }
@@ -303,7 +306,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             items = _items;
             for (int i = 0; i < capacity; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     items->Key = key;
                     items->Value = value;
@@ -333,7 +336,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
     {
         try
         {
-            if (_comparer.Equals(key, _defaultKey))
+            if (_comparer.Equals(key, DefaultKey))
             {
                 ThrowHelper.BlockSimpleDicDefKeyNotAllowed();
             }
@@ -347,7 +350,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             var items = _items;
             for (int i = 0; i < capacity && curCount < count; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     continue;
                 }
@@ -389,7 +392,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             var items = _items;
             for (int i = 0; i < capacity && curCount < count; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     continue;
                 }
@@ -434,7 +437,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             var items = _items;
             for (int i = 0; i < capacity && curCount < count; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     continue;
                 }
@@ -465,7 +468,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
     {
         try
         {
-            if (_comparer.Equals(key, _defaultKey))
+            if (_comparer.Equals(key, DefaultKey))
             {
                 ThrowHelper.BlockSimpleDicDefKeyNotAllowed();
             }
@@ -479,7 +482,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             var items = _items;
             for (int i = 0; i < capacity && curCount < count; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     continue;
                 }
@@ -504,7 +507,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             items = _items;
             for (int i = 0; i < capacity; i++, ++items)
             {
-                if (_comparer.Equals(items->Key, _defaultKey))
+                if (_comparer.Equals(items->Key, DefaultKey))
                 {
                     items->Key = key;
                     items->Value = valueFactory(key);
@@ -513,8 +516,8 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
                     return items->Value;
                 }
             }
-            Debug.Assert(false, "We should never get here!");
             added = success = false;
+            Debug.Assert(false, "We should never get here!");
             return default;
         }
         finally
@@ -592,7 +595,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
             }
 
             ++_curItem;
-            while (_dic._comparer.Equals(_curItem->Key, _defaultKey))
+            while (_dic._comparer.Equals(_curItem->Key, DefaultKey))
             {
                 ++_curItem;
             }

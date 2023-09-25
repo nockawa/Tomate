@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
@@ -17,10 +14,11 @@ namespace Tomate;
 /// Methods return the value will return it as a reference for you to have a direct access of the data. It is your choice to mutate the value or not.
 /// The enumerator also returns reference to the actual data and you're free to mutate the value if needed.
 /// </remarks>
+[PublicAPI]
 public struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey : unmanaged where TValue : unmanaged
 {
     [DebuggerDisplay("Key {Key}, Value {Value}")]
-    internal struct KeyValuePairInternal
+    private struct KeyValuePairInternal
     {
         public TKey Key;
         public TValue Value;
@@ -29,6 +27,7 @@ public struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey : unman
     [DebuggerDisplay("Key {Key}, Value {Value}")]
     public struct KeyValuePair
     {
+        // ReSharper disable once UnassignedReadonlyField
         public readonly TKey Key;
         public TValue Value;
     }
@@ -44,6 +43,7 @@ public struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey : unman
         /// so -2 means end of free list, -3 means index 0 but on free list, -4 means index 1 but on free list, etc.
         /// </summary>
         public int Next;
+        // ReSharper disable once MemberHidesStaticFromOuterClass
         public KeyValuePairInternal KeyValuePair;
     }
 

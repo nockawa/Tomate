@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+// ReSharper disable once RedundantUsingDirective
 using System.Text;
 
 namespace Tomate;
@@ -13,8 +13,6 @@ public partial class DefaultMemoryManager
         [StructLayout(LayoutKind.Sequential, Pack = 2)]
         public struct SegmentHeader
         {
-            private const int BlockIdMask = 0xFFFFFF;
-            private const int FreeFlag = 0x1000000;     // If set, the segment is free
             public static readonly int MaxSegmentSize = 0x7FFFFFFF;
 
             // 0-8
@@ -212,7 +210,6 @@ public partial class DefaultMemoryManager
                 // Backward link integrity test
                 var hashBackward = new HashSet<uint>(Count);
                 cur = firstHeader.Previous;
-                last = cur;
                 first = cur;
                 while (cur != 0)
                 {
@@ -266,6 +263,7 @@ public partial class DefaultMemoryManager
         private int _totalAllocatedSegments;
         private int _totalFreeSegments;
         private readonly int _blockId;
+        // ReSharper disable once NotAccessedField.Local
         private int _countBetweenDefrag;
         public int BlockIndex => _blockId;
 
@@ -286,7 +284,9 @@ public partial class DefaultMemoryManager
             Debug.Assert(debugInfo.IsCoherent);
             debugInfo.TotalCommitted += data.Length;
 
-            // Setup the main & free list with empty segments that span the whole region. Each segment can be up to 64KiB - 16, that's why we need more than one
+            // Setup the free list with one big empty segment that span the whole region.
+            
+            // Compute offset, size and id of the free segment
             var curOffset = sizeof(SegmentHeader).Pad16();
             debugInfo.TotalPaddingSize += curOffset - sizeof(SegmentHeader);
             var size = _data.Length - curOffset;
@@ -294,12 +294,16 @@ public partial class DefaultMemoryManager
             ref var header = ref SegmentHeaderAccessor(segId);
             Debug.Assert((segId << 4) + size <= data.Length);
 
+            // Setup of free segment
             header.GenHeader.IsFree = true;
-            header.GenHeader.BlockId = _blockId;
+            header.GenHeader.BlockIndex = _blockId;
             header.SegmentSize = size;
             header.GenHeader.RefCounter = 0;
+            
+            // Add it to the free list
             _freedSegmentList.InsertLast(segId);
 
+            // Update debug info
             debugInfo.TotalFreeMemory += size;
             debugInfo.TotalHeaderSize += sizeof(SegmentHeader);
             ++debugInfo.FreeSegmentCount;
@@ -325,12 +329,6 @@ public partial class DefaultMemoryManager
         private unsafe ref SegmentHeader SegmentHeaderAccessor(uint id)
         {
             return ref Unsafe.AsRef<SegmentHeader>(_data.Address + (int)id * 16 - sizeof(SegmentHeader));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private unsafe ref TwoWaysLinkedList.Link SegmentHeaderLinkAccessor(uint id)
-        {
-            return ref Unsafe.AsRef<TwoWaysLinkedList.Link>(_data.Address + (int)id * 16 - sizeof(SegmentHeader));
         }
 
         internal unsafe bool DoAllocate(ref MemoryBlockInfo info, ref BlockAllocatorSequence.DebugData debugInfo, out MemoryBlock block)
@@ -414,7 +412,7 @@ public partial class DefaultMemoryManager
 
                         var allocatedSegId = (uint)(curSegId + (remainingSize >> 4));
                         ref var allocatedSegHeader = ref SegmentHeaderAccessor(allocatedSegId);
-                        allocatedSegHeader.GenHeader.BlockId = curSegHeader.GenHeader.BlockId;
+                        allocatedSegHeader.GenHeader.BlockIndex = curSegHeader.GenHeader.BlockIndex;
                         allocatedSegHeader.SegmentSize = requiredSize;
                         allocatedSegHeader.GenHeader.IsFree = false;
                         allocatedSegHeader.GenHeader.RefCounter = 1;
@@ -445,7 +443,7 @@ public partial class DefaultMemoryManager
             }
         }
 
-        public unsafe bool Free(ref SegmentHeader header)
+        private unsafe bool Free(ref SegmentHeader header)
         {
             if (Interlocked.Decrement(ref header.GenHeader.RefCounter) > 0)
             {
@@ -498,7 +496,7 @@ public partial class DefaultMemoryManager
             return Free(ref lbh);
         }
 
-        internal unsafe void DefragmentFreeSegments(ref BlockAllocatorSequence.DebugData debugInfo)
+        private unsafe void DefragmentFreeSegments(ref BlockAllocatorSequence.DebugData debugInfo)
         {
             var startFreeSegCount = _freedSegmentList.Count;
             if (startFreeSegCount < 2)

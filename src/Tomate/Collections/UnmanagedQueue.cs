@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 
 namespace Tomate;
@@ -11,7 +10,7 @@ namespace Tomate;
 /// <remarks>
 /// This class is heavily based from the <see cref="Queue{T}"/> type of the .net framework.
 /// Designed for single thread usage only.
-/// <see cref="TryPeek"/> and <see cref="Peek"/> return <code>ref of {T}</code>, so don't use this reference after a <see cref="Enqueue"/> or <see cref="Dequeue"/> operation.
+/// <see cref="TryPeek"/> and <see cref="Peek"/> return <code>ref of {T}</code>, so don't use this reference after a <see cref="Enqueue()"/> or <see cref="Dequeue"/> operation.
 /// </remarks>
 [PublicAPI]
 [DebuggerTypeProxy(typeof(UnmanagedQueue<>.DebugView))]

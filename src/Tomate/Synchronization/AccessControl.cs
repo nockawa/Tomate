@@ -69,7 +69,7 @@ public struct AccessControl
 
     public void EnterExclusiveAccess()
     {
-        var ct = Thread.CurrentThread.ManagedThreadId ^ ProcessId;
+        var ct = Environment.CurrentManagedThreadId ^ ProcessId;
 
         // Fast path: exclusive lock works immediately
         if (Interlocked.CompareExchange(ref _lockedByThreadId, ct, 0) == 0)
@@ -114,7 +114,7 @@ public struct AccessControl
 
     public bool TryPromoteToExclusiveAccess()
     {
-        var ct = Thread.CurrentThread.ManagedThreadId ^ ProcessId;
+        var ct = Environment.CurrentManagedThreadId ^ ProcessId;
 
         // We can enter only if we are the only user (_sharedUsedCounter == 1)
         if (_sharedUsedCounter != 1)

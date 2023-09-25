@@ -3,6 +3,11 @@ using JetBrains.Annotations;
 
 namespace Tomate;
 
+// TODO MemBlock: AddRef/Dispose(release) can have a race condition
+// If thread B is calling AddRef while thread A is freeing a block.
+//  Need a lock mechanism in the MemBlock's header (interlocked.or/add in the RefCounter) to prevent this issue.
+//  Maybe consider exposing the lock and using in the appropriate APIs.
+
 /// <summary>
 /// Represent an allocated block of unmanaged memory
 /// </summary>
@@ -21,10 +26,10 @@ public struct MemoryBlock : IDisposable
     /// The Memory Segment corresponding to the Memory Block
     /// </summary>
     /// <remarks>
-    /// There is also an implicit casting operator <see cref="op_Implicit"/> that has the same function.
+    /// There is also an implicit casting operator <see cref="op_Implicit(Tomate.MemoryBlock)"/> that has the same function.
     /// </remarks>
     public MemorySegment MemorySegment;
-
+    
     /// <summary>
     /// Construct a MemoryBlock from a MemorySegment
     /// </summary>

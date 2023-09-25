@@ -1,8 +1,7 @@
 ﻿using System.Collections.Concurrent;
-using System.Net;
+using JetBrains.Annotations;
+// ReSharper disable once RedundantUsingDirective
 using System.Runtime.CompilerServices;
-using static Tomate.DefaultMemoryManager.SmallBlockAllocator.TwoWaysLinkedList;
-using static Tomate.MemoryManager;
 
 namespace Tomate;
 
@@ -14,6 +13,7 @@ namespace Tomate;
 /// Each Allocator instance has a unique Id <see cref="MemoryManagerId"/> that allows anyone to retrieve it back using <see cref="GetMemoryManager"/>.
 /// It also allows to reference a given instance inside an unmanaged type, which can't be with an instance of <see cref="IMemoryManager"/>, see <see cref="UnmanagedList{T}"/>.
 /// </remarks>
+[PublicAPI]
 public interface IMemoryManager
 {
     /// <summary>
@@ -33,11 +33,16 @@ public interface IMemoryManager
     private static ConcurrentDictionary<int, IMemoryManager> _memoryManagerById;
     private static int _curMemoryManagerId;
 
-    public static int AllocMemoryManagerId(IMemoryManager memoryManager)
+    public static int RegisterMemoryManager(IMemoryManager memoryManager)
     {
         var id = Interlocked.Increment(ref _curMemoryManagerId);
         _memoryManagerById.TryAdd(id, memoryManager);
         return id;
+    }
+
+    public static bool UnregisterMemoryManager(int memoryManagerId)
+    {
+        return _memoryManagerById.TryRemove(memoryManagerId, out _);
     }
 
     public static IMemoryManager GetMemoryManager(int id)
@@ -96,6 +101,7 @@ public interface IMemoryManager
     void Clear();
 }
 
+[PublicAPI]
 public interface IPageAllocator
 {
     unsafe byte* BaseAddress { get; }
@@ -103,10 +109,11 @@ public interface IPageAllocator
 
     MemorySegment AllocatePages(int length);
     bool FreePages(MemorySegment pages);
-    unsafe int ToBlockId(MemorySegment segment);
-    unsafe MemorySegment FromBlockId(int blockId);
+    int ToBlockId(MemorySegment segment);
+    MemorySegment FromBlockId(int blockId);
 }
 
+[PublicAPI]
 public interface IBlockAllocator : IDisposable
 {
     int BlockIndex { get; }

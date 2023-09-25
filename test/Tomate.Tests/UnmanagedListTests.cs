@@ -57,7 +57,6 @@ public class UnmanagedListTests
     private static int GenList(int count, out long ts)
     {
         GC.Collect();
-        var v = 0;
 
         ts = Stopwatch.GetTimestamp();
         var list = new List<int>();
@@ -73,7 +72,7 @@ public class UnmanagedListTests
             list.Add(i);
         }
 
-        v = list.Count;
+        var v = list.Count;
 
         GC.Collect();
         ts = Stopwatch.GetTimestamp() - ts;
@@ -84,7 +83,6 @@ public class UnmanagedListTests
     {
         ts = Stopwatch.GetTimestamp();
         var ul = new UnmanagedList<int>(mm);
-        var v = 0;
 
         for (int i = 0; i < count; i+=8)
         {
@@ -98,7 +96,7 @@ public class UnmanagedListTests
             ul.Add(i);
         }
 
-        v = ul.Count;
+        var v = ul.Count;
 
         ul.Dispose();
         ts = Stopwatch.GetTimestamp() - ts;

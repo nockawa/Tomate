@@ -1,14 +1,16 @@
-﻿using Serilog;
-using System.Diagnostics;
-using System.Net.Http.Headers;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using static Tomate.MemoryManager;
-using System.Text;
+using JetBrains.Annotations;
+
+// ReSharper disable RedundantUsingDirective
 using System.Runtime.Intrinsics;
+using System.Text;
+using Serilog;
+// ReSharper restore RedundantUsingDirective
 
 namespace Tomate;
 
+[PublicAPI]
 public class BlockOverrunException : Exception
 {
     public MemoryBlock Block { get; }
@@ -58,6 +60,7 @@ public class BlockOverrunException : Exception
 ///   to release is, the only way is to call <see cref="DefaultMemoryManager.Clear"/>.
 /// </para>
 /// </remarks>
+[PublicAPI]
 public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 {
     public static readonly int BlockInitialCount = Environment.ProcessorCount * 4;
@@ -172,6 +175,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     {
     }
 
+    // ReSharper disable once UnusedParameter.Local
     private DefaultMemoryManager(bool enableBlockOverrunDetection, bool isGlobal
 #if DEBUGALLOC
         , [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0
@@ -186,7 +190,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 
         MemoryBlockContentInitialization = DebugMemoryInit.None;
 #endif
-        MemoryManagerId = IMemoryManager.AllocMemoryManagerId(this);
+        MemoryManagerId = IMemoryManager.RegisterMemoryManager(this);
         _isGlobal = isGlobal;
         _nativeBlockList = new List<NativeBlockInfo>(16);
         _curNativeBlockInfo = new NativeBlockInfo(SmallBlockSize, BlockInitialCount);
@@ -237,12 +241,12 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 
         foreach (var ba in _pooledSmallBlockList)
         {
-            BlockReferential.ReleaseAllocator(ba.BlockIndex);
+            BlockReferential.UnregisterAllocator(ba.BlockIndex);
         }
 
         foreach (var ba in _pooledLargeBlockList)
         {
-            BlockReferential.ReleaseAllocator(ba.BlockIndex);
+            BlockReferential.UnregisterAllocator(ba.BlockIndex);
         }
 
         _nativeBlockList.Clear();
@@ -271,12 +275,12 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 
         foreach (var ba in _pooledSmallBlockList)
         {
-            BlockReferential.ReleaseAllocator(ba.BlockIndex);
+            BlockReferential.UnregisterAllocator(ba.BlockIndex);
         }
 
         foreach (var ba in _pooledLargeBlockList)
         {
-            BlockReferential.ReleaseAllocator(ba.BlockIndex);
+            BlockReferential.UnregisterAllocator(ba.BlockIndex);
         }
 
         _nativeBlockList.Clear();
@@ -313,7 +317,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 
         if (totalLeaks > 0)
         {
-            Log.Verbose($"Memory Manager allocated in {_sourceFile}:line {_lineNb} has {totalLeaks} leaked segments\r\n" + sb);
+            Log.Verbose("Memory Manager allocated in {SourceFile}:line {LineNb} has {TotalLeaks} leaked segments\\r\\n{SB}", _sourceFile, _lineNb, totalLeaks, sb);
         }
     }
 #endif
@@ -410,7 +414,8 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     }
 #endif
 
-public unsafe bool Free(MemoryBlock block)
+    // ReSharper disable once RedundantUnsafeContext
+    public unsafe bool Free(MemoryBlock block)
     {
 #if DEBUGALLOC
         if (_blockOverrunDetection)
@@ -435,7 +440,7 @@ public unsafe bool Free(MemoryBlock block)
         return BlockReferential.Free(block);
     }
 
-    internal void RecycleBlock(SmallBlockAllocator blockAllocator)
+    private void RecycleBlock(SmallBlockAllocator blockAllocator)
     {
         try
         {
@@ -448,7 +453,7 @@ public unsafe bool Free(MemoryBlock block)
         }
     }
 
-    internal void RecycleBlock(LargeBlockAllocator blockAllocator)
+    private void RecycleBlock(LargeBlockAllocator blockAllocator)
     {
         try
         {
@@ -572,11 +577,7 @@ public unsafe bool Free(MemoryBlock block)
             }
 
             // If we didn't find a suitable bloc, allocate a new one
-            if (largeBlockAllocator == null)
-            {
-                largeBlockAllocator = new LargeBlockAllocator(owner, minimumSize);
-            }
-            return largeBlockAllocator;
+            return largeBlockAllocator ?? new LargeBlockAllocator(owner, minimumSize);
         }
         finally
         {

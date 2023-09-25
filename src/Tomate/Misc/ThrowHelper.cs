@@ -95,4 +95,28 @@ internal static class ThrowHelper
     {
         throw new CapacityTooBigException($"Can't create an AppendCollection withe the given capacity ({requestedCapacity}), the maximum allowed is {maxAllowed}");
     }
+
+    [DoesNotReturn]
+    internal static void SmallLockConcurrencyCapacityReached(int maxConcurrency)
+    {
+        throw new SmallLockConcurrencyExceededException($"Can't enter lock, the maximum concurrency level ({maxConcurrency}) has been reached.");
+    }
+
+    [DoesNotReturn]
+    internal static void SmallLockConcurrencyTooBig(int maxConcurrency)
+    {
+        throw new SmallLockConcurrencyExceededException($"Maximum Concurrency exceeded, max must be at most {ushort.MaxValue}, but {maxConcurrency} was specified at construction");
+    }
+
+    [DoesNotReturn]
+    internal static void SmallLockTooManyExit()
+    {
+        throw new Exception("Exit has been called too many times");
+    }
+
+    [DoesNotReturn]
+    internal static void SmallLockBadLockId(ulong expected, ulong actual)
+    {
+        throw new ArgumentException($"Trying to unlock with [{expected.HighS()};{expected.LowS()}] but [{actual.HighS()};{actual.LowS()}] is actually on the top of the queue", "lockId");
+    }
 }

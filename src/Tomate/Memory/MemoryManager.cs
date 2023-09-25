@@ -1,8 +1,11 @@
 ﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
+// ReSharper disable RedundantUsingDirective
+using System.Runtime.CompilerServices;
 using System.Text;
 using Serilog;
+// ReSharper restore RedundantUsingDirective
 
 namespace Tomate;
 
@@ -33,6 +36,7 @@ namespace Tomate;
 /// </para>
 /// </remarks>
 [Obsolete("Use DefaultMemoryManager instead")]
+[PublicAPI]
 public unsafe class MemoryManager : IMemoryManager, IDisposable
 {
     /// <summary>
@@ -67,7 +71,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
 #endif
     )
     {
-        MemoryManagerId = IMemoryManager.AllocMemoryManagerId(this);
+        MemoryManagerId = IMemoryManager.RegisterMemoryManager(this);
         MaxAllocationLength = pinnedMemoryBlockSize;
         _pinnedMemoryBlocks = new List<PinnedMemoryBlock>(16);
 #if DEBUGALLOC
@@ -234,7 +238,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
     /// <summary>
     /// Free a previously allocated segment
     /// </summary>
-    /// <param name="segment">The memory segment to free</param>
+    /// <param name="block">The memory block to free</param>
     /// <returns><c>true</c> if the segment was successfully released, <c>false</c> otherwise.</returns>
     /// <exception cref="ObjectDisposedException">Can't free if the instance is disposed, all segments have been released anyway.</exception>
     /// <remarks>
@@ -263,7 +267,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
         return false;
     }
 
-    public bool Free<T>(MemoryBlock<T> segment) where T : unmanaged => Free(segment);
+    public bool Free<T>(MemoryBlock<T> memoryBlock) where T : unmanaged => Free((MemoryBlock)memoryBlock);
 
     /// <summary>
     /// Release all the allocated segments, free the memory allocated through .net.
@@ -282,7 +286,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
     private List<PinnedMemoryBlock> _pinnedMemoryBlocks;
 
     [DebuggerDisplay("Address: {SegmentAddress}, Biggest Free Segment: {BiggestFreeSegment}, Total Free: {TotalFree}")]
-    internal class PinnedMemoryBlock : IDisposable
+    private class PinnedMemoryBlock : IDisposable
     {
         public PinnedMemoryBlock(int size)
         {

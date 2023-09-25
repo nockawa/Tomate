@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Tomate;
 
@@ -37,6 +38,12 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
     public static implicit operator Span<byte>(MemorySegment segment)
     {
         return new Span<byte>(segment.Address, segment.Length);
+    }
+    
+    /// Beware if the span doesn't map to a fixed address space, you may have issues if you don't handle the MemorySegment's lifetime accordingly
+    public static explicit operator MemorySegment(Span<byte> span)
+    {
+        return new MemorySegment((byte*)Unsafe.AsPointer(ref MemoryMarshal.AsRef<byte>(span)), span.Length * sizeof(byte));
     }
 
     public MemorySegment<T> Cast<T>() where T : unmanaged => new(Address, Length / sizeof(T));
@@ -148,7 +155,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
 
     [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
     public Span<T> ToSpan() => new(Address, Length);
-    public Span<TU> ToSpan<TU>() where TU : unmanaged => new(Address, Length * sizeof(T) / sizeof(TU));
+    public Span<U> ToSpan<U>() where U : unmanaged => new(Address, Length * sizeof(T) / sizeof(U));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static implicit operator Span<T>(MemorySegment<T> segment)
