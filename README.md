@@ -41,11 +41,18 @@ Terminology:
 
 ### A set of collection types
 
-#### Single-threaded
-
-#### Concurrent
+Collections are prefixed to give more information about their intended usage:
+ - Unmanaged: a single-threaded, generic collection type where T is unmanaged, is not compatible with MemoryMappedFile. It's the default prefix.
+ - Mapped: a collection that can be used inside a MemoryMappedFile.
+ - Blocked: thread-safe collection but no efficient on its implementation, simplicity and memory footprint chosen over efficiency.
+ - Concurrent: thread-safe collection designed and implemented for concurrency intensive use cases.
 
 ### Low level synchronization types
+
+These types can be instanced either for runtime purpose or inside a MemoryMappedFile.
+ - AccessControl: enable shared read/exclusive write access to a resource where contention is not the issue (there's no waiting list). 
+ - ExclusiveAccessControl: smaller version than AccessControl with only exclusive access.
+ - SmallLock: An interprocess/thread lock mechanism with a proper waiting list.
 
 ### Persistant data manipulation through Memory Mapped File
 
@@ -67,18 +74,4 @@ New collection and synchronization types can be used on a MMF the same way you w
 You can manipulate data structures that are bigger than the available memory and with a lifespan that is bound to the file that store them, not the process that uses them.
 You no longer have loading/saving: you operate on the file's content directly, C# types are mapping the collections, structures, content and synchronization object for you.
 
-## WIP
-
-
-| Type Name   | Struct | Description | Thread Safe | Is Resizable | Is MMF | Operations | Remark  |
-| ----------- | ------- | ----------- | ------------ | ------ | ------- |
-| ConcurrentBitmapL3All   | class |  Bit alloc/search/free | Yes | No | No, could be | SetL0/L1, IsSet, Clear, FindUnset
-| ConcurrentBitmapL4   | struct| Alloc/free variable bit length | Yes | No | Yes | Allocate/FreeBits |
-| AppendCollection&lt;T&gt; | struct | Append/Get _x_ items consecutively | No | Append | Yes | Reserve/Get | 
-| BlockingSimpleDictionary<TKey, TValue> | struct | Dictionary | Yes, lock | No | Yes | TryAdd/Remove/Get/GetOrAdd | 
-| ChunkBasedConcurrentCircularBuffer | struct | Multiple prod-single cons, queueing variable sized data | Yes | No | Yes | Reserve/Peek | Wait on reserve if full
-| ConcurrentChunkQueue | struct | | Yes | No | Yes | Queue/Dequeue | |
-| StringTable | struct | | No | Append | Yes | Add | No get! |
-| UnmanagedList&lt;T&gt; | struct | | No | Grow | No | Add/Insert | Could add Remove |
-| UnmanagedStack&lt;T&gt; | struct | | No | Grow | No | Push/Pop/TryPeek |  |
 

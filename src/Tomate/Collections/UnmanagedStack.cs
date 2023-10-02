@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
 namespace Tomate;
@@ -18,11 +19,27 @@ namespace Tomate;
 [DebuggerDisplay("Count = {Count}")]
 public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
 {
-    private readonly IMemoryManager _memoryManager;
-    private MemoryBlock<T> _memoryBlock;
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Header
+    {
+        public int _size;
+        public int _capacity;
+        private ulong _padding;
+    }
+
+    private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
+    private T* _buffer => (T*)(_header + 1);
+
+    private ref int _size => ref _header->_size;
+    private ref int _capacity => ref _header->_capacity;
+
+    //private readonly IMemoryManager _memoryManager;
+    private MemoryBlock _memoryBlock;
+    /*
     private int _size;
     private int _capacity;
     private T* _buffer;
+    */
 
     private const int DefaultCapacity = 8;
 
@@ -37,16 +54,20 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         {
             ThrowHelper.NeedNonNegIndex(nameof(capacity));
         }
-        _memoryManager = memoryManager ?? DefaultMemoryManager.GlobalInstance;
+        memoryManager ??= DefaultMemoryManager.GlobalInstance;
         _memoryBlock = default;
         if (capacity > 0)
         {
-            _memoryBlock = _memoryManager.Allocate<T>(capacity);
+            _memoryBlock = memoryManager.Allocate(sizeof(Header) + sizeof(T) * capacity);
+        }
+        else
+        {
+            _memoryBlock = memoryManager.Allocate(sizeof(Header));
         }
 
-        _buffer = _memoryBlock.MemorySegment.Address;
+        //_buffer = _memoryBlock.MemorySegment.Address;
         _size = 0;
-        _capacity = _memoryBlock.MemorySegment.Length;
+        _capacity = capacity;
     }
     public int Count => _size;
 
@@ -58,7 +79,9 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             return ref _buffer[index];
         }
     }
-    public bool IsDefault => _memoryManager == null;
+
+    public MemorySegment<T> Content => new ((_buffer), _size);
+    public bool IsDefault => _memoryBlock.IsDefault;
     public bool IsDisposed => _size < 0;
 
     public void Clear()
@@ -175,9 +198,13 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         var newCapacity = _capacity == 0 ? DefaultCapacity : 2 * _capacity;
 
         // Check if the new capacity exceed the size of the block we can allocate
-        if ((newCapacity * sizeof(T)) > _memoryManager.MaxAllocationLength)
+        var memoryManager = _memoryBlock.MemoryManager;
+        var maxAllocationLength = memoryManager.MaxAllocationLength;
+        var headerSize = sizeof(Header);
+        var itemSize = sizeof(T);
+        if ((headerSize + newCapacity * itemSize) > maxAllocationLength)
         {
-            newCapacity = _memoryManager.MaxAllocationLength / sizeof(T);
+            newCapacity = (maxAllocationLength - headerSize) / itemSize;
 
             if (newCapacity < capacity)
             {
@@ -185,19 +212,17 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             }
         }
         
-        if (newCapacity < capacity) newCapacity = capacity;
-        if (newCapacity < _size)
-        {
-            ThrowHelper.OutOfRange($"New Capacity {newCapacity} can't be less than actual Count {_size}");
-        }
-
-        var newItems = _memoryManager.Allocate<T>(newCapacity);
+        _memoryBlock.Resize(sizeof(Header) + (itemSize * newCapacity));
+        _capacity = newCapacity;
+        /*
+        var newItems = memoryManager.Allocate(headerSize + itemSize * newCapacity);
         _memoryBlock.MemorySegment.Slice(0, _size).ToSpan().CopyTo(newItems.MemorySegment.ToSpan());
 
         _memoryManager.Free(_memoryBlock);
         _memoryBlock = newItems;
         _capacity = _memoryBlock.MemorySegment.Length;
         _buffer = _memoryBlock.MemorySegment.Address;
+    */
     }
 
     // Copies the Stack to an array, in the same order Pop would return the items.
@@ -208,7 +233,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             return Array.Empty<T>();
         }
 
-        T[] objArray = new T[_size];
+        var objArray = new T[_size];
         int i = 0;
         while (i < _size)
         {
@@ -238,23 +263,32 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         {
             get
             {
+                var data = new Span<T>(_stack._buffer, _stack._size);
+                var items = new T[data.Length];
+                var dest = new Span<T>(items);
+                data.CopyTo(dest);
+                
+                /*
                 var src = _stack._memoryBlock.MemorySegment.Slice(0, _stack.Count).ToSpan();
                 var dst = new T[src.Length];
                 src.CopyTo(dst);
-                Array.Reverse(dst);
-                return dst;
+                */
+                Array.Reverse(items);
+                return items;
             }
         }
     }
 
     public void Dispose()
     {
-        if (IsDefault)
+        if (IsDefault || IsDisposed)
         {
             return;
         }
-        _memoryManager.Free(_memoryBlock);
+        
+        // _memoryManager.Free(_memoryBlock);
+        _memoryBlock.Dispose();
         _memoryBlock = default;
-        _size = -1;
+        // _size = -1;
     }
 }

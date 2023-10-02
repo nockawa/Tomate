@@ -345,7 +345,6 @@ public unsafe partial class MemoryManagerOverMMF
 
     private void InitializeBlockAllocator(int blockPageId, MemorySegment blockData, int nextAllocatorPageId = 0)
     {
-        
         // Initialize the header
         var (hms, data) = blockData.Split(sizeof(BlockAllocator).Pad16());
         hms.ToSpan<byte>().Clear();
@@ -389,7 +388,7 @@ public unsafe partial class MemoryManagerOverMMF
 #if DEBUGALLOC
     public MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
 #else
-    public MemoryBlock Allocate(int size)
+    public MemoryBlock Allocate(int length)
 #endif
     {
         var pageId = GetAllocatorStartingSegmentId();
@@ -397,12 +396,12 @@ public unsafe partial class MemoryManagerOverMMF
         while (true)
         {
             ref var allocator = ref GetAllocator(pageId, out var data);
-            if (DoAllocate(ref allocator, data, size, out var memoryBlock))
+            if (DoAllocate(ref allocator, data, length, out var memoryBlock))
             {
                 return memoryBlock;
             }
 
-            pageId = GetNextAllocatorSegmentId(ref allocator, size);
+            pageId = GetNextAllocatorSegmentId(ref allocator, length);
         }
     }
 
@@ -417,7 +416,7 @@ public unsafe partial class MemoryManagerOverMMF
             if (blockAllocator.TotalFreeSegments > 100 && fragRatio < 0.15f)
             {
                 ++DebugInfo.FreeSegmentDefragCount;
-                //DefragmentFreeSegments(ref debugInfo);
+                DefragmentFreeSegments(ref blockAllocator, data);
                 blockAllocator.CountBetweenDefrag = 0;
             }
 
@@ -523,10 +522,10 @@ public unsafe partial class MemoryManagerOverMMF
 #if DEBUGALLOC
     public MemoryBlock<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
 #else
-    public MemoryBlock<T> Allocate<T>(int size) where T : unmanaged
+    public MemoryBlock<T> Allocate<T>(int length) where T : unmanaged
 #endif
     {
-        return Allocate(size * sizeof(T)).Cast<T>();
+        return Allocate(length * sizeof(T)).Cast<T>();
     }
 
     public bool Free(MemoryBlock block)
@@ -584,6 +583,84 @@ public unsafe partial class MemoryManagerOverMMF
     public bool Free<T>(MemoryBlock<T> block) where T : unmanaged
     {
         return BlockReferential.Free(block);
+    }
+
+    public void Defragment()
+    {
+        for (var i = 0; i < _allocators.Length; i++)
+        {
+            if (_allocators[i] == 0)
+            {
+                continue;
+            }
+
+            ref var allocator = ref GetAllocator(_allocators[i], out var data);
+            while (true)
+            {
+                DefragmentFreeSegments(ref allocator, data);
+
+                if (allocator.NextAllocatorPageId == 0)
+                {
+                    break;
+                }
+
+                allocator = ref GetAllocator(allocator.NextAllocatorPageId, out data);
+            }
+        }
+    }
+
+    private void DefragmentFreeSegments(ref BlockAllocator blockAllocator, MemorySegment memorySegment)
+    {
+        ref var debugInfo = ref DebugInfo;
+        var startFreeSegCount = blockAllocator.FreedSegmentList.Count;
+        if (startFreeSegCount < 2)
+        {
+            return;
+        }
+
+        var baseAddress = memorySegment.Address;
+        var headerSize = sizeof(SegmentHeader);
+        var freeSegments = new (uint, int)[blockAllocator.FreedSegmentList.Count];
+        var curSegId = blockAllocator.FreedSegmentList.FirstId;
+        var i = 0;
+        while (curSegId != default)
+        {
+            ref var header = ref SegmentHeaderAccessor(baseAddress, curSegId);
+            var length = (header.SegmentSize + headerSize >> 4);
+            freeSegments[i++] = (curSegId, length);
+
+            curSegId = blockAllocator.FreedSegmentList.Next(baseAddress, curSegId);
+        }
+
+        Array.Sort(freeSegments, (a, b) => (int)(a.Item1 - b.Item1));
+
+        var maxSize = (SegmentHeader.MaxSegmentSize >> 4) + 1;
+        var end = freeSegments.Length - 1;
+
+        // Merge adjacent free segment (if the combined size allows it)
+        for (i = 0; i < end; i++)
+        {
+            (uint start, int length) a = freeSegments[i];
+            (uint start, int length) b = freeSegments[i + 1];
+
+            var aEnd = a.start + a.length;
+            var bEnd = b.start + b.length;
+            if (aEnd == b.start && bEnd - a.start <= maxSize)
+            {
+                ref var aHeader = ref SegmentHeaderAccessor(baseAddress, a.start);
+                aHeader.SegmentSize += (b.length << 4);
+                blockAllocator.FreedSegmentList.Remove(baseAddress, b.start);
+
+                --debugInfo.FreeSegmentCount;
+                --blockAllocator.TotalFreeSegments;
+                debugInfo.TotalHeaderSize -= headerSize;
+                debugInfo.TotalFreeMemory += headerSize;
+
+                freeSegments[i + 1] = (a.start, (ushort)(a.length + b.length));
+            }
+        }
+
+        Debug.Assert(debugInfo.IsCoherent);
     }
 
     public void Clear()

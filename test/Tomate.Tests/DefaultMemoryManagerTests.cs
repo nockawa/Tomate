@@ -199,6 +199,47 @@ public class DefaultMemoryManagerTests
     }
 
     [Test]
+    public unsafe void SmallAllocations()
+    {
+        const int start = 0;
+        const int end = 32;
+        const int count = end - start + 1;
+        
+        using var mm = new DefaultMemoryManager();
+
+        var mbList = stackalloc MemoryBlock[count];
+        for (int i = start; i <= end; i++)
+        {
+            var memoryBlock = mm.Allocate(i);
+            Assert.That(memoryBlock.MemorySegment.Length, Is.EqualTo(i));
+            Assert.That(memoryBlock.MemoryManager, Is.EqualTo(mm));
+            mbList[i] = memoryBlock;
+        }
+        
+        for (int i = start; i <= end; i++)
+        {
+            mbList[i].Dispose();
+        }
+    }
+
+    [Test]
+    public void ZeroSizedAllocationSucceedButDontAllocSegment()
+    {
+        using var mm = new DefaultMemoryManager();
+        var bs = mm.GetThreadBlockAllocatorSequence();
+        var seqCount = bs.DebugInfo.AllocatedSegmentCount;
+
+        {
+            using var mb = mm.Allocate(0);
+            Assert.That(mb.MemorySegment.Length, Is.EqualTo(0));
+            Assert.That(mb.IsDefault, Is.False);
+            Assert.That(mb.IsDisposed, Is.False);
+            Assert.That(mb.MemoryManager, Is.EqualTo(mm));
+            Assert.That(seqCount, Is.EqualTo(bs.DebugInfo.AllocatedSegmentCount));
+        }
+    }
+    
+    [Test]
     [TestCase(0.5f)]
     [TestCase(1.0f)]
     [TestCase(2.0f)]

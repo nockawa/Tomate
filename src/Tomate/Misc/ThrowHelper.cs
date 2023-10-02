@@ -93,7 +93,7 @@ internal static class ThrowHelper
     [DoesNotReturn]
     internal static void AppendCollectionCapacityTooBig(int requestedCapacity, int maxAllowed)
     {
-        throw new CapacityTooBigException($"Can't create an AppendCollection withe the given capacity ({requestedCapacity}), the maximum allowed is {maxAllowed}");
+        throw new CapacityTooBigException($"Can't create a MappedAppendCollection withe the given capacity ({requestedCapacity}), the maximum allowed is {maxAllowed}");
     }
 
     [DoesNotReturn]
@@ -118,5 +118,11 @@ internal static class ThrowHelper
     internal static void SmallLockBadLockId(ulong expected, ulong actual)
     {
         throw new ArgumentException($"Trying to unlock with [{expected.HighS()};{expected.LowS()}] but [{actual.HighS()};{actual.LowS()}] is actually on the top of the queue", "lockId");
+    }
+
+    [DoesNotReturn]
+    internal static void KeyNotFound<T>(T key)
+    {
+        throw new KeyNotFoundException($"The given key {key} was not found.");
     }
 }

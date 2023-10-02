@@ -96,6 +96,8 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     private int _largeBlockMinSize;
 
     private readonly bool _isGlobal;
+    private readonly BlockReferential.GenBlockHeader _zeroHeader;
+    private readonly MemoryBlock _zeroMemoryBlock;
 
 #if DEBUGALLOC
     private static readonly int BlockMargingSize = 1024;                    // MUST BE A MULTIPLE OF 32 BYTES !!!
@@ -176,7 +178,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     }
 
     // ReSharper disable once UnusedParameter.Local
-    private DefaultMemoryManager(bool enableBlockOverrunDetection, bool isGlobal
+    private unsafe DefaultMemoryManager(bool enableBlockOverrunDetection, bool isGlobal
 #if DEBUGALLOC
         , [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0
 #endif
@@ -212,6 +214,12 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
             var v = Interlocked.Increment(ref _blockSequenceCounter);
             return _blockAllocatorSequences[v % _blockAllocatorSequences.Length];
         });
+
+        {
+            _zeroHeader.BlockIndex = _blockAllocatorSequences[0].FirstBlockId;
+            _zeroHeader.RefCounter = 1;
+            _zeroMemoryBlock = new MemoryBlock((byte*)Unsafe.AsPointer(ref _zeroHeader) + sizeof(BlockReferential.GenBlockHeader), 0);
+        }
     }
 
     public void Dispose()
@@ -326,11 +334,17 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 #if DEBUGALLOC
     public unsafe MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
 #else
-    public MemoryBlock Allocate(int size)
+    public MemoryBlock Allocate(int length)
 #endif
     {
         var blockSequence = _assignedBlockSequence.Value;
 
+        // Special case: 0 length
+        if (length == 0)
+        {
+            return _zeroMemoryBlock;
+        }
+        
 #if DEBUGALLOC
         if (_blockOverrunDetection)
         {
@@ -338,7 +352,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         }
         var sai = new MemoryBlockInfo(size, sourceFile, lineNb);
 #else
-        var sai = new MemoryBlockInfo(size);
+        var sai = new MemoryBlockInfo(length);
 #endif
         var res = blockSequence!.Allocate(ref sai);
 
@@ -379,7 +393,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 #if DEBUGALLOC
     public unsafe MemoryBlock<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
 #else
-    public unsafe MemoryBlock<T> Allocate<T>(int size) where T : unmanaged
+    public unsafe MemoryBlock<T> Allocate<T>(int length) where T : unmanaged
 #endif
     {
 #if DEBUGALLOC
@@ -387,10 +401,10 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         return Allocate(size * sizeof(T), sourceFile, lineNb).Cast<T>();
         // ReSharper restore ExplicitCallerInfoArgument
 #else
-        return Allocate(size * sizeof(T)).Cast<T>();
+        return Allocate(length * sizeof(T)).Cast<T>();
 #endif
     }
-
+    
 #if DEBUGALLOC
     private unsafe bool OverrunCheck(MemorySegment<byte> segment)
     {

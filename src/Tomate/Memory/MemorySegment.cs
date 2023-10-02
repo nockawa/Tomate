@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
@@ -17,6 +18,8 @@ public delegate TResult BinarySearchComp<T1, T2, out TResult>(ref T1 arg1, ref T
 /// Only work with this type if you are dealing with pinned memory block, otherwise rely on <see cref="Span{T}"/>
 /// </remarks>
 [DebuggerDisplay("Address: {Address}, Length: {Length}")]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
+[PublicAPI]
 public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 {
     public readonly byte* Address;
@@ -118,6 +121,8 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 /// </remarks>
 [DebuggerDisplay("Type: {typeof(T).Name} Address: {Address}, Length: {Length}")]
 [DebuggerTypeProxy(typeof(MemorySegment<>.DebugView))]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
+[PublicAPI]
 public readonly unsafe struct MemorySegment<T> where T : unmanaged
 {
     internal sealed class DebugView

@@ -15,7 +15,7 @@ public class AppendCollectionTests
     [Test]
     public void AllocationTest()
     {
-        using var col = AppendCollection<long>.Create(_allocator, 16);
+        using var col = MappedAppendCollection<long>.Create(_allocator, 16);
 
         for (int i = 0; i < 488; i += 4)
         {
@@ -40,7 +40,7 @@ public class AppendCollectionTests
         }
 
         {
-            using var col2 = AppendCollection<long>.Map(_allocator, col.RootPageId);
+            using var col2 = MappedAppendCollection<long>.Map(_allocator, col.RootPageId);
 
             for (int i = 0; i < 488; i += 4)
             {
@@ -63,7 +63,7 @@ public class AppendCollectionTests
     [Test]
     public void CantAllocateSetBiggerThanMaxAllowedTest()
     {
-        using var col = AppendCollection<long>.Create(_allocator, 16);
+        using var col = MappedAppendCollection<long>.Create(_allocator, 16);
 
         var maxPerPage = col.MaxItemCountPerPage;
         Assert.That(maxPerPage, Is.EqualTo(_allocator.PageSize / sizeof(long)));
@@ -85,14 +85,14 @@ public class AppendCollectionTests
 
         Assert.Throws<CapacityTooBigException>(() =>
         {
-            using var col = AppendCollection<long>.Create(_allocator, (_allocator.PageSize / 4));
+            using var col = MappedAppendCollection<long>.Create(_allocator, (_allocator.PageSize / 4));
         });
     }
 
     [Test]
-    public void StringTableTest()
+    public void MappedStringTableTest()
     {
-        using var col = StringTable.Create(_allocator, 16);
+        using var col = MappedStringTable.Create(_allocator, 16);
 
         col.AddString("Pipo");
         col.AddString("Pouet Tagada");

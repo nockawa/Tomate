@@ -160,7 +160,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
     /// <summary>
     /// Allocate a Memory Segment
     /// </summary>
-    /// <param name="size">Length of the segment to allocate.</param>
+    /// <param name="length">Length of the segment to allocate.</param>
     /// <returns>The segment or an exception will be fired if we couldn't allocate one.</returns>
     /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
     /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>
@@ -172,7 +172,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
 #if DEBUGALLOC
     public MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
 #else
-    public MemoryBlock Allocate(int size)
+    public MemoryBlock Allocate(int length)
 #endif
     {
         if (_pinnedMemoryBlocks == null)
@@ -182,21 +182,21 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
 
         for (var i = 0; i < _pinnedMemoryBlocks.Count; i++)
         {
-            if (_pinnedMemoryBlocks[i].AllocateSegment(size,
+            if (_pinnedMemoryBlocks[i].AllocateSegment(length,
 #if DEBUGALLOC
                     sourceFile, lineNb,
 #endif
                     out var res))
             {
                 ++AllocationPinnedMemoryBlockEpoch;
-                return new MemoryBlock(res, size);
+                return new MemoryBlock(res, length);
             }
         }
 
         var memorySegment = new PinnedMemoryBlock(MaxAllocationLength);
-        if (memorySegment.BiggestFreeSegment < size)
+        if (memorySegment.BiggestFreeSegment < length)
         {
-            ThrowHelper.OutOfMemory($"The requested size ({size}) is too big to be allocated into a single block.");
+            ThrowHelper.OutOfMemory($"The requested size ({length}) is too big to be allocated into a single block.");
         }
 
         _pinnedMemoryBlocks.Add(memorySegment);
@@ -206,7 +206,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
 #if DEBUGALLOC
         return Allocate(size, sourceFile, lineNb);
 #else
-        return Allocate(size);
+        return Allocate(length);
 #endif
     }
 
@@ -214,7 +214,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
     /// Allocate a Memory Segment
     /// </summary>
     /// <typeparam name="T">The type of each item of the segment.</typeparam>
-    /// <param name="size">Length (in {T}) of the segment to allocate.</param>
+    /// <param name="length">Length (in {T}) of the segment to allocate.</param>
     /// <returns>The segment or an exception will be fired if we couldn't allocate one.</returns>
     /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
     /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>
@@ -229,9 +229,9 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
         return Allocate(sizeof(T) * size, sourceFile, lineNb).Cast<T>();
     }
 #else
-    public MemoryBlock<T> Allocate<T>(int size) where T : unmanaged
+    public MemoryBlock<T> Allocate<T>(int length) where T : unmanaged
     {
-        return Allocate(sizeof(T) * size).Cast<T>();
+        return Allocate(sizeof(T) * length).Cast<T>();
     }
 #endif
 

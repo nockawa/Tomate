@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using JetBrains.Annotations;
 // ReSharper disable once RedundantUsingDirective
 using System.Runtime.CompilerServices;
@@ -16,13 +17,7 @@ namespace Tomate;
 [PublicAPI]
 public interface IMemoryManager
 {
-    /// <summary>
-    /// Check if the instance is disposed or not.
-    /// </summary>
-    bool IsDisposed { get; }
-
-    int MaxAllocationLength { get; }
-    int MemoryManagerId { get; }
+    #region Statics
 
     static IMemoryManager()
     {
@@ -50,11 +45,21 @@ public interface IMemoryManager
         _memoryManagerById.TryGetValue(id, out var memoryManager);
         return memoryManager;
     }
+    
+
+    #endregion
+    /// <summary>
+    /// Check if the instance is disposed or not.
+    /// </summary>
+    bool IsDisposed { get; }
+
+    int MaxAllocationLength { get; }
+    int MemoryManagerId { get; }
 
     /// <summary>
     /// Allocate a Memory Block
     /// </summary>
-    /// <param name="size">Length of the block to allocate.</param>
+    /// <param name="length">Length of the block to allocate.</param>
     /// <returns>The block or an exception will be fired if we couldn't allocate one.</returns>
     /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
     /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>
@@ -65,14 +70,14 @@ public interface IMemoryManager
 #if DEBUGALLOC
      MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0);
 #else
-    MemoryBlock Allocate(int size);
+    MemoryBlock Allocate(int length);
 #endif
 
     /// <summary>
     /// Allocate a Memory Block
     /// </summary>
     /// <typeparam name="T">The type of each item of the segment assigned to the block.</typeparam>
-    /// <param name="size">Length (in {T}) of the segment to allocate.</param>
+    /// <param name="length">Length (in {T}) of the segment to allocate.</param>
     /// <returns>The segment or an exception will be fired if we couldn't allocate one.</returns>
     /// <exception cref="ObjectDisposedException">Can't allocate because the object is disposed.</exception>
     /// <exception cref="OutOfMemoryException">The requested size is too big.</exception>
@@ -83,8 +88,48 @@ public interface IMemoryManager
 #if DEBUGALLOC
     MemoryBlock<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged;
 #else
-    MemoryBlock<T> Allocate<T>(int size) where T : unmanaged;
+    MemoryBlock<T> Allocate<T>(int length) where T : unmanaged;
 #endif
+
+    bool Resize(ref MemoryBlock memoryBlock, int newLength, bool zeroExtra=false)
+    {
+        if (memoryBlock.MemorySegment.Length == newLength)
+        {
+            return true;
+        }
+        
+        var newBlock = Allocate(newLength);
+        if (newLength > memoryBlock.MemorySegment.Length)
+        {
+            memoryBlock.MemorySegment.ToSpan<byte>().CopyTo(newBlock.MemorySegment.ToSpan<byte>());
+            if (zeroExtra)
+            {
+                memoryBlock.MemorySegment.ToSpan<byte>()[newLength..].Clear();
+            }
+        }
+        else
+        {
+            memoryBlock.MemorySegment.ToSpan<byte>()[..newLength].CopyTo(newBlock.MemorySegment.ToSpan<byte>());
+        }
+        
+        memoryBlock.Dispose();
+        memoryBlock = newBlock;
+        return true;
+    }
+
+    unsafe bool Resize<T>(ref MemoryBlock<T> memoryBlock, int newLength, bool zeroExtra=false) where T : unmanaged
+    {
+        var mb = (MemoryBlock)memoryBlock;
+        var res = Resize(ref mb, newLength * sizeof(T));
+        if (res == false)
+        {
+            return false;
+        }
+
+        memoryBlock = mb.Cast<T>();
+        Debug.Assert(memoryBlock.MemorySegment.Length == newLength);
+        return true;
+    }
 
     /// <summary>
     /// Free a previously allocated block
@@ -116,6 +161,7 @@ public interface IPageAllocator
 [PublicAPI]
 public interface IBlockAllocator : IDisposable
 {
+    IMemoryManager Owner { get; }
     int BlockIndex { get; }
     bool Free(MemoryBlock memoryBlock);
 }

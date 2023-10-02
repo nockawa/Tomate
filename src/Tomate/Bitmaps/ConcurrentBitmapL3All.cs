@@ -12,19 +12,20 @@ namespace Tomate;
 /// Usage:
 /// Typically designed to implement an occupancy map.
 /// You have a Memory Block that can store x elements and you want to reserve/free these elements in a concurrent fashion.
-/// The occupancy map has one bit per element and when you want to allocate an element, you look for a free bit (with <see cref="FindNextUnsetL0"/>) and reserve this bit with
-/// <see cref="SetL0"/>. You can also look for and set 64bits at a time (<see cref="FindNextUnsetL1"/> and <see cref="SetL1"/>).
+/// The occupancy map has one bit per element and when you want to allocate an element, you look for a free bit (with <see cref="FindNextUnsetL0"/>) and reserve
+/// this bit with <see cref="SetL0"/>. You can also look for and set 64bits at a time (<see cref="FindNextUnsetL1"/> and <see cref="SetL1"/>).
 /// This class is designed for multiple thread concurrently looking for any available bit (corresponding entry set to 0) to set.
-/// A thread will call <see cref="FindNextUnsetL0"/> to get the position of a bit actually free, and will call <see cref="SetL0"/> to reserve it and set it to one.
-/// If another thread beats us and set this bit to one before us, then <see cref="SetL0"/> will return <c>false</c> and we have to look for another bit.
+/// A thread will call <see cref="FindNextUnsetL0"/> to get the position of a bit actually free, and will call <see cref="SetL0"/> to reserve it and set it
+/// to one. If another thread beats us and set this bit to one before us, then <see cref="SetL0"/> will return <c>false</c> and we have to look for another bit.
 /// </para>
 /// <para>
 /// Implementation:
 /// As the BitMap may hold thousands of bits, looking for free ones, bit by bit, may take too much time as the occupancy rate increases. To alleviate this,
 /// we have two levels of aggregation that allow us to skips complete 64bits blocks (level 1) and compete 64^2 blocks (level 2) during our search.
 /// e.g. the first bit of the L1ALL map is set to 1 is all bit from [0-63] are set to 1.
-/// Finding an unset bit is concurrent friendly, many threads can execute such operation at the same time, but setting or clearing a bit has to be an exclusive operation (because of
-/// resize), but it's fast so if another thread has started such operation (<see cref="TakeControl"/> is called), then we SpinWait until it can be our turn.
+/// Finding an unset bit is concurrent friendly, many threads can execute such operation at the same time, but setting or clearing a bit has to be an exclusive
+/// operation (because of resize), but it's fast so if another thread has started such operation (<see cref="TakeControl"/> is called), then we SpinWait until
+/// it can be our turn.
 /// </para>
 /// </remarks>
 public class ConcurrentBitmapL3All

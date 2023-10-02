@@ -119,8 +119,65 @@ public static class BlockReferential
         }
     }
 
+    public static unsafe IMemoryManager GetMemoryManager(MemoryBlock block)
+    {
+        if (block.MemorySegment.IsDefault)
+        {
+            return null;
+        }
+        ref var header = ref Unsafe.AsRef<GenBlockHeader>(block.MemorySegment.Address - sizeof(GenBlockHeader));
+
+        // Most significant bit to one mean the MemoryBlock is from a MMF, the encoded value is different as MMF are interprocess, thus address independent
+        if (header.IsFromMMF)
+        {
+            // We need to identify which MMF this MemoryBlock is from, for that we use the address range the MMF is using
+            return MemoryManagerOverMMF.GetMMFFromRange((long)block.MemorySegment.Address);
+        }
+        else
+        {
+            var blockId = header.BlockIndex;
+            var allocator = Allocators[blockId];
+            if (allocator == null)
+            {
+                throw new InvalidOperationException("No allocated are currently registered with this Id");
+            }
+
+            return allocator.Owner;
+        }
+    }
+    
+    public static bool Resize(ref MemoryBlock block, int newLength, bool zeroExtra=false)
+    {
+        if (block.IsDefault || block.IsDisposed)
+        {
+            // TODO Exception?
+            return false;
+        }
+        var mm = block.MemoryManager;
+        mm.Resize(ref block, newLength);
+        return true;
+    }
+    
+    public static bool Resize<T>(ref MemoryBlock<T> block, int newLength, bool zeroExtra=false) where T : unmanaged
+    {
+        if (block.IsDefault || block.IsDisposed)
+        {
+            // TODO Exception?
+            return false;
+        }
+        var mm = block.MemoryManager;
+        mm.Resize(ref block, newLength);
+        return true;
+    }
+
     public static unsafe bool Free(MemoryBlock block)
     {
+        // Special case, zero size block are not allocated, so not freed either
+        if (block.MemorySegment.Length == 0)
+        {
+            return true;
+        }
+        
         Debug.Assert(block.MemorySegment.Address != null, "Can't free empty MemoryBlock");
         ref var header = ref Unsafe.AsRef<GenBlockHeader>(block.MemorySegment.Address - sizeof(GenBlockHeader));
 

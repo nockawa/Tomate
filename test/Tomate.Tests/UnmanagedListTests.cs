@@ -6,11 +6,10 @@ namespace Tomate.Tests;
 public class UnmanagedListTests
 {
     [Test]
-    public void RemoveAtTest()
+    public unsafe void RemoveAtTest()
     {
         using var mm = new DefaultMemoryManager();
         using var ul = new UnmanagedList<int>();
-
         ul.Add(10);
         ul.Add(11);
         ul.Add(12);
@@ -29,6 +28,19 @@ public class UnmanagedListTests
 
         var i = ul.IndexOf(14);
         Assert.That(i, Is.EqualTo(3));
+
+        i = 0;
+        var expectedNumbers = new[] { 10, 11, 13, 14, 15 }; 
+        foreach (var item in ul)
+        {
+            Assert.That(item, Is.EqualTo(expectedNumbers[i++]));
+        }
+        
+        ul.Clear();
+        foreach (var item in ul)
+        {
+            Assert.Fail("There should be no item to enumerate");
+        }
     }
 
     [Test]

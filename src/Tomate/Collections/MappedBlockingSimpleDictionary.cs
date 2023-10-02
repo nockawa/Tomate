@@ -6,7 +6,7 @@ using JetBrains.Annotations;
 namespace Tomate;
 
 /// <summary>
-/// A very simple, not efficient dictionary, with concurrent operations made through a lock
+/// Fixed size, not efficient dictionary, with concurrent operations made through a lock
 /// </summary>
 /// <remarks>
 /// Designed to be simple, accesses are O(n), a key of value default(TKey) is not permitted as it's used to detect free entries.
@@ -15,7 +15,7 @@ namespace Tomate;
 /// You can enumerate the dictionary content, but only to evaluate it. Any call to ro/rw operations would lead to a deadlock.
 /// </remarks>
 [PublicAPI]
-public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanaged where TValue : unmanaged
+public unsafe struct MappedBlockingSimpleDictionary<TKey, TValue> where TKey : unmanaged where TValue : unmanaged
 {
     private readonly Header* _header;
     private KeyValuePair* _items;
@@ -78,8 +78,8 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
     /// <returns>The item capacity</returns>
     public static int ComputeItemCapacity(int storageSize) => (storageSize - sizeof(Header)) / sizeof(KeyValuePair);
 
-    public static BlockingSimpleDictionary<TKey, TValue> Create(MemorySegment segment) => new(segment, true);
-    public static BlockingSimpleDictionary<TKey, TValue> Map(MemorySegment segment) => new(segment, false);
+    public static MappedBlockingSimpleDictionary<TKey, TValue> Create(MemorySegment segment) => new(segment, true);
+    public static MappedBlockingSimpleDictionary<TKey, TValue> Map(MemorySegment segment) => new(segment, false);
 
     /// <summary>
     /// Construct the dictionary over the given memory segment
@@ -96,7 +96,7 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
     /// from a given memory size to know how many items would fit.
     /// </para>
     /// </remarks>
-    private BlockingSimpleDictionary(MemorySegment segment, bool create)
+    private MappedBlockingSimpleDictionary(MemorySegment segment, bool create)
     {
         _header = segment.Cast<Header>().Address;
         _items = (KeyValuePair*)(_header + 1);
@@ -569,14 +569,14 @@ public unsafe struct BlockingSimpleDictionary<TKey, TValue> where TKey : unmanag
     public struct Enumerator : IDisposable
     {
         /// <summary>The segment being enumerated.</summary>
-        private readonly BlockingSimpleDictionary<TKey, TValue> _dic;
+        private readonly MappedBlockingSimpleDictionary<TKey, TValue> _dic;
 
         private int _curCount;
         private readonly int _count;
         private KeyValuePair* _curItem;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Enumerator(BlockingSimpleDictionary<TKey, TValue> dic)
+        internal Enumerator(MappedBlockingSimpleDictionary<TKey, TValue> dic)
         {
             _dic = dic;
             _curCount = 0;

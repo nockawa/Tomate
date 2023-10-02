@@ -1,18 +1,20 @@
 ﻿using System.Text;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
-public struct StringTable : IDisposable
+[PublicAPI]
+public struct MappedStringTable : IDisposable
 {
-    private AppendCollection<byte> _storage;
+    private MappedAppendCollection<byte> _storage;
 
-    public static StringTable Create(IPageAllocator allocator, int pageCapacity)
+    public static MappedStringTable Create(IPageAllocator allocator, int pageCapacity)
     {
-        return new StringTable(allocator, pageCapacity, true);
+        return new MappedStringTable(allocator, pageCapacity, true);
     }
-    private StringTable(IPageAllocator allocator, int pageCapacity, bool create)
+    private MappedStringTable(IPageAllocator allocator, int pageCapacity, bool create)
     {
-        _storage = AppendCollection<byte>.Create(allocator, pageCapacity);
+        _storage = MappedAppendCollection<byte>.Create(allocator, pageCapacity);
     }
 
     public unsafe int AddString(string str)

@@ -1,22 +1,22 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
 namespace Tomate;
 
 /// <summary>
-/// A dictionary implementation for MemoryMappedFile, thread-safe but not concurrent friendly
+/// An unmanaged Dictionary implementation.
 /// </summary>
 /// <typeparam name="TKey"></typeparam>
 /// <typeparam name="TValue"></typeparam>
 /// <remarks>
-/// This implementation is a big copy/paste of the .net Dictionary{TKey, TValue} class and adapted to this usage.
-/// Methods returning the value will return it as a reference for you to have a direct access of the data. It is your choice to mutate the value or not.
+/// This implementation is a big copy/paste of the .net Dictionary{TKey, TValue} class and adapted to for unmanaged.
+/// Methods return the value will return it as a reference for you to have a direct access of the data. It is your choice to mutate the value or not.
 /// The enumerator also returns reference to the actual data and you're free to mutate the value if needed.
 /// </remarks>
 [PublicAPI]
-public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey : unmanaged where TValue : unmanaged
+[Obsolete]
+public struct UnmanagedDictionaryOld<TKey, TValue> : IDisposable where TKey : unmanaged where TValue : unmanaged
 {
     [DebuggerDisplay("Key {Key}, Value {Value}")]
     private struct KeyValuePairInternal
@@ -33,14 +33,6 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
         public TValue Value;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Header
-    {
-        public int Count;
-        public int FreeCount;
-        public int FreeList;
-    }
-    
     private const int StartOfFreeList = -3;
 
     private struct Entry
@@ -79,37 +71,31 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
         GetExisting = 3
     }
 
-    private MemoryBlock _memoryBlock;
-    private Header* _header;
-    private readonly IEqualityComparer<TKey> _comparer;
-    private MemorySegment<int> _buckets;
-    private MemorySegment<Entry> _entries;
+    public int Count => _count - _freeCount;
+    public bool IsDisposed => _allocator == null;
 
-    public int Count => _header!=null ? (_header->Count - _header->FreeCount) : 0;
-
-    public TValue this[TKey key]
+    public ref TValue this[TKey key]
     {
         get
         {
-            var value = FindValue(key, out var res);
-            if (res)
+            ref TValue value = ref FindValue(key);
+            if (!Unsafe.IsNullRef(ref value))
             {
-                return value;
+                return ref value;
             }
 
-            ThrowHelper.KeyNotFound(key);
-            return default;
+            //ThrowHelper.ThrowKeyNotFoundException(key);
+            //return default;
+            //TODO Exception
+            throw new KeyNotFoundException();
         }
     }
     
-    public static UnmanagedDictionary<TKey, TValue> Create(IMemoryManager owner, int capacity = 8, IEqualityComparer<TKey> comparer = null) => new(owner, capacity, comparer, true);
-    //public static MappedBlockingDictionary<TKey, TValue> Map(IPageAllocator allocator, int rootPageId) => new(allocator, rootPageId, false);
-    private UnmanagedDictionary(IMemoryManager owner, int capacity, IEqualityComparer<TKey> comparer, bool create)
+    public UnmanagedDictionaryOld(IMemoryManager allocator, int capacity = 0, IEqualityComparer<TKey> comparer = null)
     {
-        Debug.Assert(capacity >= 3, "Capacity must be at least 3 to be valid.");
-        owner ??= DefaultMemoryManager.GlobalInstance;
+        _allocator = allocator;
+        
         _comparer = default;
-        // ReSharper disable once PossibleUnintendedReferenceComparison
         if (comparer is not null && comparer != EqualityComparer<TKey>.Default) // first check for null to avoid forcing default comparer instantiation unnecessarily
         {
             _comparer = comparer;
@@ -117,44 +103,43 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
 
         _buckets = default;
         _entries = default;
+        _freeList = -1;
+        _count = 0;
+        _freeCount = 0;
 
-        var size = PrimeHelpers.GetPrime(capacity);
-        _memoryBlock = owner.Allocate(sizeof(Header) + size * (sizeof(int) + sizeof(Entry)));
-        _memoryBlock.MemorySegment.ToSpan<byte>().Clear();
-        var (h, m) = _memoryBlock.MemorySegment.Split(sizeof(Header));
-        _header = (Header*)h.Address;
-        _header->FreeList = -1;
-
-        var (b, e) = m.Split(size * sizeof(int));
-        _buckets = b.Cast<int>();
-        _entries = e.Cast<Entry>();
+        if (capacity > 0)
+        {
+            Initialize(capacity);
+        }
     }
+
 
     public void Dispose()
     {
-        if (IsDefault || IsDisposed)
-        {
-            return;
-        }
-        _memoryBlock.Dispose();
-        _memoryBlock = default;
+        _buckets.Dispose();
+        _entries.Dispose();
+        _allocator = null;
     }
 
-    public bool IsDefault => _memoryBlock.IsDefault;
-    public bool IsDisposed => _memoryBlock.IsDefault;
     public Enumerator GetEnumerator() => new(this);
 
     /// <summary>
-    /// Get the value for the given key or add a new entry if it doesn't exist
+    /// Get a reference to the value for the given key or add a new entry if it doesn't exist
     /// </summary>
     /// <param name="key">The key of the element to get or add</param>
     /// <param name="found">
     /// If <c>true</c> the element with this key already exists. If <c>false</c> there was no element for the given key and we've added one.
     /// </param>
     /// <returns>
-    /// The value of the element corresponding to the given key
+    /// A reference to the value of the element corresponding to the given key
     /// </returns>
-    public TValue GetOrAdd(TKey key, out bool found) => TryInsert(key, default, InsertionBehavior.GetExisting, out found);
+    /// <remarks>
+    /// Many things can be done with this method: you can get, add or update the value corresponding to the given key.
+    /// You must NOT keep and use the returned reference after other mutable calls to this dictionary instance are made.
+    /// Any further mutable call may end up reallocate this element to a different place and make this reference invalid.
+    /// Accessing/setting would like to access violation/memory corruption.
+    /// </remarks>
+    public ref TValue GetOrAdd(TKey key, out bool found) => ref TryInsert(key, default, InsertionBehavior.GetExisting, out found);
 
     public void Add(TKey key, TValue value) => TryInsert(key, value, InsertionBehavior.ThrowOnExisting, out _);
 
@@ -168,66 +153,78 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
     /// Try to get the value corresponding to the given key
     /// </summary>
     /// <param name="key">The key of the element to access its value from.</param>
-    /// <param name="value">The value corresponding to the key</param>
+    /// <param name="found">Will return <c>true</c> if the element was found, <c>false</c> otherwise.</param>
     /// <returns>
-    /// Will return <c>true</c> if the element was found, <c>false</c> otherwise.
+    /// A reference to the value if the call succeed or a null reference otherwise.
+    /// You must NOT keep and use the returned reference after other mutable calls to this dictionary instance are made.
+    /// Any further mutable call may end up reallocate this element to a different place and make this reference invalid.
+    /// Accessing/setting would like to access violation/memory corruption.
     /// </returns>
-    public bool TryGetValue(TKey key, out TValue value)
+    public ref TValue TryGetValue(TKey key, out bool found)
     {
-        value = FindValue(key, out var res);
-        return res;
+        ref TValue valRef = ref FindValue(key);
+        if (!Unsafe.IsNullRef(ref valRef))
+        {
+            found = true;
+            return ref valRef;
+        }
+
+        found = false;
+        return ref Unsafe.NullRef<TValue>();
+    }
+
+    public ref TValue TryGetValue(TKey key)
+    {
+        return ref FindValue(key);
     }
 
     public bool Remove(TKey key, out TValue value)
     {
-        if (_buckets.IsDefault)
+        if (_buckets.IsDefault == false)
         {
-            value = default;
-            return false;
-        }
-
-        Debug.Assert(_entries.IsDefault == false, "entries should be allocated");
-        uint collisionCount = 0;
-        var hashCode = (uint)(_comparer?.GetHashCode(key) ?? key.GetHashCode());
-        ref var bucket = ref GetBucket(hashCode);
-        var entries = _entries.ToSpan();
-        var last = -1;
-        var i = bucket - 1; // Value in buckets is 1-based
-        while (i >= 0)
-        {
-            ref var entry = ref entries[i];
-
-            if (entry.HashCode == hashCode && (_comparer?.Equals(entry.KeyValuePair.Key, key) ?? EqualityComparer<TKey>.Default.Equals(entry.KeyValuePair.Key, key)))
+            Debug.Assert(_entries.IsDefault == false, "entries should be allocated");
+            uint collisionCount = 0;
+            var hashCode = (uint)(_comparer?.GetHashCode(key) ?? key.GetHashCode());
+            ref var bucket = ref GetBucket(hashCode);
+            var entries = _entries.MemorySegment.ToSpan();
+            var last = -1;
+            var i = bucket - 1; // Value in buckets is 1-based
+            while (i >= 0)
             {
-                if (last < 0)
+                ref var entry = ref entries[i];
+
+                if (entry.HashCode == hashCode && (_comparer?.Equals(entry.KeyValuePair.Key, key) ?? EqualityComparer<TKey>.Default.Equals(entry.KeyValuePair.Key, key)))
                 {
-                    bucket = entry.Next + 1; // Value in buckets is 1-based
+                    if (last < 0)
+                    {
+                        bucket = entry.Next + 1; // Value in buckets is 1-based
+                    }
+                    else
+                    {
+                        entries[last].Next = entry.Next;
+                    }
+
+                    value = entry.KeyValuePair.Value;
+
+                    Debug.Assert((StartOfFreeList - _freeList) < 0, "shouldn't underflow because max hashtable length is MaxPrimeArrayLength = 0x7FEFFFFD(2146435069) _freelist underflow threshold 2147483646");
+                    entry.Next = StartOfFreeList - _freeList;
+
+                    _freeList = i;
+                    _freeCount++;
+                    return true;
                 }
-                else
+
+                last = i;
+                i = entry.Next;
+
+                collisionCount++;
+                if (collisionCount > (uint)entries.Length)
                 {
-                    entries[last].Next = entry.Next;
+                    //TODO Exception
+                    // The chain of entries forms a loop; which means a concurrent update has happened.
+                    // Break out of the loop and throw, rather than looping forever.
+                    //ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
                 }
-
-                value = entry.KeyValuePair.Value;
-
-                Debug.Assert((StartOfFreeList - _header->FreeList) < 0, "shouldn't underflow because max hashtable length is MaxPrimeArrayLength = 0x7FEFFFFD(2146435069) Freelist underflow threshold 2147483646");
-                entry.Next = StartOfFreeList - _header->FreeList;
-
-                _header->FreeList = i;
-                _header->FreeCount++;
-                return true;
-            }
-
-            last = i;
-            i = entry.Next;
-
-            collisionCount++;
-            if (collisionCount > (uint)entries.Length)
-            {
-                //TODO Exception
-                // The chain of entries forms a loop; which means a concurrent update has happened.
-                // Break out of the loop and throw, rather than looping forever.
-                //ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
             }
         }
 
@@ -246,10 +243,15 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
             //ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.capacity);
         }
 
-        var currentCapacity = _entries.Length;
+        int currentCapacity = _entries.MemorySegment.Length;
         if (currentCapacity >= capacity)
         {
             return currentCapacity;
+        }
+
+        if (_buckets.IsDefault)
+        {
+            return Initialize(capacity);
         }
 
         var newSize = PrimeHelpers.GetPrime(capacity);
@@ -257,23 +259,44 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
         return newSize;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+
+    private int Initialize(int capacity)
+    {
+        _buckets.Dispose();
+        _entries.Dispose();
+        var size = PrimeHelpers.GetPrime(capacity);
+        _buckets = _allocator.Allocate<int>(size);
+        _entries = _allocator.Allocate<Entry>(size);
+        _freeList = -1;
+
+        _buckets.MemorySegment.ToSpan().Clear();
+        _entries.MemorySegment.ToSpan().Clear();
+
+        return size;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ref int GetBucket(uint hashCode)
     {
-        var buckets = _buckets.ToSpan();
+        var buckets = _buckets.MemorySegment.ToSpan();
         return ref buckets[(int)(hashCode % (uint)buckets.Length)];
     }
 
-    private TValue TryInsert(TKey key, TValue value, InsertionBehavior behavior, out bool result)
+    private ref TValue TryInsert(TKey key, TValue value, InsertionBehavior behavior, out bool result)
     {
-        var entries = _entries.ToSpan();
+        if (_buckets.IsDefault)
+        {
+            Initialize(0);
+        }
+        
+        var entries = _entries.MemorySegment.ToSpan();
 
-        var comparer = _comparer;
-        var hashCode = (uint)(comparer?.GetHashCode(key) ?? key.GetHashCode());
+        IEqualityComparer<TKey> comparer = _comparer;
+        uint hashCode = (uint)(comparer?.GetHashCode(key) ?? key.GetHashCode());
 
         uint collisionCount = 0;
-        ref var bucket = ref GetBucket(hashCode);
-        var i = bucket - 1; // Value in _buckets is 1-based
+        ref int bucket = ref GetBucket(hashCode);
+        int i = bucket - 1; // Value in _buckets is 1-based
 
         if (comparer == null)
         {
@@ -293,13 +316,13 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
                     {
                         entries[i].KeyValuePair.Value = value;
                         result = true;
-                        return entries[i].KeyValuePair.Value;
+                        return ref entries[i].KeyValuePair.Value;
                     }
 
                     if (behavior == InsertionBehavior.GetExisting)
                     {
                         result = true;
-                        return entries[i].KeyValuePair.Value;
+                        return ref entries[i].KeyValuePair.Value;
                     }
 
                     if (behavior == InsertionBehavior.ThrowOnExisting)
@@ -309,7 +332,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
                     }
 
                     result = false;
-                    return default;
+                    return ref Unsafe.NullRef<TValue>();
                 }
 
                 i = entries[i].Next;
@@ -341,13 +364,13 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
                     {
                         entries[i].KeyValuePair.Value = value;
                         result = true;
-                        return entries[i].KeyValuePair.Value;
+                        return ref entries[i].KeyValuePair.Value;
                     }
 
                     if (behavior == InsertionBehavior.GetExisting)
                     {
                         result = true;
-                        return entries[i].KeyValuePair.Value;
+                        return ref entries[i].KeyValuePair.Value;
                     }
 
                     if (behavior == InsertionBehavior.ThrowOnExisting)
@@ -357,7 +380,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
                     }
 
                     result = false;
-                    return default;
+                    return ref Unsafe.NullRef<TValue>();
                 }
 
                 i = entries[i].Next;
@@ -374,23 +397,23 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
         }
 
         int index;
-        if (_header->FreeCount > 0)
+        if (_freeCount > 0)
         {
-            index = _header->FreeList;
-            _header->FreeList = StartOfFreeList - entries[_header->FreeList].Next;
-            _header->FreeCount--;
+            index = _freeList;
+            _freeList = StartOfFreeList - entries[_freeList].Next;
+            _freeCount--;
         }
         else
         {
-            var count = _header->Count;
+            int count = _count;
             if (count == entries.Length)
             {
                 Resize();
                 bucket = ref GetBucket(hashCode);
             }
             index = count;
-            _header->Count = count + 1;
-            entries = _entries.ToSpan();
+            _count = count + 1;
+            entries = _entries.MemorySegment.ToSpan();
         }
 
         ref var entry = ref entries[index];
@@ -401,11 +424,10 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
         bucket = index + 1; // Value in _buckets is 1-based
 
         result = behavior != InsertionBehavior.GetExisting;
-        return entry.KeyValuePair.Value;
+        return ref entry.KeyValuePair.Value;
     }
 
-    // Must execute under shared lock
-    internal TValue FindValue(TKey key, out bool found)
+    internal ref TValue FindValue(TKey key)
     {
         ref var entry = ref Unsafe.NullRef<Entry>();
         if (_buckets.IsDefault == false)
@@ -416,7 +438,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
             {
                 var hashCode = (uint)key.GetHashCode();
                 var i = GetBucket(hashCode);
-                var entries = _entries.ToSpan();
+                var entries = _entries.MemorySegment.ToSpan();
                 uint collisionCount = 0;
                 if (typeof(TKey).IsValueType)
                 {
@@ -442,13 +464,17 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
 
                         collisionCount++;
                     } while (collisionCount <= (uint)entries.Length);
+
+                    // The chain of entries forms a loop; which means a concurrent update has happened.
+                    // Break out of the loop and throw, rather than looping forever.
+                    goto ConcurrentOperation;
                 }
             }
             else
             {
                 var hashCode = (uint)comparer.GetHashCode(key);
                 var i = GetBucket(hashCode);
-                var entries = _entries.ToSpan();
+                var entries = _entries.MemorySegment.ToSpan();
                 uint collisionCount = 0;
                 i--; // Value in _buckets is 1-based; subtract 1 from i. We do it here so it fuses with the following conditional.
                 do
@@ -470,80 +496,85 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
 
                     collisionCount++;
                 } while (collisionCount <= (uint)entries.Length);
+
+                // The chain of entries forms a loop; which means a concurrent update has happened.
+                // Break out of the loop and throw, rather than looping forever.
+                goto ConcurrentOperation;
             }
         }
 
         goto ReturnNotFound;
 
-ReturnFound:
-        found = true;
-        return entry.KeyValuePair.Value;
-ReturnNotFound:
-        found = false;
-        return default;
+    ConcurrentOperation:
+    //TODO Exception
+        //ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
+    ReturnFound:
+        ref TValue value = ref entry.KeyValuePair.Value;
+    Return:
+        return ref value;
+    ReturnNotFound:
+        value = ref Unsafe.NullRef<TValue>();
+        goto Return;
     }
 
-    private void Resize() => Resize(PrimeHelpers.ExpandPrime(_header->Count));
+    private void Resize() => Resize(PrimeHelpers.ExpandPrime(_count));
 
-    // Must execute under exclusive lock
     private void Resize(int newSize)
     {
         // Value types never rehash
         Debug.Assert(_entries.IsDefault == false, "_entries should be allocated");
-        Debug.Assert(newSize >= _entries.Length);
+        Debug.Assert(newSize >= _entries.MemorySegment.Length);
 
-        // Allocate the data buffer for the new size, this buffer contains space for the header, buckets and entries
-        var newDataBlock = _memoryBlock.MemoryManager.Allocate(sizeof(Header) + newSize * (sizeof(int) + sizeof(Entry)));
-        
-        // Copy the header to the new header and replace the old by the new
-        var (h, m) = newDataBlock.MemorySegment.Split(sizeof(Header));
-        new Span<Header>(_header, 1).CopyTo(h.ToSpan<Header>());
-        _header = (Header*)h.Address;
+        var entries = _allocator.Allocate<Entry>(newSize);
 
-        var (bms, ems) = m.Split(newSize * sizeof(int));
-        var entries = ems.Cast<Entry>();
+        int count = _count;
+        _entries.MemorySegment.ToSpan().CopyTo(entries.MemorySegment.ToSpan());
+        entries.MemorySegment.ToSpan()[count..].Clear();
 
-        var count = _header->Count;
-        _entries.ToSpan().CopyTo(entries.ToSpan());
-        entries.ToSpan()[count..].Clear();
+        _buckets.Dispose();
+        _buckets = _allocator.Allocate<int>(newSize);
+        _buckets.MemorySegment.ToSpan().Clear();
 
-        _buckets = bms.Cast<int>();
-        _buckets.ToSpan().Clear();
-
-        var e = entries.ToSpan();
-        for (var i = 0; i < count; i++)
+        var e = entries.MemorySegment.ToSpan();
+        for (int i = 0; i < count; i++)
         {
             if (e[i].Next >= -1)
             {
-                ref var bucket = ref GetBucket(e[i].HashCode);
+                ref int bucket = ref GetBucket(e[i].HashCode);
                 e[i].Next = bucket - 1; // Value in _buckets is 1-based
                 bucket = i + 1;
             }
         }
 
+        _entries.Dispose();
         _entries = entries;
-        _memoryBlock.Dispose();
-        _memoryBlock = newDataBlock;
     }
 
-    [PublicAPI]
-    public struct Enumerator
+    private IMemoryManager _allocator;
+    private readonly IEqualityComparer<TKey> _comparer;
+    private int _freeList;
+    private MemoryBlock<int> _buckets;
+    private MemoryBlock<Entry> _entries;
+    private int _count;
+    private int _freeCount;
+
+    public unsafe struct Enumerator
     {
-        private readonly UnmanagedDictionary<TKey, TValue> _dictionary;
+        private readonly UnmanagedDictionaryOld<TKey, TValue> _dictionary;
         private readonly Entry* _entries;
         private int _index;
 
-        internal Enumerator(UnmanagedDictionary<TKey, TValue> dictionary)
+        internal Enumerator(UnmanagedDictionaryOld<TKey, TValue> dictionary)
         {
             _dictionary = dictionary;
             _index = 0;
-            _entries = _dictionary._entries.Address;
+            _entries = _dictionary._entries.MemorySegment.Address;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public bool MoveNext()
         {
-            while ((uint)_index < (uint)_dictionary._header->Count)
+            while ((uint)_index < (uint)_dictionary._count)
             {
                 if (_entries[_index++].Next >= -1)
                 {
@@ -555,5 +586,71 @@ ReturnNotFound:
         }
 
         public ref KeyValuePair Current => ref *(KeyValuePair*)&_entries[_index - 1].KeyValuePair;
+    }
+}
+
+public struct UnmanagedDictionaryMultiValues<TKey, TValue> : IDisposable where TKey : unmanaged where TValue : unmanaged
+{
+    private readonly IMemoryManager _allocator;
+    private UnmanagedDictionaryOld<TKey, UnmanagedList<TValue>> _dictionary;
+
+    public UnmanagedDictionaryMultiValues(IMemoryManager allocator, int capacity = 0, IEqualityComparer<TKey> comparer = null)
+    {
+        _allocator = allocator;
+        _dictionary = new UnmanagedDictionaryOld<TKey, UnmanagedList<TValue>>(allocator, capacity, comparer);
+    }
+
+    public int Count => _dictionary.Count;
+    public bool IsDisposed => _dictionary.IsDisposed;
+
+    public ref UnmanagedList<TValue> this[TKey key]
+    {
+        get
+        {
+            ref var values = ref _dictionary.TryGetValue(key);
+
+            if (Unsafe.IsNullRef(ref values))
+            {
+                //TODO Exception
+                throw new KeyNotFoundException();
+            }
+
+            return ref values;
+        }
+    }
+
+    public void Add(TKey key, TValue value)
+    {
+        ref var values = ref _dictionary.GetOrAdd(key, out var found);
+        if (found == false)
+        {
+            values = new UnmanagedList<TValue>(_allocator);
+        }
+
+        values.Add(value);
+    }
+
+    public bool Remove(TKey key)
+    {
+        var found = _dictionary.Remove(key, out var values);
+        if (found)
+        {
+            values.Dispose();
+        }
+
+        return found;
+    }
+
+    public void Dispose()
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+        foreach (ref var kvp in _dictionary)
+        {
+            kvp.Value.Dispose();
+        }
+        _dictionary.Dispose();
     }
 }

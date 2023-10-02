@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
@@ -26,10 +27,11 @@ namespace Tomate;
 ///  is allocated. Which means you could end up with a big fragmentation and poor usage ratio if you always allocate sets of items that are bigger than half
 ///  of a <seealso cref="IPageAllocator.PageSize"/>, so choose the Page Size of the allocator accordingly !
 /// This type can address a very big space of data, way above 4GiB.
-///  The limit is <c><seealso cref="IPageAllocator.PageSize"/> * <seealso cref="AppendCollection{T}.Capacity"/> * sizeof(T)</c>
+///  The limit is <c><seealso cref="IPageAllocator.PageSize"/> * <seealso cref="MappedAppendCollection{T}.Capacity"/> * sizeof(T)</c>
 /// </para>
 /// </remarks>
-public unsafe struct AppendCollection<T> : IDisposable where T : unmanaged
+[PublicAPI]
+public unsafe struct MappedAppendCollection<T> : IDisposable where T : unmanaged
 {
     private readonly IPageAllocator _allocator;
     private readonly Header* _header;
@@ -66,8 +68,8 @@ public unsafe struct AppendCollection<T> : IDisposable where T : unmanaged
         }
     }
 
-    public static AppendCollection<T> Create(IPageAllocator allocator, int pageCapacity) => new(allocator, pageCapacity, true);
-    public static AppendCollection<T> Map(IPageAllocator allocator, int rootPageId) => new(allocator, rootPageId, false);
+    public static MappedAppendCollection<T> Create(IPageAllocator allocator, int pageCapacity) => new(allocator, pageCapacity, true);
+    public static MappedAppendCollection<T> Map(IPageAllocator allocator, int rootPageId) => new(allocator, rootPageId, false);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Header
@@ -78,7 +80,7 @@ public unsafe struct AppendCollection<T> : IDisposable where T : unmanaged
         private readonly int _padding0;
     }
 
-    private AppendCollection(IPageAllocator allocator, int pageCapacityOrRootId, bool create)
+    private MappedAppendCollection(IPageAllocator allocator, int pageCapacityOrRootId, bool create)
     {
         _allocator = allocator;
         _baseAddress = _allocator.BaseAddress;

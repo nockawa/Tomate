@@ -6,6 +6,14 @@ public class MemoryManagerOverMMFTests
 {
     private const long DefaultMMFSize = 1 * 1024 * 1024 * 1024;
     private const int DefaultPageSize = 4 * 1024 * 1024;
+
+    public struct TestA
+    {
+        public float A;
+        public int B;
+        public int C;
+        public float D;
+    }
     
     [Test]
     public void Test()
@@ -38,6 +46,23 @@ public class MemoryManagerOverMMFTests
                 Assert.That(seg3.RefCounter, Is.EqualTo(1));
                 Assert.That(seg3.IsDefault, Is.False);
                 Assert.That(seg3.MemorySegment.Length, Is.EqualTo(24));
+            }
+
+            {
+                mmf.Defragment();
+                var size = 250_000;
+                using var mb1 = mmf.Allocate<TestA>(size);
+                var seg = mb1.MemorySegment.Cast<TestA>();
+
+                for (int i = 0; i < size; i++)
+                {
+                    ref var t = ref seg[i];
+                    t.A = i;
+                    t.B = i + 10;
+                    t.C = i * 2;
+                    t.D = i * 2 + 20;
+                }
+
             }
 
         }

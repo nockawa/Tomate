@@ -272,6 +272,7 @@ public partial class DefaultMemoryManager
         private readonly Dictionary<int, MemoryBlockInfo> _allocatedBlocks = new();
 #endif
 
+        public IMemoryManager Owner => _owner.Owner;
         public int BlockIndex => _blockId;
 
         public unsafe SmallBlockAllocator(BlockAllocatorSequence owner)

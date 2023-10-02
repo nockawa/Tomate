@@ -265,6 +265,7 @@ public partial class DefaultMemoryManager
         private readonly int _blockId;
         // ReSharper disable once NotAccessedField.Local
         private int _countBetweenDefrag;
+        public IMemoryManager Owner => _owner.Owner;
         public int BlockIndex => _blockId;
 
 #if DEBUGALLOC

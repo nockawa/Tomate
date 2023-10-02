@@ -8,7 +8,7 @@ public class UnmanagedDictionaryTests
     public void DictionaryTest()
     {
         using var mm = new DefaultMemoryManager();
-        using var dic = new UnmanagedDictionary<int, int>(mm);
+        using var dic = new UnmanagedDictionaryOld<int, int>(mm);
 
         for (int i = 0; i < 1000; i++)
         {

@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
@@ -32,24 +33,25 @@ namespace Tomate;
 /// This allows us to skip 64, 4096, 262144 entries per test when looking for a free segment to allocate.
 /// L0/L1 are always used, but L2/L3 are activated based on the bitmap size.
 /// When you allocate 64bits, we are looking for an empty long in L0, as this type is concurrent friendly, setting the bits has to be an atomic operation so
-/// we can allocate bits that overlap multiple long. (e.g. 0xFFFFFFFF00000000 0x00000000FFFFFFFF, can't be used to allocate 64 bits). This is important to
+/// we can't allocate bits that overlap multiple longs. (e.g. 0xFFFFFFFF00000000 0x00000000FFFFFFFF, can't be used to allocate 64 bits). This is important to
 /// understand as allocating big sizes can lead to fragmentation and may not succeed because of it (fragmentation).
-/// The implementation is entirely lock-less, relies on Interlocked And/Or/Add.
 /// </para>
 /// </remarks>
+[PublicAPI]
 public struct ConcurrentBitmapL4
 {
     // L2/L3 will be activated if this threshold is met
-    const int levelThreshold = 4;
+    const int LevelThreshold = 4;
 
-    private readonly MemorySegments<Header, long, byte, byte, byte> _data;
+    private readonly MemorySegments<Header, ulong, byte, byte, byte> _data;
 
     private readonly unsafe Header* _header;
-    private readonly MemorySegment<long> _l0 => _data.Segment2;
+    private readonly MemorySegment<ulong> _l0 => _data.Segment2;
     private readonly MemorySegment<byte> _l1 => _data.Segment3;
     private readonly MemorySegment<byte> _l2 => _data.Segment4;
     private readonly MemorySegment<byte> _l3 => _data.Segment5;
-    private readonly int AggregationLevelCount;
+    private readonly int _aggregationLevelCount;
+    private int _unaddressableBitCount;
     private static readonly Vector256<byte> _64broadcast;
 
     static ConcurrentBitmapL4()
@@ -83,7 +85,7 @@ public struct ConcurrentBitmapL4
         var l2 = (l1 + 63) / 64;
         var l3 = (l2 + 63) / 64;
 
-        return (l0, l1, l2 >= levelThreshold ? l2 : 0, l3 >= levelThreshold ? l3 : 0);
+        return (l0, l1, l2 >= LevelThreshold ? l2 : 0, l3 >= LevelThreshold ? l3 : 0);
     }
 
     /// <summary>
@@ -119,16 +121,17 @@ public struct ConcurrentBitmapL4
     {
         public int Capacity;
         public int Count;
+        public AccessControl AccessControl;
     }
 
-    private unsafe ConcurrentBitmapL4(int bitCount, MemorySegment storage)
+    private unsafe ConcurrentBitmapL4(int capacity, MemorySegment storage)
     {
-        Debug.Assert(storage.Length >= ComputeRequiredSize(bitCount));
+        Debug.Assert(storage.Length >= ComputeRequiredSize(capacity));
 
-        var (l0S, l1S, l2S, l3S) = ComputeStorageInternal(bitCount);
-        _data = new MemorySegments<Header, long, byte, byte, byte>(storage, 1, l0S / sizeof(long), l1S, l2S, l3S);
+        var (l0S, l1S, l2S, l3S) = ComputeStorageInternal(capacity);
+        _data = new MemorySegments<Header, ulong, byte, byte, byte>(storage, 1, l0S / sizeof(ulong), l1S, l2S, l3S);
 
-        AggregationLevelCount = 1 + (l2S > 0 ? 1 : 0) + (l3S > 0 ? 1 : 0);
+        _aggregationLevelCount = 1 + (l2S > 0 ? 1 : 0) + (l3S > 0 ? 1 : 0);
 
         _data.Segment1.ToSpan().Clear();
         _data.Segment2.ToSpan().Clear();
@@ -136,8 +139,19 @@ public struct ConcurrentBitmapL4
         _data.Segment4.ToSpan().Fill(64);
         _data.Segment5.ToSpan().Fill(64);
 
+        // The bitcount may not be a multiple of 64, so we need to mark the last long with the bit that can't be allocated
+        var mask = (ulong)(~((1L << (capacity % 64)) - 1));
+        if (mask != ulong.MaxValue)
+        {
+            var lastIndex = _data.Segment2.Length - 1;
+            _unaddressableBitCount = BitOperations.PopCount(mask);
+            _data.Segment2.ToSpan()[lastIndex] = mask;
+            UpdateAggregatedLevels(lastIndex);
+        }
+        
         _header = _data.Segment1.Address;
-        _header->Capacity = bitCount;
+        _header->AccessControl = default;
+        _header->Capacity = capacity;
         _header->Count = 0;
 
 #if DEBUG
@@ -151,9 +165,15 @@ public struct ConcurrentBitmapL4
         _header = (Header*)segment.Address;
         var capacity = _header->Capacity;
         var (l0S, l1S, l2S, l3S) = ComputeStorageInternal(capacity);
-        _data = new MemorySegments<Header, long, byte, byte, byte>(segment, 1, l0S / sizeof(long), l1S, l2S, l3S);
+        _data = new MemorySegments<Header, ulong, byte, byte, byte>(segment, 1, l0S / sizeof(long), l1S, l2S, l3S);
 
-        AggregationLevelCount = 1 + (l2S > 0 ? 1 : 0) + (l3S > 0 ? 1 : 0);
+        var mask = (ulong)(~((1L << (capacity % 64)) - 1));
+        if (mask != ulong.MaxValue)
+        {
+            _unaddressableBitCount = BitOperations.PopCount(mask);
+        }
+
+        _aggregationLevelCount = 1 + (l2S > 0 ? 1 : 0) + (l3S > 0 ? 1 : 0);
 
 #if DEBUG
         _lookupCount = 0;
@@ -166,45 +186,48 @@ public struct ConcurrentBitmapL4
         var sb = new StringBuilder();
         var errorCount = 0;
 
-        var l0l = _l0.Length;
+        var l0Length = _l0.Length;
         var setCount = 0;
         var l0ErrorCount = 0;
         var l1ErrorCount = 0;
         var l2ErrorCount = 0;
         var maxL1 = 0;
         var maxL2 = 0;
-        for (int i = 0; i < l0l; i++)
+        for (int i = 0; i < l0Length; i++)
         {
-            var ulc = ComputeMaxFreeSegment((ulong)_l0[i]);
+            var ulc = ComputeMaxFreeSegment(_l0[i]);
             if (_l1[i] != ulc)
             {
                 ++l0ErrorCount;
             }
-            setCount += BitOperations.PopCount((ulong)_l0[i]);
+            setCount += BitOperations.PopCount(_l0[i]);
 
             maxL1 = Math.Max(ulc, maxL1);
 
-            if ((i & 0x3F) == 0x3F)
+            if (_aggregationLevelCount > 1)
             {
-                if (_l2[i >> 6] != maxL1)
+                if ((i & 0x3F) == 0x3F)
                 {
-                    ++l1ErrorCount;
+                    if (_l2[i >> 6] != maxL1)
+                    {
+                        ++l1ErrorCount;
+                    }
+                    maxL2 = Math.Max(maxL1, maxL2);
+                    maxL1 = 0;
                 }
-                maxL2 = Math.Max(maxL1, maxL2);
-                maxL1 = 0;
-            }
 
-            if ((i & 0xFFF) == 0xFFF)
-            {
-                if (_l3[i >> 12] != maxL2)
+                if (_aggregationLevelCount > 2 && (i & 0xFFF) == 0xFFF)
                 {
-                    ++l2ErrorCount;
+                    if (_l3[i >> 12] != maxL2)
+                    {
+                        ++l2ErrorCount;
+                    }
+                    maxL2 = 0;
                 }
-                maxL2 = 0;
             }
         }
 
-        if (setCount != _header->Count)
+        if (setCount != (_header->Count + _unaddressableBitCount))
         {
             sb.AppendLine($"L0 count mismatch, {setCount} in bit-field for {_header->Count} in TotalBitSet");
             ++errorCount;
@@ -235,52 +258,58 @@ public struct ConcurrentBitmapL4
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private unsafe bool SetL0(int bitIndex, int requestedLength)
     {
-        var requestedmask = (requestedLength == 64) ? -1 : ((1L << requestedLength) - 1) << (bitIndex & 0x3F);
+        var requestedmask = ((requestedLength == 64) ? ulong.MaxValue : ((1UL << requestedLength) - 1) << (bitIndex & 0x3F));
         var l0 = _l0.ToSpan();
-        var l0i = bitIndex >> 6;
-        var prevValue = Interlocked.Or(ref l0[l0i], requestedmask);
-        if ((prevValue & requestedmask) != 0L)
+        var l0Index = bitIndex >> 6;
+
+        _header->AccessControl.EnterExclusiveAccess();
+        if ((l0[l0Index] & requestedmask) != 0)
         {
-            // Restore the previous value, removing the bits we set with the or that weren't concurrently changed
-            Interlocked.And(ref l0[l0i], ~prevValue);
+            _header->AccessControl.ExitExclusiveAccess();
             return false;
         }
 
-        Interlocked.Add(ref Unsafe.AsRef<int>(_header->Count), requestedLength);
-        UpdateAggregatedLevels(l0i);
+        l0[l0Index] |= requestedmask;
+        _header->Count += requestedLength;
+        
+        UpdateAggregatedLevels(l0Index);
 
+        _header->AccessControl.ExitExclusiveAccess();
         return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private unsafe bool ClearL0(int bitIndex, int requestedLength)
     {
-        var requestedmask = (requestedLength == 64) ? -1 : ((1L << requestedLength) - 1) << (bitIndex & 0x3F);
+        var requestedmask = (requestedLength == 64) ? ulong.MaxValue : ((1UL << requestedLength) - 1) << (bitIndex & 0x3F);
         var l0 = _l0.ToSpan();
-        var l0i = bitIndex >> 6;
-        Interlocked.And(ref l0[l0i], ~requestedmask);
+        var l0Index = bitIndex >> 6;
+        
+        _header->AccessControl.EnterExclusiveAccess();
 
-        Interlocked.Add(ref Unsafe.AsRef<int>(_header->Count), -requestedLength);
-        UpdateAggregatedLevels(l0i);
+        l0[l0Index] &= ~requestedmask;
+        _header->Count -= requestedLength;
+        UpdateAggregatedLevels(l0Index);
 
+        _header->AccessControl.ExitExclusiveAccess();
         return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization|MethodImplOptions.AggressiveInlining)]
-    private unsafe void UpdateAggregatedLevels(int l0i)
+    private unsafe void UpdateAggregatedLevels(int l0Index)
     {
         var l0 = _l0.ToSpan();
-        var levelCount = AggregationLevelCount;
+        var levelCount = _aggregationLevelCount;
 
-        var v0 = l0[l0i];
-        var v0b = ComputeMaxFreeSegment((ulong)v0);
+        var v0 = l0[l0Index];
+        var v0Max = ComputeMaxFreeSegment(v0);
         var l1 = _l1.ToSpan();
 
-        var prevLevelMax = l1[l0i];
-        l1[l0i] = (byte)v0b;
+        var prevLevelMax = l1[l0Index];
+        l1[l0Index] = (byte)v0Max;
 
-        var curLevelMaxSegment = v0b;
-        var curLevelIndex = l0i;
+        var curLevelMaxSegment = v0Max;
+        var curLevelIndex = l0Index;
         for (int i = 2; i <= levelCount; i++)
         {
             var curLevel = (i == 2) ? _l2 : _l3;
@@ -298,6 +327,7 @@ public struct ConcurrentBitmapL4
             var curLevelBank = curLevelIndex & ~0x3F;
             var v1 = Avx.LoadVector256(prevLevel.Address + curLevelBank);        // Load 32 bytes
             var v2 = Avx.LoadVector256(prevLevel.Address + curLevelBank + 32);   //  and the rest
+
             v1 = Avx2.Subtract(_64broadcast, v1);                                           // We want the max, but SIMD only does min on horizontal, so let's invert the values
             v2 = Avx2.Subtract(_64broadcast, v2);
             var v = Avx2.Min(v1, v2);                                         // Min of the two 32 bytes lanes
@@ -320,7 +350,6 @@ public struct ConcurrentBitmapL4
 
             // The store of the value as it is could not play well with multi-thread but what are the odds and the consequences?
             curLevel[curLevelIndex >> 6] = m;
-
             curLevelMaxSegment = m;
             curLevelIndex >>= 6;
         }
@@ -365,11 +394,12 @@ public struct ConcurrentBitmapL4
     [Conditional("DEBUG")]
     private void IncrementLookup() {}
 #endif
-    
+
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public int AllocateBits(int requestedLength)
     {
-        if (IsFull)
+        // Looking for early exit, doesn't mean we'll find a spot for sure
+        if (IsFull || (TotalBitSet + requestedLength) > Capacity)
         {
             return -1;
         }
@@ -377,57 +407,48 @@ public struct ConcurrentBitmapL4
         var l1 = _l1;
         var l2 = _l2;
         var l3 = _l3;
-        var l1l = l1.Length;
-        var l2l = l2.Length;
-        var l3l = l3.Length;
-        var maxLevel = AggregationLevelCount;
+        var l1Length = l1.Length;
+        var l2Length = l2.Length;
+        var l3Length = l3.Length;
+        var maxLevel = _aggregationLevelCount;
         var capacity = Capacity;
-        var mask = (requestedLength == 64) ? long.MaxValue : ((1L << requestedLength) - 1);
+        var mask = (requestedLength == 64) ? ulong.MaxValue : ((1UL << requestedLength) - 1);
         var maxIt = 64 - requestedLength;
         IncrementLookup();
 
-StartOver:
         var curBitIndex = 0;
 
         while (curBitIndex < capacity)
         {
-RestartL3:
+            RestartL3:
             if (maxLevel == 3)
             {
                 var l3Index = curBitIndex >> 18;
-                while (l3Index < l3l && l3[l3Index] < requestedLength)
+                while (l3Index < l3Length && l3[l3Index] < requestedLength)
                 {
                     IncrementLookupIteration();
                     ++l3Index;
                 }
-                if (l3Index == l3l)
+                if (l3Index == l3Length)
                 {
-                    if (IsFull)
-                    {
-                        return -1;
-                    }
-                    goto StartOver;
+                    return -1;
                 }
 
                 curBitIndex = l3Index << 18;
             }
-RestartL2:
+            RestartL2:
             if (maxLevel >= 2)
             {
                 var l2Index = curBitIndex >> 12;
-                var l2End = (maxLevel==3) ? (l2Index + 64) : l2l;
+                var l2End = Math.Min((maxLevel==3) ? (l2Index + 64) : l2Length, l2.Length);
                 while (l2Index < l2End && l2[l2Index] < requestedLength)
                 {
                     IncrementLookupIteration();
                     ++l2Index;
                 }
-                if (l2Index == l2l)
+                if (l2Index == l2Length)
                 {
-                    if (IsFull)
-                    {
-                        return -1;
-                    }
-                    goto StartOver;
+                    return -1;
                 }
 
                 if (l2Index == l2End)
@@ -438,21 +459,17 @@ RestartL2:
 
                 curBitIndex = l2Index << 12;
             }
-RestartL1:
+            RestartL1:
             var l1Index = curBitIndex >> 6;
-            var l1End = (maxLevel >= 2) ? (l1Index + 64) : l1l;
+            var l1End = Math.Min((maxLevel >= 2) ? (l1Index + 64) : l1Length, l1.Length);
             while (l1Index < l1End && l1[l1Index] < requestedLength)
             {
                 IncrementLookupIteration();
                 ++l1Index;
             }
-            if (l1Index == l1l)
+            if (l1Index == l1Length)
             {
-                if (IsFull)
-                {
-                    return -1;
-                }
-                goto StartOver;
+                return -1;
             }
 
             if (l1Index == l1End)
@@ -464,7 +481,7 @@ RestartL1:
             curBitIndex = l1Index << 6;
 
             var val = l0[l1Index];
-            if (BitOperations.PopCount((ulong)val) > maxIt)
+            if (BitOperations.PopCount(val) > maxIt)
             {
                 IncrementLookupIteration();
                 curBitIndex += 64;

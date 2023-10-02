@@ -163,7 +163,7 @@ public unsafe class BitBenchark
 {
     private const int bitLength = 1024 * 1024;
     private const int innerSize = 1024;
-    private MemoryManager _mm;
+    private DefaultMemoryManager _mm;
     private ConcurrentBitmapL4 _bitmap;
 
     private TestClass[] _gcAlloc;
@@ -180,7 +180,7 @@ public unsafe class BitBenchark
         //    _val[i] = (ulong)rnd.NextInt64();
         //}
 
-        _mm = new MemoryManager(256 * 1024 * 1024);
+        _mm = new DefaultMemoryManager();
         _gcAlloc = new TestClass[1024 * 128];
     }
     
@@ -331,7 +331,7 @@ public unsafe class BenchmarkSegmentAccess
 {
     const int BlockSize = 64;
 
-    private MemoryManager _mm;
+    private DefaultMemoryManager _mm;
     private byte* _mbRaw;
     private MemorySegment _mb;
     private LogicalMemorySegment _lb;
@@ -339,7 +339,7 @@ public unsafe class BenchmarkSegmentAccess
     [GlobalSetup]
     public void GlobalSetup()
     {
-        _mm = new MemoryManager(1 * 1024 * 1024 * 1024);
+        _mm = new DefaultMemoryManager();
         _mbRaw = _mm.Allocate(BlockSize).MemorySegment.Address;
         _mb = new MemorySegment(_mbRaw, BlockSize);
         _lb = new LogicalMemorySegment(0, BlockSize);

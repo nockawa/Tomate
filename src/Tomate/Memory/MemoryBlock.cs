@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
 namespace Tomate;
@@ -19,6 +21,8 @@ namespace Tomate;
 /// as well as the Allocator that owns the block.
 /// Freeing a Memory Block instance will redirect the operation to the appropriate Allocator.
 /// </remarks>
+[DebuggerDisplay("IsDefault: {IsDefault}, RefCounter: {RefCounter}, IsDisposed: {IsDisposed}, {MemorySegment}")]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 [PublicAPI]
 public struct MemoryBlock : IDisposable
 {
@@ -57,8 +61,8 @@ public struct MemoryBlock : IDisposable
     /// </remarks>
     public unsafe int AddRef()
     {
-        ref var header = ref Unsafe.AsRef<BlockReferential.GenBlockHeader>(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
-        return Interlocked.Increment(ref header.RefCounter);
+        var header = (BlockReferential.GenBlockHeader*)(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+        return Interlocked.Increment(ref header->RefCounter);
     }
 
     /// <summary>
@@ -72,8 +76,12 @@ public struct MemoryBlock : IDisposable
     {
         get
         {
-            ref var header = ref Unsafe.AsRef<BlockReferential.GenBlockHeader>(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
-            return header.RefCounter;
+            if (MemorySegment.IsDefault)
+            {
+                return 0;
+            }
+            var header = (BlockReferential.GenBlockHeader*)(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+            return header->RefCounter;
         }
     }
 
@@ -85,6 +93,14 @@ public struct MemoryBlock : IDisposable
     /// If <c>true</c> the instance is not valid and considered as <c>Default</c> (<see cref="IsDefault"/> will be also <c>true</c>).
     /// </summary>
     public bool IsDisposed => MemorySegment.IsDefault;
+
+    public IMemoryManager MemoryManager => BlockReferential.GetMemoryManager(this);
+
+    /// <summary>
+    /// Resize the MemoryBlock
+    /// </summary>
+    /// <param name="newSize">The new size, can't be more than <see cref="IMemoryManager.MaxAllocationLength"/>.</param>
+    public void Resize(int newSize) => BlockReferential.Resize(ref this, newSize);
 
     /// <summary>
     /// Attempt to Dispose and free the MemoryBlock
@@ -111,6 +127,8 @@ public struct MemoryBlock : IDisposable
     public static implicit operator MemoryBlock(MemorySegment seg) => new(seg);
 }
 
+[DebuggerDisplay("IsDefault: {IsDefault}, RefCounter: {RefCounter}, IsDisposed: {IsDisposed}, {MemorySegment}")]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 [PublicAPI]
 public struct MemoryBlock<T> : IDisposable where T : unmanaged
 {
@@ -123,21 +141,32 @@ public struct MemoryBlock<T> : IDisposable where T : unmanaged
 
     public unsafe int AddRef()
     {
-        ref var header = ref Unsafe.AsRef<BlockReferential.GenBlockHeader>(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
-        return Interlocked.Increment(ref header.RefCounter);
+        var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+        return Interlocked.Increment(ref header->RefCounter);
     }
 
     public unsafe int RefCounter
     {
         get
         {
-            ref var header = ref Unsafe.AsRef<BlockReferential.GenBlockHeader>(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
-            return header.RefCounter;
+            var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+            return header->RefCounter;
         }
     }
 
     public bool IsDefault => MemorySegment.IsDefault;
     public bool IsDisposed => MemorySegment.IsDefault;
+
+    public IMemoryManager MemoryManager => BlockReferential.GetMemoryManager(this);
+
+    public long MaxAllocationLength => MemoryManager?.MaxAllocationLength ?? 0;
+    
+    /// <summary>
+    /// Resize the MemoryBlock
+    /// </summary>
+    /// <param name="newSize">The new size, can't be more than <see cref="IMemoryManager.MaxAllocationLength"/>.</param>
+    /// <remarks>This method will change the <see cref="MemorySegment"/> and its address.</remarks>
+    public void Resize(int newSize) => BlockReferential.Resize(ref this, newSize);
 
     public void Dispose()
     {

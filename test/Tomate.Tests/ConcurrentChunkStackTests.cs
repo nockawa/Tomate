@@ -6,14 +6,12 @@ namespace Tomate.Tests;
 
 public class ConcurrentChunkStackTests
 {
-    private const int bitLength = 1024 * 1024;
-
-    private MemoryManager _mm;
+    private DefaultMemoryManager _mm;
     
     [SetUp]
     public void Setup()
     {
-        _mm = new MemoryManager(64 * 1024 * 1024);
+        _mm = new DefaultMemoryManager();
     }
 
 
@@ -23,7 +21,7 @@ public class ConcurrentChunkStackTests
         var seg = _mm.Allocate(1024);
         try
         {
-            var stack = ConcurrentChunkQueue.Create(seg);
+            var stack = MappedConcurrentChunkQueue.Create(seg);
 
             {
                 using var h = stack.TryDequeue();
@@ -78,7 +76,7 @@ public class ConcurrentChunkStackTests
         var taskList = new List<Task>(prodThreadCount + consThreadCount);
 
         var seg = _mm.Allocate(bufferSize);
-        var stack = ConcurrentChunkQueue.Create(seg);
+        var stack = MappedConcurrentChunkQueue.Create(seg);
         var rand = new Random(DateTime.UtcNow.Millisecond);
         TimeSpan? wait = waitMs == 0 ? null : TimeSpan.FromMilliseconds(waitMs);
 

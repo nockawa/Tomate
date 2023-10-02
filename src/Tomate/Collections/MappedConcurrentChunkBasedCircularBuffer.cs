@@ -1,10 +1,12 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
-public unsafe struct ChunkBasedConcurrentCircularBuffer
+[PublicAPI]
+public unsafe struct MappedConcurrentChunkBasedCircularBuffer
 {
     [StructLayout(LayoutKind.Sequential)]
     private struct Header
@@ -24,10 +26,10 @@ public unsafe struct ChunkBasedConcurrentCircularBuffer
     private readonly int _bufferSize;
     private int _sizeToNext;
 
-    public static ChunkBasedConcurrentCircularBuffer Create(MemorySegment memorySegment) => new(memorySegment, true);
-    public static ChunkBasedConcurrentCircularBuffer Map(MemorySegment memorySegment) => new(memorySegment, false);
+    public static MappedConcurrentChunkBasedCircularBuffer Create(MemorySegment memorySegment) => new(memorySegment, true);
+    public static MappedConcurrentChunkBasedCircularBuffer Map(MemorySegment memorySegment) => new(memorySegment, false);
 
-    private ChunkBasedConcurrentCircularBuffer(MemorySegment segment, bool create)
+    private MappedConcurrentChunkBasedCircularBuffer(MemorySegment segment, bool create)
     {
         _header = segment.Cast<Header>().Address;
         _dataStart = (byte*)(_header + 1);

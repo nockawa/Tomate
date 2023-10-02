@@ -29,6 +29,7 @@ public partial class DefaultMemoryManager
 
         public DefaultMemoryManager Owner { get; private set; }
         internal DebugData DebugInfo;
+        internal readonly int FirstBlockId;
 
         public BlockAllocatorSequence(DefaultMemoryManager owner)
         {
@@ -36,6 +37,7 @@ public partial class DefaultMemoryManager
             _control = new ExclusiveAccessControl();
             _firstSmallBlockAllocator = owner.AllocateSmallBlockAllocator(this);
             DebugInfo.TotalBlockCount = 1;
+            FirstBlockId = _firstSmallBlockAllocator.BlockIndex;
         }
 
         public bool IsDisposed => Owner == null;

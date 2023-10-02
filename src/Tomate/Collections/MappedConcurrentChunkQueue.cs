@@ -11,7 +11,7 @@ namespace Tomate;
 /// This type allows to enqueue and dequeue chunks of data. Each chunk has a type (from 1 to 16383) and a size (up to 32767).
 /// Multiple threads can enqueue/dequeue concurrently, everything is thread safe.
 /// </remarks>
-public unsafe struct ConcurrentChunkQueue
+public unsafe struct MappedConcurrentChunkQueue
 {
     /// <summary>
     /// For debug/info purpose only, number of time we iterate the wait loop
@@ -39,16 +39,16 @@ public unsafe struct ConcurrentChunkQueue
     /// </summary>
     /// <param name="memorySegment">The memory segment to use to store the queue data</param>
     /// <returns>The queue instance</returns>
-    public static ConcurrentChunkQueue Create(MemorySegment memorySegment) => new(memorySegment, true);
+    public static MappedConcurrentChunkQueue Create(MemorySegment memorySegment) => new(memorySegment, true);
 
     /// <summary>
     /// Create a new instance over an existing queue
     /// </summary>
     /// <param name="memorySegment">The memory segment storing the queue</param>
     /// <returns>The instance</returns>
-    public static ConcurrentChunkQueue Map(MemorySegment memorySegment) => new(memorySegment, false);
+    public static MappedConcurrentChunkQueue Map(MemorySegment memorySegment) => new(memorySegment, false);
 
-    private ConcurrentChunkQueue(MemorySegment segment, bool create)
+    private MappedConcurrentChunkQueue(MemorySegment segment, bool create)
     {
         _header = segment.Cast<Header>().Address;
         _dataStart = (byte*)(_header + 1);

@@ -53,6 +53,10 @@ public unsafe class PageAllocator : IDisposable, IPageAllocator
     {
         Debug.Assert(pageCount is > 0 and <= 64, "Page count must be within the [1-64] range");
         var pageIndex = _occupancyMap.AllocateBits(pageCount);
+        if (pageIndex == -1)
+        {
+            return default;
+        }
 
         ++PageAllocationEpoch;
 

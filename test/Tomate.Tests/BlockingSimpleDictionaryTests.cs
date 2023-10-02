@@ -5,19 +5,19 @@ namespace Tomate.Tests;
 
 public class BlockingSimpleDictionaryTests
 {
-    private MemoryManager _mm;
+    private DefaultMemoryManager _mm;
 
     [SetUp]
     public void Setup()
     {
-        _mm = new MemoryManager(64 * 1024 * 1024);
+        _mm = new DefaultMemoryManager();
     }
 
     [Test]
     public void TestDefautKeyNotAllowed()
     {
         var seg = _mm.Allocate(1024);
-        var dic = BlockingSimpleDictionary<int, int>.Create(seg);
+        var dic = MappedBlockingSimpleDictionary<int, int>.Create(seg);
 
         Assert.Throws<ArgumentException>(() => dic.TryAdd(default, 123));
         Assert.Throws<ArgumentException>(() => dic.GetOrAdd(default, _ => 123, out _, out _));
@@ -29,7 +29,7 @@ public class BlockingSimpleDictionaryTests
     public void TestCommonOperations()
     {
         var seg = _mm.Allocate(1024);
-        var dic = BlockingSimpleDictionary<int, int>.Create(seg);
+        var dic = MappedBlockingSimpleDictionary<int, int>.Create(seg);
 
         Assert.That(dic.Count, Is.EqualTo(0));
 
@@ -93,7 +93,7 @@ public class BlockingSimpleDictionaryTests
     public void TestEnumeration()
     {
         var seg = _mm.Allocate(1024);
-        var dic = BlockingSimpleDictionary<int, int>.Create(seg);
+        var dic = MappedBlockingSimpleDictionary<int, int>.Create(seg);
 
         dic.TryAdd(12, 122);
         dic.TryAdd(13, 123);
@@ -142,7 +142,7 @@ public class BlockingSimpleDictionaryTests
     public void TestSubscriptOperator()
     {
         var seg = _mm.Allocate(1024);
-        var dic = BlockingSimpleDictionary<int, int>.Create(seg);
+        var dic = MappedBlockingSimpleDictionary<int, int>.Create(seg);
 
         dic[12] = 1;
         dic[15] = 2;
