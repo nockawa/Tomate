@@ -8,7 +8,7 @@ namespace Tomate;
 [DebuggerTypeProxy(typeof(UnmanagedList<>.DebugView))]
 [DebuggerDisplay("Count = {Count}")]
 [PublicAPI]
-public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
+public unsafe struct UnmanagedList<T> : IRefCounted where T : unmanaged
 {
     private const int DefaultCapacity = 4;
 
@@ -21,17 +21,15 @@ public unsafe struct UnmanagedList<T> : IDisposable where T : unmanaged
     }
     
     private MemoryBlock _memoryBlock;
-    /*
-    private int _size;
-    private uint _capacity;
-    private T* _buffer;
-    */
-
     private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
     private T* _items => (T*)(_header + 1);
     private ref int _count => ref _header->Count;
     private ref uint _capacity => ref _header->Capacity;
     
+    public int AddRef() => _memoryBlock.AddRef();
+
+    public int RefCounter => _memoryBlock.RefCounter;
+
     /// <summary>
     /// Create an instance with the <see cref="DefaultMemoryManager.GlobalInstance"/>.
     /// </summary>

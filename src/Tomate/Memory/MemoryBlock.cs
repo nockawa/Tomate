@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
@@ -24,7 +23,7 @@ namespace Tomate;
 [DebuggerDisplay("IsDefault: {IsDefault}, RefCounter: {RefCounter}, IsDisposed: {IsDisposed}, {MemorySegment}")]
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 [PublicAPI]
-public struct MemoryBlock : IDisposable
+public struct MemoryBlock : IRefCounted
 {
     /// <summary>
     /// The Memory Segment corresponding to the Memory Block
@@ -130,7 +129,7 @@ public struct MemoryBlock : IDisposable
 [DebuggerDisplay("IsDefault: {IsDefault}, RefCounter: {RefCounter}, IsDisposed: {IsDisposed}, {MemorySegment}")]
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 [PublicAPI]
-public struct MemoryBlock<T> : IDisposable where T : unmanaged
+public struct MemoryBlock<T> : IRefCounted where T : unmanaged
 {
     public MemorySegment<T> MemorySegment;
 
