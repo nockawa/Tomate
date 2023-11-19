@@ -33,13 +33,14 @@
     ],
     "template": [
       "default",
-      "modern"
+      "templates/material"
     ],
     "globalMetadata": {
       "_appName": "Tomate",
       "_appTitle": "Tomate",
       "_appFaviconPath": "images/favicon.ico",
       "_appLogoPath": "images/tomate.svg",
+      "_appFooter": "Copyright (c) Loïc Baumann",
       "_enableSearch": true,
       
       "pdf": false
