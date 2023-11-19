@@ -32,7 +32,7 @@
     ],
     "template": [
       "default",
-      "templates/material"
+      "modern"
     ],
     "globalMetadata": {
       "_appName": "Tomate",
