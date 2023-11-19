@@ -9,8 +9,7 @@
           ]
         }
       ],
-      "dest": "api",
-      "output": "_site"
+      "dest": "api"
     }
   ],
   "build": {
@@ -20,7 +19,7 @@
           "**/*.{md,yml}"
         ],
         "exclude": [
-          "_site/**"
+          "live/**"
         ]
       }
     ],
