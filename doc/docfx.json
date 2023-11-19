@@ -1,0 +1,49 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../src",
+          "files": [
+            "**/*.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "output": "_site"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "**/*.{md,yml}"
+        ],
+        "exclude": [
+          "_site/**"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "images/**"
+        ]
+      }
+    ],
+    "template": [
+      "default",
+      "modern"
+    ],
+    "globalMetadata": {
+      "_appName": "Tomate",
+      "_appTitle": "Tomate",
+      "_appFaviconPath": "images/favicon.ico",
+      "_appLogoPath": "images/tomate.svg",
+      "_enableSearch": true,
+      
+      "pdf": false
+    },
+    "dest" : "live"    
+  }
+}

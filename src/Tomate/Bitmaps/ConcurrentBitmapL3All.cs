@@ -24,7 +24,7 @@ namespace Tomate;
 /// we have two levels of aggregation that allow us to skips complete 64bits blocks (level 1) and compete 64^2 blocks (level 2) during our search.
 /// e.g. the first bit of the L1ALL map is set to 1 is all bit from [0-63] are set to 1.
 /// Finding an unset bit is concurrent friendly, many threads can execute such operation at the same time, but setting or clearing a bit has to be an exclusive
-/// operation (because of resize), but it's fast so if another thread has started such operation (<see cref="TakeControl"/> is called), then we SpinWait until
+/// operation (because of resize), but it's fast so if another thread has started such operation (<c>TakeControl()</c> is called), then we SpinWait until
 /// it can be our turn.
 /// </para>
 /// </remarks>
@@ -114,6 +114,9 @@ public class ConcurrentBitmapL3All
     }
 
 
+    /// <summary>
+    /// Private method called to take control of the instance to ensure thread-safeness 
+    /// </summary>
     private void TakeControl()
     {
         if (Interlocked.CompareExchange(ref _control, 1, 0) != 0)

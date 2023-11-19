@@ -1,8 +1,8 @@
 ﻿# 🍅 Tomate 🍅
 
-Low level library for concurrent, low GC impact data storing/manipulation.
+Low level library for concurrent, high performance, low GC impact data storing & manipulation.
 
-Also allowing real-time processing of persistant data through a set of collections and primitives that operate over a Memory Mapped File.
+Also allowing real-time processing of persistent data through a set of collections and primitives that operate over a Memory Mapped File.
 
 ## What it is about?
 .net standard libraries are great, especially the collection ones, they allow one to write code very quickly/easily.
@@ -29,6 +29,8 @@ If you are doing real-time programming for instance, you have to deal with a lot
 Because our computers have more and more CPU cores, we can't rely on single-threaded code anymore. But multi-threaded code is far from easy and it doesn't get easier when we are targeting low latency code. A mutex lock/unlock is about 100ns, a thread context switch is in the mater of millisecond, so we have to avoid them as much as possible.
 
 This library provides thread-safe types, but not exclusively (because single-threaded will always be faster) to help you and ease things.
+
+## [Usage overview](doc/overview.md)
 
 ## So, how?
 

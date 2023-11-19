@@ -268,3 +268,8 @@ __pycache__/
 /docs/api/.manifest
 .ionide/
 *BenchmarkDotNet.Aritfacts*
+
+# DocFX
+doc/live/
+doc/api/
+doc/public/
