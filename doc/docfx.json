@@ -19,7 +19,8 @@
           "**/*.{md,yml}"
         ],
         "exclude": [
-          "live/**"
+          "live/**",
+          "ovr/**"
         ]
       }
     ],
@@ -30,9 +31,17 @@
         ]
       }
     ],
+    "overwrite": [
+      {
+        "files": [
+          "ovr/*.md"
+        ]
+      }
+    ],
     "template": [
       "default",
-      "modern"
+      "modern",
+      "template"
     ],
     "globalMetadata": {
       "_appName": "Tomate",

@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
@@ -28,6 +29,7 @@ namespace Tomate;
 /// it can be our turn.
 /// </para>
 /// </remarks>
+[PublicAPI]
 public class ConcurrentBitmapL3All
 {
     private const int L0All = 0;

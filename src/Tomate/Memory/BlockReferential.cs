@@ -77,7 +77,7 @@ public static class BlockReferential
     /// </summary>
     /// <param name="allocator">The instance to register</param>
     /// <returns>The Id that must be stored in <see cref="GenBlockHeader.BlockIndex"/> property</returns>
-    public static int RegisterAllocator(IBlockAllocator allocator)
+    internal static int RegisterAllocator(IBlockAllocator allocator)
     {
         try
         {

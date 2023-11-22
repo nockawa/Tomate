@@ -1,6 +1,4 @@
-- name: Overview
-  items:
-    - name: Memory Manager
-      href: doc/memory-manager.md
+- name: Docs
+  href: doc/
 - name: API Reference
   href: api/

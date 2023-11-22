@@ -6,14 +6,6 @@ using System.Runtime.CompilerServices;
 
 namespace Tomate;
 
-/// <summary>
-/// This is the interface to implement a Memory Manager (a.k.a. Allocator).
-/// </summary>
-/// <remarks>
-/// Anyone can implement an Allocator, few rules must be followed and it's best to take a look at <see cref="DefaultMemoryManager"/>.
-/// Each Allocator instance has a unique Id <see cref="MemoryManagerId"/> that allows anyone to retrieve it back using <see cref="GetMemoryManager"/>.
-/// It also allows to reference a given instance inside an unmanaged type, which can't be with an instance of <see cref="IMemoryManager"/>, see <see cref="UnmanagedList{T}"/>.
-/// </remarks>
 [PublicAPI]
 public interface IMemoryManager
 {
@@ -147,19 +139,7 @@ public interface IMemoryManager
 }
 
 [PublicAPI]
-public interface IPageAllocator
-{
-    unsafe byte* BaseAddress { get; }
-    int PageSize { get; }
-
-    MemorySegment AllocatePages(int length);
-    bool FreePages(MemorySegment pages);
-    int ToBlockId(MemorySegment segment);
-    MemorySegment FromBlockId(int blockId);
-}
-
-[PublicAPI]
-public interface IBlockAllocator : IDisposable
+internal interface IBlockAllocator : IDisposable
 {
     IMemoryManager Owner { get; }
     int BlockIndex { get; }

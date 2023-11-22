@@ -2,7 +2,9 @@
 
 Low level library for concurrent, high performance, low GC impact data storing & manipulation.
 
-Also allowing real-time processing of persistent data through a set of collections and primitives that operate over a Memory Mapped File.
+Also allowing interprocess communication and real-time processing of persistent data through a set of collections and primitives that operate over a Memory Mapped File.
+
+For the full documentation, please visit [the 🍅 website](https://nockawa.github.io/Tomate/)
 
 ## What it is about?
 .net standard libraries are great, especially the collection ones, they allow one to write code very quickly/easily.
@@ -30,7 +32,12 @@ Because our computers have more and more CPU cores, we can't rely on single-thre
 
 This library provides thread-safe types, but not exclusively (because single-threaded will always be faster) to help you and ease things.
 
-## [Usage overview](doc/overview.md)
+### Operating over a Memory Mapped File
+[Memory Mapped File](https://learn.microsoft.com/en-us/dotnet/standard/io/memory-mapped-files) (MMF for short) can be used in many scenarios:
+ - __Interprocess communication__ : multiple process exchanges data by writing and reading in a given MMF.
+ - __Streaming of very large data__ : a persistent MMF can store hundreds of gigabytes and be virtually completely accessible from memory.
+
+🍅 implements a set of collections and features for you to structure the data stored in an MMF and taking care of multi-thread, interprocess synchronization.
 
 ## So, how?
 
@@ -56,14 +63,14 @@ These types can be instanced either for runtime purpose or inside a MemoryMapped
  - ExclusiveAccessControl: smaller version than AccessControl with only exclusive access.
  - SmallLock: An interprocess/thread lock mechanism with a proper waiting list.
 
-### Persistant data manipulation through Memory Mapped File
+### Persistent data manipulation through Memory Mapped File
 
 #### Background
-Serializing data over persistant storage is needed when you operate on data structures that rely on pointers. You have to transform the data in order to be saved on disk and you have to code the opposite to load it into memory at loading time.
+Serializing data over persistent storage is needed when you operate on data structures that rely on pointers. You have to transform the data in order to be saved on disk and you have to code the opposite to load it into memory at loading time.
 
-All of this because of memory pointers...And when we switched from 32bits to 64bits we suddendly had performance hit because of the extra data they take.
+All of this because of memory pointers...And when we switched from 32bits to 64bits we suddenly had performance hit because of the extra data they take.
 
-.net and C# don't like pointers, so why not created a set of collections and primitives types that are relying on indices instead of pointers to reference data location? It should be at least as fast as pointer, consumming less memory, so maybe a little bit faster. We could also make this data structure persistant and use it directly over Memory Mapped Files. Even better, with the right synchronization primitives types we could use it to exchange data/events between multiples processes sharing the same Memory Mapped File.
+.net and C# don't like pointers, so why not created a set of collections and primitives types that are relying on indices instead of pointers to reference data location? It should be at least as fast as pointer, consuming less memory, so maybe a little bit faster. We could also make this data structure persistent and use it directly over Memory Mapped Files. Even better, with the right synchronization primitives types we could use it to exchange data/events between multiples processes sharing the same Memory Mapped File.
 
 This library implements many types for you to achieve this.
 

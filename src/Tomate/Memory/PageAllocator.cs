@@ -1,9 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
+[PublicAPI]
 public unsafe class PageAllocator : IDisposable, IPageAllocator
 {
     private ConcurrentBitmapL4 _occupancyMap;

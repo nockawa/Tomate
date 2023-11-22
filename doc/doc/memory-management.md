@@ -1,4 +1,8 @@
-﻿# Memory Manager Overview
+﻿---
+uid: memory-management-overview
+---
+
+# Memory Management Overview
 
 There is only one way to avoid GC in .net when you're manipulating data with a indeterminate lifecycle: a custom memory Manager.
 
@@ -6,22 +10,38 @@ That's right, you trade ease of use against performance, which is not unusual.
 The responsibility of the memory lifecycle shift on your side, some features and helpers ease things for you, but still, it's your job now.
 
 ## Memory Manager and friends
-Tomate declare the [`IMemoryManager`](<xref:Tomate.IMemoryManager>) interface which has two implementations so far
+### IMemoryManager
+Tomate declare the [`IMemoryManager`](<xref:Tomate.IMemoryManager>) interface which has two implementations so far:
 
 1. [`DefaultMemoryManager`](<xref:Tomate.DefaultMemoryManager>): which is the default memory manager for in-process memory allocation.
 2. [`MemoryManagerOverMMF`](<xref:Tomate.MemoryManagerOverMMF>): which is the memory manager that maps a memory-mapped-file (MMF) for interprocess communication/processing and/or persistent data storage.
 
 The purpose of a Memory Manager is to allocate, resize and free memory blocks while being thread-safe.
 
+### IPageAllocator
+A simpler kind of allocator can be implemented through the [`IPageAllocator`](<xref:Tomate.IPageAllocator>) interface, it allows to allocate fixed-size memory segment.
+
+> [!WARNING]
+> Page allocators don't deal with `MemoryBlock` but only with `MemorySegment` and BlockId (which is simply an `int`).
+
 ### Memory Block
 
 The memory manager is used to allocated linear segments of memory, each one has a fixed address and is represented by the [`MemoryBlock`](<xref:Tomate.MemoryBlock>) type.
 
 From an instance of [`MemoryBlock`](<xref:Tomate.MemoryBlock>) you can:
-1. Extend/release the lifecycle through reference counting.
+1. Extend the lifecycle by calling [`AddRef()`](<xref:Tomate.MemoryBlock.AddRef>).
 2. Resize the block, which will allocate a new one, copying the content of the existing and release it. So your instance will point to a new address.
-3. Release/Dispose the memory block.
+3. Release/Dispose the memory block. Every block stores a reference to the Memory Manager that "owns" it and then can be released without "knowing" the manager per se.
 4. Accessing the underlying [`MemorySegment`](<xref:Tomate.MemorySegment>).
+
+> [!NOTE]
+> The lifecycle of a block is handled by a reference counter.
+> 
+> When you allocate the block, the counter equals to 1.
+> 
+> You can _extend_ the lifetime of a block by calling [`AddRef()`](<xref:Tomate.MemoryBlock.AddRef>). But __always call__ a corresponding [`Dispose()`](<xref:Tomate.MemoryBlock.Dispose>) to _release_ the hold you have on this block.
+> 
+> If the reference counter was 1 before `Dispose()` is called, then the memory block will be deallocated and its corresponding memory area no longer usable.
 
 ### Memory Segment
 
@@ -38,6 +58,12 @@ Note that while doing this you should ensure the __lifetime of the underlying me
 The implementation of [`DefaultMemoryManager`](<xref:Tomate.DefaultMemoryManager>) was deliberately kept aside from being too complex, but still with the goal of achieving overall decent performances.
 
 You can have multiple instance of this type, but you are encourage to use the default one, accessible from the static property of its type.
+
+> [!TIP]
+> Use the [GlobalInstance](<xref:Tomate.DefaultMemoryManager.GlobalInstance>) static property of `DefaultMemoryManager` which is enough for most scenarios.
+
+> [!TIP]
+> If you pass `null` to methods taking an `IMemoryManager` as parameter the [GlobalInstance](<xref:Tomate.DefaultMemoryManager.GlobalInstance>) memory manager will be used.
 
 ## Memory Manager over a Memory Mapped File
 
