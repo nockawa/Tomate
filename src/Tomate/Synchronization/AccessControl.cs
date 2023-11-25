@@ -57,6 +57,26 @@ public struct AccessControl
     /// </summary>
     public int SharedUsedCounter => _sharedUsedCounter;
 
+    /// <summary>
+    /// Enter a shared access
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Shared access is typically used to allow concurrent readers, that is, many processes/threads can concurrently enter a shared access.
+    /// If there is already an exclusive access being hold, the calling thread will wait until it can enter the shared access (which is the exclusive access
+    /// to be released).
+    /// While in shared access, if a process/thread attempts to enter an exclusive access calling <see cref="EnterExclusiveAccess"/>,the calling thread will
+    /// wait until there is no shared access at all to satisfy the request.
+    /// </para>
+    /// <para>
+    /// You have the possibility to attempt transforming your shared access to an exclusive one by calling <see cref="TryPromoteToExclusiveAccess"/>. If the
+    /// calling thread is the only shared access the promotion will succeed and the thread will then become the exclusive owner. If there is at least another
+    /// process/thread holding a shared access, the promotion attempt will fail.
+    /// </para>
+    /// <para>
+    /// Be sure to call <see cref="ExitSharedAccess"/> when you want to release the access. 
+    /// </para>
+    /// </remarks>
     public void EnterSharedAccess()
     {
         // Currently exclusively locked, wait it's over
@@ -86,8 +106,24 @@ public struct AccessControl
         }
     }
 
+    /// <summary>
+    /// Exit a previously entered shared access
+    /// </summary>
+    /// <remarks>
+    /// A process/thread calling <see cref="EnterSharedAccess"/> must call this method to release the shared access.
+    /// </remarks>
     public void ExitSharedAccess() => Interlocked.Decrement(ref _sharedUsedCounter);
 
+    /// <summary>
+    /// Enter an exclusive access
+    /// </summary>
+    /// <remarks>
+    /// There can be only one process/thread being in the exclusive access state at a given time.
+    /// If the `AccessControl` instance is being in shared mode or exclusive hold by another process/thread, the calling thread will wait until this call can
+    /// be satisfied.
+    /// Note that this method is not reentrant, if somewhere lower in the calling stack a method successfully entered an exclusive access, this call will
+    /// wait indefinitely.
+    /// </remarks>
     public void EnterExclusiveAccess()
     {
         var ct = CurrentProcessThreadId;
@@ -133,6 +169,16 @@ public struct AccessControl
         }
     }
 
+    /// <summary>
+    /// Attempt to promote a previously set shared access to exclusive
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> if the calling process/thread could switch to exclusive, <c>false</c> if the attempt failed (other processes/threads are also holding a
+    /// shared access).
+    /// </returns>
+    /// <remarks>
+    /// This method will either switch from shared to exclusive or stay shared. Based on the outcome, you have to call the corresponding Exit method.
+    /// </remarks>
     public bool TryPromoteToExclusiveAccess()
     {
         var ct = CurrentProcessThreadId;
@@ -160,8 +206,18 @@ public struct AccessControl
         return true;
     }
 
+    /// <summary>
+    /// Demote from exclusive to shared access
+    /// </summary>
+    /// <remarks>
+    /// The calling process/thread must be in a valid exclusive state for this method to be called.
+    /// </remarks>
     public void DemoteFromExclusiveAccess() => _lockedByThreadId = 0;
 
+    /// <summary>
+    /// Release the exclusive access on the calling process/thread
+    /// </summary>
     public void ExitExclusiveAccess() => _lockedByThreadId = 0;
+    
     private static int CurrentProcessThreadId => Environment.CurrentManagedThreadId ^ ProcessId;
 }
