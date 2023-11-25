@@ -83,6 +83,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
     public bool IsDisposed => _mmf == null;
     public int MaxAllocationLength { get; }
     public int MemoryManagerId { get; }
+    public IProcessProvider ProcessProvider => _processProvider;
 
     public static MemoryManagerOverMMF Create(CreateSettings settings)
     {

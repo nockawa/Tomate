@@ -5,6 +5,9 @@ using JetBrains.Annotations;
 
 namespace Tomate;
 
+/// <summary>
+/// Exception triggered when an operation can't be performed to due a greater number of concurrent operations than <see cref="SmallLock"/> can handle.
+/// </summary>
 public class SmallLockConcurrencyExceededException : Exception
 {
     public SmallLockConcurrencyExceededException(string message) : base(message)
@@ -13,6 +16,19 @@ public class SmallLockConcurrencyExceededException : Exception
     }
 }
 
+/// <summary>
+/// An interprocess lock allowing control over concurrent accesses for a given (immaterial) resource.
+/// </summary>
+/// <remarks>
+/// <para>
+/// As all interprocess compatible types, `SmallLock` is designed to be compatible with storing instances on a <see cref="MemoryManagerOverMMF"/>.
+/// One of the resulted constraint is you have to specify at construction the maximum level of concurrency, resizing data on the fly would make the
+/// implementation of this type way harder.
+/// </para>
+/// <para>
+/// This type would apparently itself to <see cref="System.Threading.Monitor"/> but is interprocess compatible (and simpler, as more limited).
+/// </para>
+/// </remarks>
 [PublicAPI]
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct SmallLock
@@ -64,15 +80,74 @@ public unsafe struct SmallLock
         }
     }
 
+    /// <summary>
+    /// Helper method determining the size of the <see cref="MemorySegment"/> needed to store a `SmallLock` supporting the given concurrency level
+    /// </summary>
+    /// <param name="concurrencyLevel">
+    /// The required concurrency level, that is, the number of processes/threads that would be able to use the <see cref="SmallLock"/> instance concurrently.
+    /// </param>
+    /// <returns>The size the `MemorySegment` should be to store one instance.</returns>
     public static int ComputeSegmentSize(ushort concurrencyLevel) => sizeof(Header) + sizeof(long)*concurrencyLevel;
+    
+    /// <summary>
+    /// Create a new instance, stored in the given memory location
+    /// </summary>
+    /// <param name="segment">The memory segment used to store the instance, the max concurrency will determined by the size of this segment.</param>
+    /// <param name="processProvider">
+    /// This type support interprocess synchronization and must rely on an instance of this interface to get access to the processes involved.
+    /// You are likely to store the instance inside a <see cref="MemoryManagerOverMMF"/> so you can use the <see cref="MemoryManagerOverMMF.ProcessProvider"/>
+    /// property.
+    /// </param>
+    /// <returns>The created instance.</returns>
     public static SmallLock Create(MemorySegment segment, IProcessProvider processProvider) => new(segment, processProvider, true);
+    
+    /// <summary>
+    /// Create a C# instance of `SmallLock` by mapping to an existing (and previously created) one. 
+    /// </summary>
+    /// <param name="segment">The memory segment that contains the data of the `SmallLock` to map against.</param>
+    /// <returns>The instance</returns>
+    /// <remarks>See <see cref="MemoryManagerOverMMF"/> for more detail of how this is working</remarks>
     public static SmallLock Map(MemorySegment segment) => new(segment, null, false);
 
+    /// <summary>
+    /// Get the process provider instance used to identify the process involved in the synchronization
+    /// </summary>
     public IProcessProvider ProcessProvider => IProcessProvider.GetProvider(_header->ProcessProviderId);
+    
+    /// <summary>
+    /// Return <c>true</c> if the lock is taken by _someone_, <c>false</c> otherwise.
+    /// </summary>
     public bool IsEntered => _header->LockedBy != 0;
+    
+    /// <summary>
+    /// Get the id of the processing holding the lock
+    /// </summary>
+    /// <remarks>
+    /// The return id is equivalent to <see cref="IProcessProvider.CurrentProcessId"/> for the calling process.
+    /// <c>0</c> means the lock is not held.
+    /// </remarks>
     public int LockedByProcess => _header->LockedBy.HighS();
+    
+    /// <summary>
+    /// Get the lockId (the one given during `Enter()`) that is currently holding the lock
+    /// </summary>
+    /// <remarks>
+    /// <c>0</c> means the lock is not held.
+    /// </remarks>
     public int LockId => _header->LockedBy.LowS();
+    
+    /// <summary>
+    /// Get the maximum concurrency level the lock can support.
+    /// </summary>
+    /// <remarks>
+    /// This value is determined at construction, base on the size of the data segment that is given.
+    /// The lock can't support more concurrent operations (e.g.: simultaneous/concurrent calls to <see cref="Enter"/> for instance) than given at construction.
+    /// </remarks>
     public int ConcurrencyCapacity => _header->QueueCapacity;
+    
+    /// <summary>
+    /// Get the current concurrency level, at the time this property is accessed
+    /// </summary>
     public int ConcurrencyCounter => _header->QueueCount;
     
     private int QueueCount => _header->QueueCount;

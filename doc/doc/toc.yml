@@ -4,8 +4,12 @@
   - name: Overview
   - name: Memory Management
     href: memory-management.md
+  - name: Lifetime of instances
+    href: lifetime-instances.md
   - name: Collections
     href: collections.md
+  - name: Synchronization
+    href: synchronization.md
   - name: Misc
   - name: Bitmaps
     href: bitmaps.md

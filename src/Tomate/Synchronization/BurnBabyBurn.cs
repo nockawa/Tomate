@@ -1,5 +1,16 @@
-﻿namespace Tomate;
+﻿using JetBrains.Annotations;
 
+namespace Tomate;
+
+/// <summary>
+/// Put the calling thread in hold for a given time span
+/// </summary>
+/// <remarks>
+/// This type is mostly for testing/debugging purpose, the calling thread is spinning for a given time span, CPU is not consumed during this span, it relies
+/// on a particular assembly instruction that "waits doing nothing".
+/// The user typically create a while loop with <see cref="Wait"/> being call as the while predicate.
+/// </remarks>
+[PublicAPI]
 public readonly struct BurnBabyBurn
 {
     private readonly DateTime _waitUntil;
