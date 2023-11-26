@@ -4,7 +4,7 @@
   - name: Overview
   - name: Memory Management
     href: memory-management.md
-  - name: Lifetime of instances
+  - name: Lifetime of instances (and struct 101)
     href: lifetime-instances.md
   - name: Collections
     href: collections.md

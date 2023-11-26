@@ -7,4 +7,6 @@ public interface IRefCounted : IDisposable
 {
     int AddRef();
     int RefCounter { get; }
+    
+    bool IsDisposed { get; }
 }
