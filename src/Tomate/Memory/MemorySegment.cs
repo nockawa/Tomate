@@ -22,32 +22,37 @@ public delegate TResult BinarySearchComp<T1, T2, out TResult>(ref T1 arg1, ref T
 [PublicAPI]
 public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 {
-    public readonly byte* Address;
-    public readonly int Length;
+    #region Constants
 
     public static readonly MemorySegment Empty = new(null, 0);
-    public override string ToString() => $"Address: 0x{(ulong)Address:X}, Length: {Length}";
 
-    public MemorySegment(byte* address, int length)
-    {
-        Address = address;
-        Length = length;
-    }
+    #endregion
 
-    public bool IsDefault => Address == null;
+    #region Public APIs
+
+    #region Properties
+
     public byte* End => Address + Length;
 
-    public Span<T> ToSpan<T>() where T : unmanaged => new(Address, Length / sizeof(T));
-    public static implicit operator Span<byte>(MemorySegment segment)
-    {
-        return new Span<byte>(segment.Address, segment.Length);
-    }
-    
+    public bool IsDefault => Address == null;
+
+    #endregion
+
+    #region Methods
+
     /// Beware if the span doesn't map to a fixed address space, you may have issues if you don't handle the MemorySegment's lifetime accordingly
     public static explicit operator MemorySegment(Span<byte> span)
     {
         return new MemorySegment((byte*)Unsafe.AsPointer(ref MemoryMarshal.AsRef<byte>(span)), span.Length * sizeof(byte));
     }
+
+    public static implicit operator Span<byte>(MemorySegment segment)
+    {
+        return new Span<byte>(segment.Address, segment.Length);
+    }
+
+    public static implicit operator void*(MemorySegment segment) => segment.Address;
+    public static implicit operator byte*(MemorySegment segment) => segment.Address;
 
     public MemorySegment<T> Cast<T>() where T : unmanaged => new(Address, Length / sizeof(T));
 
@@ -76,8 +81,38 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
         return (new MemorySegment(Address, splitOffset), new MemorySegment(Address+splitOffset, Length-splitOffset));
     }
 
-    public static implicit operator void*(MemorySegment segment) => segment.Address;
-    public static implicit operator byte*(MemorySegment segment) => segment.Address;
+    public (MemorySegment<TA>, MemorySegment<TB>) Split<TA, TB>(int splitOffset) where TA : unmanaged where TB : unmanaged
+    {
+        if ((splitOffset < 0) || splitOffset > Length)
+            ThrowHelper.OutOfRange($"The given split offset ({splitOffset}) is out of range, segment length limit is {Length}.");
+
+        return (new MemorySegment(Address, splitOffset).Cast<TA>(), new MemorySegment(Address+splitOffset, Length-splitOffset).Cast<TB>());
+    }
+
+    public Span<T> ToSpan<T>() where T : unmanaged => new(Address, Length / sizeof(T));
+
+    public override string ToString() => $"Address: 0x{(ulong)Address:X}, Length: {Length}";
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    public readonly byte* Address;
+    public readonly int Length;
+
+    #endregion
+
+    #region Constructors
+
+    public MemorySegment(byte* address, int length)
+    {
+        Address = address;
+        Length = length;
+    }
+
+    #endregion
 
     #region GetHashCode & Equality
 
@@ -125,48 +160,19 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 [PublicAPI]
 public readonly unsafe struct MemorySegment<T> where T : unmanaged
 {
-    internal sealed class DebugView
-    {
-        private readonly T[] _array;
+    #region Constants
 
-        public DebugView(MemorySegment<T> segment)
-        {
-            _array = segment.ToArray();
-        }
-
-        [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-        public T[] Items => _array;
-    }
-
-    public readonly T* Address;
-    public readonly int Length;
-    public T* End => Address + Length;
-
-    public static implicit operator MemorySegment(MemorySegment<T> source) => new((byte*)source.Address, sizeof(T)*source.Length);
-
-    /// <summary>
-    /// Construct an instance of a Memory Segment
-    /// </summary>
-    /// <param name="address">Starting address of the segment</param>
-    /// <param name="length">Length of the segment in {T} (NOT in bytes)</param>
-    public MemorySegment(void* address, int length)
-    {
-        Address = (T*)address;
-        Length = length;
-    }
-
-    public bool IsDefault => Address == null;
     public static readonly MemorySegment<T> Empty = new(null, 0);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
-    public Span<T> ToSpan() => new(Address, Length);
-    public Span<U> ToSpan<U>() where U : unmanaged => new(Address, Length * sizeof(T) / sizeof(U));
+    #endregion
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static implicit operator Span<T>(MemorySegment<T> segment)
-    {
-        return new Span<T>(segment.Address, segment.Length);
-    }
+    #region Public APIs
+
+    #region Properties
+
+    public T* End => Address + Length;
+
+    public bool IsDefault => Address == null;
 
     public ref T this[int index]
     {
@@ -178,17 +184,16 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
         }
     }
 
-    private T[] ToArray()
+    #endregion
+
+    #region Methods
+
+    public static implicit operator MemorySegment(MemorySegment<T> source) => new((byte*)source.Address, sizeof(T)*source.Length);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static implicit operator Span<T>(MemorySegment<T> segment)
     {
-        var length = Length;
-        var res = new T[length];
-
-        for (int i = 0; i < length; i++)
-        {
-            res[i] = this[i];
-        }
-
-        return res;
+        return new Span<T>(segment.Address, segment.Length);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -204,28 +209,6 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
         if ((index < 0) || (index >= Length)) ThrowHelper.OutOfRange($"The given index ({index}) is out of range. Segment length limit is {Length}.");
         return ref Unsafe.AsRef<T>(Address + index);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public MemorySegment<T> Slice(int start) => Slice(start, Length - start);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public MemorySegment<T> Slice(int start, int length)
-    {
-        if (start < 0)
-        {
-            start = Length + start;
-        }
-
-        if ((start + length) > Length)
-        {
-            ThrowHelper.OutOfRange($"The given index ({start}) and length ({length}) are out of range. Segment length limit is {Length}, slice's end is {start+length}.");
-        }
-
-        return new(Address + start, length);
-    }
-
-    public MemorySegment Cast() => new MemorySegment((byte*)Address, Length * sizeof(T));
-    public MemorySegment<TTo> Cast<TTo>() where TTo : unmanaged => new(Address, Length * sizeof(T) / sizeof(TTo));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int BinarySearch<TKey>(TKey key, BinarySearchComp<T, TKey, long> f) where TKey : unmanaged
@@ -267,26 +250,128 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
         // is `lo` at this point.
         return ~lo;
     }
-    
+
+    public MemorySegment Cast() => new MemorySegment((byte*)Address, Length * sizeof(T));
+    public MemorySegment<TTo> Cast<TTo>() where TTo : unmanaged => new(Address, Length * sizeof(T) / sizeof(TTo));
+
     /// <summary>Gets an enumerator for this segment.</summary>
     public Enumerator GetEnumerator() => new(this);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public MemorySegment<T> Slice(int start) => Slice(start, Length - start);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public MemorySegment<T> Slice(int start, int length)
+    {
+        if (start < 0)
+        {
+            start = Length + start;
+        }
+
+        if ((start + length) > Length)
+        {
+            ThrowHelper.OutOfRange($"The given index ({start}) and length ({length}) are out of range. Segment length limit is {Length}, slice's end is {start+length}.");
+        }
+
+        return new(Address + start, length);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
+    public Span<T> ToSpan() => new(Address, Length);
+
+    public Span<U> ToSpan<U>() where U : unmanaged => new(Address, Length * sizeof(T) / sizeof(U));
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    public readonly T* Address;
+    public readonly int Length;
+
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Construct an instance of a Memory Segment
+    /// </summary>
+    /// <param name="address">Starting address of the segment</param>
+    /// <param name="length">Length of the segment in {T} (NOT in bytes)</param>
+    public MemorySegment(void* address, int length)
+    {
+        Address = (T*)address;
+        Length = length;
+    }
+
+    #endregion
+
+    #region Private methods
+
+    private T[] ToArray()
+    {
+        var length = Length;
+        var res = new T[length];
+
+        for (int i = 0; i < length; i++)
+        {
+            res[i] = this[i];
+        }
+
+        return res;
+    }
+
+    #endregion
+
+    #region Inner types
+
+    internal sealed class DebugView
+    {
+        #region Public APIs
+
+        #region Properties
+
+        [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+        public T[] Items => _array;
+
+        #endregion
+
+        #endregion
+
+        #region Fields
+
+        private readonly T[] _array;
+
+        #endregion
+
+        #region Constructors
+
+        public DebugView(MemorySegment<T> segment)
+        {
+            _array = segment.ToArray();
+        }
+
+        #endregion
+    }
 
     /// <summary>Enumerates the elements of a <see cref="MemorySegment{T}"/>.</summary>
     public ref struct Enumerator
     {
-        /// <summary>The segment being enumerated.</summary>
-        private readonly MemorySegment<T> _segment;
-        /// <summary>The next index to yield.</summary>
-        private int _index;
+        #region Public APIs
 
-        /// <summary>Initialize the enumerator.</summary>
-        /// <param name="segment">The segment to enumerate.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Enumerator(MemorySegment<T> segment)
+        #region Properties
+
+        /// <summary>Gets the element at the current position of the enumerator.</summary>
+        public ref T Current
         {
-            _segment = segment;
-            _index = -1;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => ref _segment.AsRef(_index);
         }
+
+        #endregion
+
+        #region Methods
 
         /// <summary>Advances the enumerator to the next element of the segment.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -302,20 +387,59 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
             return false;
         }
 
-        /// <summary>Gets the element at the current position of the enumerator.</summary>
-        public ref T Current
+        #endregion
+
+        #endregion
+
+        #region Fields
+
+        /// <summary>The segment being enumerated.</summary>
+        private readonly MemorySegment<T> _segment;
+
+        /// <summary>The next index to yield.</summary>
+        private int _index;
+
+        #endregion
+
+        #region Constructors
+
+        /// <summary>Initialize the enumerator.</summary>
+        /// <param name="segment">The segment to enumerate.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal Enumerator(MemorySegment<T> segment)
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => ref _segment.AsRef(_index);
+            _segment = segment;
+            _index = -1;
         }
+
+        #endregion
     }
+
+    #endregion
 }
 
 public readonly unsafe struct MemorySegments<T1, T2> where T1 : unmanaged where T2 : unmanaged
 {
+    #region Public APIs
+
+    #region Properties
+
+    public MemorySegment<T1> Segment1 => new(_baseAddress, _length1);
+    public MemorySegment<T2> Segment2 => new(_baseAddress + sizeof(T1) * _length1, _length2);
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
     private readonly byte* _baseAddress;
     private readonly int _length1;
     private readonly int _length2;
+
+    #endregion
+
+    #region Constructors
 
     public MemorySegments(MemorySegment segment, int length1, int length2)
     {
@@ -330,16 +454,33 @@ public readonly unsafe struct MemorySegments<T1, T2> where T1 : unmanaged where 
         _length2 = length2;
     }
 
-    public MemorySegment<T1> Segment1 => new(_baseAddress, _length1);
-    public MemorySegment<T2> Segment2 => new(_baseAddress + sizeof(T1) * _length1, _length2);
+    #endregion
 }
 
 public readonly unsafe struct MemorySegments<T1, T2, T3> where T1 : unmanaged where T2 : unmanaged where T3 : unmanaged
 {
+    #region Public APIs
+
+    #region Properties
+
+    public MemorySegment<T1> Segment1 => new(_baseAddress, _length1);
+    public MemorySegment<T2> Segment2 => new(_baseAddress + sizeof(T1) * _length1, _length2);
+    public MemorySegment<T3> Segment3 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2), _length3);
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
     private readonly byte* _baseAddress;
     private readonly int _length1;
     private readonly int _length2;
     private readonly int _length3;
+
+    #endregion
+
+    #region Constructors
 
     public MemorySegments(MemorySegment segment, int length1, int length2, int length3)
     {
@@ -355,18 +496,35 @@ public readonly unsafe struct MemorySegments<T1, T2, T3> where T1 : unmanaged wh
         _length3 = length3;
     }
 
-    public MemorySegment<T1> Segment1 => new(_baseAddress, _length1);
-    public MemorySegment<T2> Segment2 => new(_baseAddress + sizeof(T1) * _length1, _length2);
-    public MemorySegment<T3> Segment3 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2), _length3);
+    #endregion
 }
 
 public readonly unsafe struct MemorySegments<T1, T2, T3, T4> where T1 : unmanaged where T2 : unmanaged where T3 : unmanaged where T4 : unmanaged
 {
+    #region Public APIs
+
+    #region Properties
+
+    public MemorySegment<T1> Segment1 => new(_baseAddress, _length1);
+    public MemorySegment<T2> Segment2 => new(_baseAddress + (sizeof(T1) * _length1), _length2);
+    public MemorySegment<T3> Segment3 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2), _length3);
+    public MemorySegment<T4> Segment4 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2) + (sizeof(T3) * _length3), _length4);
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
     private readonly byte* _baseAddress;
     private readonly int _length1;
     private readonly int _length2;
     private readonly int _length3;
     private readonly int _length4;
+
+    #endregion
+
+    #region Constructors
 
     public MemorySegments(MemorySegment segment, int length1, int length2, int length3, int length4)
     {
@@ -383,21 +541,38 @@ public readonly unsafe struct MemorySegments<T1, T2, T3, T4> where T1 : unmanage
         _length4 = length4;
     }
 
-    public MemorySegment<T1> Segment1 => new(_baseAddress, _length1);
-    public MemorySegment<T2> Segment2 => new(_baseAddress + (sizeof(T1) * _length1), _length2);
-    public MemorySegment<T3> Segment3 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2), _length3);
-    public MemorySegment<T4> Segment4 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2) + (sizeof(T3) * _length3), _length4);
+    #endregion
 }
 
 
 public readonly unsafe struct MemorySegments<T1, T2, T3, T4, T5> where T1 : unmanaged where T2 : unmanaged where T3 : unmanaged where T4 : unmanaged where T5 : unmanaged
 {
+    #region Public APIs
+
+    #region Properties
+
+    public MemorySegment<T1> Segment1 => new(_baseAddress, _length1);
+    public MemorySegment<T2> Segment2 => new(_baseAddress + (sizeof(T1) * _length1), _length2);
+    public MemorySegment<T3> Segment3 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2), _length3);
+    public MemorySegment<T4> Segment4 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2) + (sizeof(T3) * _length3), _length4);
+    public MemorySegment<T5> Segment5 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2) + (sizeof(T3) * _length3) + (sizeof(T4) * _length4), _length5);
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
     private readonly byte* _baseAddress;
     private readonly int _length1;
     private readonly int _length2;
     private readonly int _length3;
     private readonly int _length4;
     private readonly int _length5;
+
+    #endregion
+
+    #region Constructors
 
     public MemorySegments(MemorySegment segment, int length1, int length2, int length3, int length4, int length5)
     {
@@ -415,9 +590,5 @@ public readonly unsafe struct MemorySegments<T1, T2, T3, T4, T5> where T1 : unma
         _length5 = length5;
     }
 
-    public MemorySegment<T1> Segment1 => new(_baseAddress, _length1);
-    public MemorySegment<T2> Segment2 => new(_baseAddress + (sizeof(T1) * _length1), _length2);
-    public MemorySegment<T3> Segment3 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2), _length3);
-    public MemorySegment<T4> Segment4 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2) + (sizeof(T3) * _length3), _length4);
-    public MemorySegment<T5> Segment5 => new(_baseAddress + (sizeof(T1) * _length1) + (sizeof(T2) * _length2) + (sizeof(T3) * _length3) + (sizeof(T4) * _length4), _length5);
+    #endregion
 }

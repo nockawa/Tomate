@@ -5,8 +5,21 @@ namespace Tomate;
 [PublicAPI]
 public interface IRefCounted : IDisposable
 {
-    int AddRef();
-    int RefCounter { get; }
-    
+    #region Public APIs
+
+    #region Properties
+
     bool IsDisposed { get; }
+
+    int RefCounter { get; }
+
+    #endregion
+
+    #region Methods
+
+    int AddRef();
+
+    #endregion
+
+    #endregion
 }

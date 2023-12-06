@@ -65,7 +65,6 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
     private MemoryMappedFile _mmf;
     private readonly bool _compactOnFinalClose;
     private MemoryMappedViewAccessor _view;
-    private IProcessProvider _processProvider;
 
     private byte* _rootAddr;
     private readonly MemorySegment<RootHeader> _header;
@@ -83,7 +82,10 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
     public bool IsDisposed => _mmf == null;
     public int MaxAllocationLength { get; }
     public int MemoryManagerId { get; }
-    public IProcessProvider ProcessProvider => _processProvider;
+    public int PageAllocatorId { get; }
+
+    public DefaultMemoryManager.DebugMemoryInit MemoryBlockContentInitialization { get; set; }
+    public DefaultMemoryManager.DebugMemoryInit MemoryBlockContentCleanup { get; set; }
 
     public static MemoryManagerOverMMF Create(CreateSettings settings)
     {
@@ -133,8 +135,6 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
         MMFFilePathName = settings.FilePathName;
         MMFName = settings.Name;
         PageSize = settings.PageSize;                   // Can be 0 at this point if we open an existing MMF
-        Debug.Assert(settings.ProcessProvider!=null, "You have to specify a ProcessProvider");
-        _processProvider = settings.ProcessProvider;
         var fileSize = settings.FileSize;
         try
         {
@@ -217,6 +217,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
         });
         
         MemoryManagerId = IMemoryManager.RegisterMemoryManager(this);
+        PageAllocatorId = IPageAllocator.RegisterPageAllocator(this);
         BaseAddress = _rootAddr;
         EndAddress = _rootAddr + MMFSize;
         MMFRangeByMMF.Add(this, ((long)BaseAddress, (long)EndAddress));
@@ -229,17 +230,11 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
         ReservePage(0, 1, -1);                                   // the first page is storing the header and all root level information, so we mark it as reserved
         ReservePage(pageCapacity, (short)(64 - (pageCapacity % 64)), -1); // Make sure we can't allocate pages that are not there but the mask would allow us to take
 
-        Trace.Assert(RegisterSession(_processProvider.CurrentProcessId));
+        Trace.Assert(RegisterSession(IProcessProvider.Singleton.CurrentProcessId));
     }
 
     private bool RegisterSession(int processId)
     {
-        // Register
-        if (_processProvider.RegisterProcess(processId) == false)
-        {
-            return false;
-        }
-
         // Acquire lock
         LockSessionInfo(processId);
 
@@ -274,12 +269,6 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
 
     private bool UnregisterSession(int processId)
     {
-        // Unregister
-        if (_processProvider.UnregisterProcess(processId) == false)
-        {
-            return false;
-        }
-
         // Acquire lock
         LockSessionInfo(processId);
 
@@ -417,8 +406,9 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
         }
 
         IMemoryManager.UnregisterMemoryManager(MemoryManagerId);
+        IPageAllocator.UnregisterPageAllocator(PageAllocatorId);
 
-        Trace.Assert(UnregisterSession(_processProvider.CurrentProcessId));
+        Trace.Assert(UnregisterSession(IProcessProvider.Singleton.CurrentProcessId));
 
         long maxSize = 0;
         if (_compactOnFinalClose)

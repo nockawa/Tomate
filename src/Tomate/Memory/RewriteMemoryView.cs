@@ -1,24 +1,24 @@
 ﻿using System.Diagnostics;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
 /// <summary>
 /// Rewrite the content of the view by processing its data
 /// </summary>
+[PublicAPI]
 public struct RewriteMemoryView
 {
-    public readonly MemorySegment MemorySegment;
+    #region Public APIs
 
-    private int _readPosition;
-    private int _writePosition;
+    #region Properties
 
     public int ReadPosition => _readPosition;
     public int WritePosition => _writePosition;
 
-    public RewriteMemoryView(MemorySegment memorySegment) : this()
-    {
-        MemorySegment = memorySegment;
-    }
+    #endregion
+
+    #region Methods
 
     public unsafe bool Fetch<T>(MemorySegment<T> dest) where T : unmanaged
     {
@@ -49,4 +49,26 @@ public struct RewriteMemoryView
         Debug.Assert(_writePosition <= MemorySegment.Length);
         return MemorySegment.Slice(pos, lengthBytes).Cast<T>();
     }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    public readonly MemorySegment MemorySegment;
+
+    private int _readPosition;
+    private int _writePosition;
+
+    #endregion
+
+    #region Constructors
+
+    public RewriteMemoryView(MemorySegment memorySegment) : this()
+    {
+        MemorySegment = memorySegment;
+    }
+
+    #endregion
 }

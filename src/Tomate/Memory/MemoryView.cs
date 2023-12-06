@@ -1,15 +1,35 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
+[PublicAPI]
 public unsafe struct MemoryView<T> where T : unmanaged
 {
-    private T* _cur;
-    private T* _end;
+    #region Public APIs
 
-    public readonly MemorySegment<T> MemorySegment;
+    #region Properties
+
     public bool IsDefault => MemorySegment.IsDefault;
+
+    public bool IsEndReached => _cur >= _end;
+
+    /// <summary>
+    /// Random access, doesn't change <see cref="Position"/>
+    /// </summary>
+    /// <param name="index">Index of the item to access</param>
+    /// <returns>Reference to the item for read/write operations</returns>
+    public ref T this[int index]
+    {
+        get
+        {
+            Debug.Assert((uint)index < MemorySegment.Length);
+            return ref Unsafe.AsRef<T>(MemorySegment.Address + index);
+        }
+    }
+
+    public int Length => MemorySegment.Length;
 
     /// <summary>
     /// Get/set the position
@@ -30,75 +50,9 @@ public unsafe struct MemoryView<T> where T : unmanaged
         }
     }
 
-    public bool IsEndReached => _cur >= _end;
-    public int Length => MemorySegment.Length;
+    #endregion
 
-    /// <summary>
-    /// Random access, doesn't change <see cref="Position"/>
-    /// </summary>
-    /// <param name="index">Index of the item to access</param>
-    /// <returns>Reference to the item for read/write operations</returns>
-    public ref T this[int index]
-    {
-        get
-        {
-            Debug.Assert((uint)index < MemorySegment.Length);
-            return ref Unsafe.AsRef<T>(MemorySegment.Address + index);
-        }
-    }
-
-    public MemoryView(MemorySegment<T> memorySegment)
-    {
-        MemorySegment = memorySegment;
-        _cur = MemorySegment.Address;
-        _end = _cur + MemorySegment.Length;
-    }
-
-    public void Reset()
-    {
-        _cur = MemorySegment.Address;
-        _end = _cur + MemorySegment.Length;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public bool Store(Span<T> data)
-    {
-        if (Reserve(data.Length, out Span<T> dest) == false)
-        {
-            return false;
-        }
-
-        data.CopyTo(dest);
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public bool Reserve(int length, out Span<T> storeArea)
-    {
-        if (_cur + length > _end)
-        {
-            storeArea = null;
-            return false;
-        }
-
-        storeArea = new Span<T>(_cur, sizeof(T) * length);
-        _cur += length;
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public bool Reserve(int length, out int index)
-    {
-        if (_cur + length > _end)
-        {
-            index = -1;
-            return false;
-        }
-
-        index = Position;
-        _cur += length;
-        return true;
-    }
+    #region Methods
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public bool BeginReserve(int maxSizeRequired, out Span<T> storeArea)
@@ -115,37 +69,9 @@ public unsafe struct MemoryView<T> where T : unmanaged
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public bool GetReservedArea(int maxLength, out Span<T> area)
-    {
-        if (_cur + maxLength > _end)
-        {
-            area = default;
-            return false;
-        }
-
-        area = new Span<T>(_cur, sizeof(T) * maxLength);
-
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void EndReserve(int writtenSize)
     {
         _cur += writtenSize;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public bool Reserve(out int index)
-    {
-        if (_cur + 1 > _end)
-        {
-            index = -1;
-            return false;
-        }
-
-        index = Position;
-        ++_cur;
-        return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -186,6 +112,68 @@ public unsafe struct MemoryView<T> where T : unmanaged
         return res;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool GetReservedArea(int maxLength, out Span<T> area)
+    {
+        if (_cur + maxLength > _end)
+        {
+            area = default;
+            return false;
+        }
+
+        area = new Span<T>(_cur, sizeof(T) * maxLength);
+
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool Reserve(int length, out Span<T> storeArea)
+    {
+        if (_cur + length > _end)
+        {
+            storeArea = null;
+            return false;
+        }
+
+        storeArea = new Span<T>(_cur, sizeof(T) * length);
+        _cur += length;
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool Reserve(int length, out int index)
+    {
+        if (_cur + length > _end)
+        {
+            index = -1;
+            return false;
+        }
+
+        index = Position;
+        _cur += length;
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool Reserve(out int index)
+    {
+        if (_cur + 1 > _end)
+        {
+            index = -1;
+            return false;
+        }
+
+        index = Position;
+        ++_cur;
+        return true;
+    }
+
+    public void Reset()
+    {
+        _cur = MemorySegment.Address;
+        _end = _cur + MemorySegment.Length;
+    }
+
     public bool Skip(int offset)
     {
         if (_cur + offset > _end)
@@ -196,4 +184,39 @@ public unsafe struct MemoryView<T> where T : unmanaged
         _cur += offset;
         return true;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool Store(Span<T> data)
+    {
+        if (Reserve(data.Length, out Span<T> dest) == false)
+        {
+            return false;
+        }
+
+        data.CopyTo(dest);
+        return true;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    public readonly MemorySegment<T> MemorySegment;
+    private T* _cur;
+    private T* _end;
+
+    #endregion
+
+    #region Constructors
+
+    public MemoryView(MemorySegment<T> memorySegment)
+    {
+        MemorySegment = memorySegment;
+        _cur = MemorySegment.Address;
+        _end = _cur + MemorySegment.Length;
+    }
+
+    #endregion
 }

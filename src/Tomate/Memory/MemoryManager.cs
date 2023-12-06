@@ -50,6 +50,8 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
     public int MemorySegmentAllocationEpoch { get; private set; }
     public int MaxAllocationLength { get; }
     public int MemoryManagerId { get; }
+    public DefaultMemoryManager.DebugMemoryInit MemoryBlockContentInitialization { get; set; }
+    public DefaultMemoryManager.DebugMemoryInit MemoryBlockContentCleanup { get; set; }
 
 #if DEBUGALLOC
     private string _sourceFile;
@@ -170,7 +172,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
     /// Pinned Memory Block that is a pinned allocation (using <see cref="GC.AllocateUninitializedArray{T}"/> with pinned set to true).
     /// </remarks>
 #if DEBUGALLOC
-    public MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
+    public MemoryBlock Allocate(int length, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
 #else
     public MemoryBlock Allocate(int length)
 #endif
@@ -204,7 +206,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
         UpdatePinnedMemoryBlockAddressMap();
 
 #if DEBUGALLOC
-        return Allocate(size, sourceFile, lineNb);
+        return Allocate(length, sourceFile, lineNb);
 #else
         return Allocate(length);
 #endif

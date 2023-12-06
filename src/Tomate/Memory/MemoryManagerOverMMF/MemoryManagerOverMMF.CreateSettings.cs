@@ -14,7 +14,6 @@ public partial class MemoryManagerOverMMF
         public bool CompactOnFinalClose { get; set; }
         public int MaxSessionCount { get; set; }
         public int MaxConcurrencyCount { get; set; }
-        public IProcessProvider ProcessProvider { get; set; }
 
         internal bool IsCreate { get; }
         
@@ -29,7 +28,6 @@ public partial class MemoryManagerOverMMF
             MaxSessionCount = maxSessionCount;
             MaxConcurrencyCount = maxConcurrencyCount;
             IsCreate = true;
-            ProcessProvider = new WindowsProcessProvider();
         }
 
         internal CreateSettings(string filePathName, string name)
@@ -37,7 +35,6 @@ public partial class MemoryManagerOverMMF
             FilePathName = filePathName;
             Name = name;
             IsCreate = false;
-            ProcessProvider = new WindowsProcessProvider();
         }
     }
 }

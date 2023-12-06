@@ -4,15 +4,16 @@ namespace Tomate;
 
 public class WindowsProcessProvider : IProcessProvider
 {
-    private readonly HashSet<int> _sessions = new();
-    public int ProcessProviderId { get; set; }
+    #region Public APIs
+
+    #region Properties
+
     public int CurrentProcessId => Environment.ProcessId;
-    public bool RegisterProcess(int processId) => processId!=0 && _sessions.Add(processId);
 
-    public bool UnregisterProcess(int processId) => _sessions.Remove(processId);
+    #endregion
 
-    public IEnumerable<int> GetAllRegisteredProcesses => _sessions;
-    
+    #region Methods
+
     public bool IsProcessAlive(int processId)
     {
         try
@@ -26,4 +27,8 @@ public class WindowsProcessProvider : IProcessProvider
 
         return true;
     }
+
+    #endregion
+
+    #endregion
 }

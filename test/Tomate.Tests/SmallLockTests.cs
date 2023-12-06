@@ -4,21 +4,15 @@ namespace Tomate.Tests;
 
 public class SmallLockTests
 {
-    private MockProcessProvider _processProvider;
-    
     [OneTimeSetUp]
     public void OneTimeSetup()
     {
-        var pp = new MockProcessProvider();
-        pp.RegisterProcess(Environment.ProcessId);
-        IProcessProvider.RegisterProcessProvider(pp);
-        _processProvider = pp;
+        IProcessProvider.Singleton = new MockProcessProvider();
     }
 
     [OneTimeTearDown]
     public void OneTimeTearDown()
     {
-        IProcessProvider.UnregisterProcessProvider(_processProvider);
     }
     
     [Test]
@@ -30,7 +24,7 @@ public class SmallLockTests
         
         var segSize = SmallLock.ComputeSegmentSize(maxConcurrency);
         Span<byte> segData = stackalloc byte[segSize];
-        var l = SmallLock.Create((MemorySegment)segData, _processProvider);
+        var l = SmallLock.Create((MemorySegment)segData);
 
         for (int i = 0; i < loopSize; i++)
         {
@@ -52,7 +46,7 @@ public class SmallLockTests
         
         var segSize = SmallLock.ComputeSegmentSize(maxConcurrency);
         Span<byte> segData = stackalloc byte[segSize];
-        var l = SmallLock.Create((MemorySegment)segData, _processProvider);
+        var l = SmallLock.Create((MemorySegment)segData);
 
         for (var i = 0; i < nestedLevels; i++)
         {
@@ -78,7 +72,7 @@ public class SmallLockTests
         
         var segSize = SmallLock.ComputeSegmentSize(maxConcurrency);
         Span<byte> segData = stackalloc byte[segSize];
-        var l = SmallLock.Create((MemorySegment)segData, _processProvider);
+        var l = SmallLock.Create((MemorySegment)segData);
 
         l.TryEnter(out _, lockId);
         Assert.Throws<ArgumentException>(() => l.Exit(badLockId));
@@ -89,18 +83,22 @@ public class SmallLockTests
     {
         const int maxConcurrency = 4;
         const int lockId = 10;
+
+        Thread.CurrentThread.Name = "*** Unit Test Running Thread ***";
         
         var segSize = SmallLock.ComputeSegmentSize(maxConcurrency);
         Span<byte> segData = stackalloc byte[segSize];
-        var l = SmallLock.Create((MemorySegment)segData, _processProvider);
+        var l = SmallLock.Create((MemorySegment)segData);
 
         var exitThread = false;
         var exitThreadCounter = 0;
         for (var i = 0; i < maxConcurrency; i++)
         {
             var curLockId = lockId + i;
+            var i1 = i;
             var t = new Thread(() =>
             {
+                Thread.CurrentThread.Name = $"*** Unit Test Worker #{curLockId} Thread ***";
                 l.TryEnter(out _, curLockId);
 
                 var sw = new SpinWait();
@@ -143,17 +141,19 @@ public class SmallLockTests
         
         var segSize = SmallLock.ComputeSegmentSize(maxConcurrency);
         Span<byte> segData = stackalloc byte[segSize];
-        var l = SmallLock.Create((MemorySegment)segData, _processProvider);
+        var l = SmallLock.Create((MemorySegment)segData);
 
         var firstProcessLockHold = false;
         var secondProcessLockHold = false;
+        var ipp = (MockProcessProvider)IProcessProvider.Singleton;
         var t = new Thread(() =>
         {
-            _processProvider.RegisterProcess(secondProcessId);
-            _processProvider.CurrentProcessId = secondProcessId;
+            ipp.CurrentProcessId = secondProcessId;
             
-            l.TryEnter(out _, secondProcessLockId);
-
+            l.TryEnter(out var lockTaken, secondProcessLockId);
+            Assert.That(lockTaken, Is.True);
+            Assert.That(l.IsEntered, Is.True);
+            
             secondProcessLockHold = true;
 
             var sw = new SpinWait();
@@ -164,28 +164,39 @@ public class SmallLockTests
                 sw.SpinOnce();
             }
         });
-        t.Name = "Simulated Second Process thread";
-        t.Start();
-        
-        // Wait for the second thread to hold the lock
-        var sw = new SpinWait();
-        while (secondProcessLockHold == false)
+
+        try
         {
-            sw.SpinOnce();
+            t.Name = "Simulated Second Process thread";
+            t.Start();
+
+            Assert.That(l.IsEntered, Is.False);
+            
+            // Wait for the second thread to hold the lock
+            var sw = new SpinWait();
+            while (Volatile.Read(ref secondProcessLockHold) == false)
+            {
+                sw.SpinOnce();
+            }
+
+            Assert.That(l.IsEntered, Is.True);
+            
+            // We shouldn't be able to enter the lock, it's still hold by the other thread
+            l.TryEnter(out var lockTaken, firstProcessLockId, TimeSpan.FromMilliseconds(100));
+            Assert.That(lockTaken, Is.False);
+
+            // Unregister the process matching the second thread
+            // This will declare the process as dead, then a subsequent TryEnter should be able to get control
+            ipp.UnregisterProcess(secondProcessId);
+
+            // Try again, this should work
+            l.TryEnter(out lockTaken, firstProcessLockId);
+            Assert.That(lockTaken, Is.True);
         }
-
-        // We shouldn't be able to enter the lock, it's still hold by the other thread
-        l.TryEnter(out var lockTaken, firstProcessLockId, TimeSpan.FromMilliseconds(1));
-        Assert.That(lockTaken, Is.False);
-
-        // Unregister the process matching the second thread
-        // This will declare the process as dead, then a subsequent TryEnter should be able to get control
-        _processProvider.UnregisterProcess(secondProcessId);
-        
-        // Try again, this should work
-        l.TryEnter(out lockTaken, firstProcessLockId);
-        Assert.That(lockTaken, Is.True);
-        firstProcessLockHold = true;
+        finally
+        {
+            firstProcessLockHold = true;
+        }
     }
 
     [Test]
@@ -201,7 +212,7 @@ public class SmallLockTests
         
         var segSize = SmallLock.ComputeSegmentSize(maxConcurrency);
         Span<byte> segData = stackalloc byte[segSize];
-        var l = SmallLock.Create((MemorySegment)segData, _processProvider);
+        var l = SmallLock.Create((MemorySegment)segData);
 
         for (int i = 0; i < lockCountBefore; i++)
         {
@@ -283,7 +294,7 @@ public class SmallLockTests
         Span<byte> segData = stackalloc byte[segSize];
         
         // Create the lock
-        var l = SmallLock.Create((MemorySegment)segData, _processProvider);
+        var l = SmallLock.Create((MemorySegment)segData);
         Assert.That(l.ConcurrencyCapacity, Is.EqualTo(maxConcurrency));
 
         // Main loop, create a number of threads equal to maxConcurrency

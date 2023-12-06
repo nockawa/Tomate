@@ -1,56 +1,71 @@
-﻿using NUnit.Framework;
+﻿using System.Runtime.CompilerServices;
+using NUnit.Framework;
 
 namespace Tomate.Tests;
 
 public class UnmanagedDataStoreTests
 {
     private PageAllocator _allocator;
-    UnmanagedDataStore<long> _uds;
 
     [SetUp]
     public void Setup()
     {
+        Thread.CurrentThread.Name = $"*** Unit Test Exec Thread ***";
         _allocator = new PageAllocator(256 * 1024, 64);
-        _uds = UnmanagedDataStore<long>.Create(_allocator);
     }
 
     [TearDown]
     public void TearDown()
     {
-        _uds.Dispose();
         _allocator.Dispose();
     }
     
     [Test]
     public void BasicTest()
     {
-        Thread.CurrentThread.Name = $"*** Unit Test Exec Thread ***";
+        using var udsSegment = DefaultMemoryManager.GlobalInstance.Allocate(UnmanagedDataStore.ComputeStorageSize(10));
+        var uds = UnmanagedDataStore.Create(_allocator, udsSegment);
+        var ec = uds.EntryCountPerPage * 10;
 
-        var itemPack = 4;
-        var itemPerPage = (_uds.ItemCountPerPage/itemPack)*itemPack;
-        var totalItems = (int)(itemPerPage * 0.5f);
-        var indexList = new int[totalItems / itemPack];
-        for (int i = 0, j = 0; i < totalItems; i+=itemPack, j++)
+        var handles = new UnmanagedDataStore.Handle<UnmanagedList<int>>[ec];
+        
+        for (var i = 0; i < ec; i++)
         {
-            var index = _uds.Allocate(itemPack);
-            Assert.That(index, Is.GreaterThanOrEqualTo(i));
-            indexList[j] = index;
+            using var ul = new UnmanagedList<int>();
+            ul.Add(i);
 
-            var id = _uds.GetItem(index, itemPack);
-            for (var k = 0; k < itemPack; k++)
-            {
-                id[k] = j * 100 + k;
-            }
+            handles[i] = uds.Store(ul);
         }
 
-        for (int i = 0; i < indexList.Length; i++)
+        for (var i = 0; i < ec; i++)
         {
-            var id = _uds.GetItem(indexList[i], itemPack);
-            for (int k = 0; k < itemPack; k++)
-            {
-                Assert.That(id[k], Is.EqualTo(i * 100 + k));
-            }
+            ref var ul2 = ref uds.Get(handles[i]);
+            Assert.That(ul2[0], Is.EqualTo(i));
         }
+    }
+    
+    [Test]
+    public void MaxCapacityReachedTest()
+    {
+        using var udsSegment = DefaultMemoryManager.GlobalInstance.Allocate(UnmanagedDataStore.ComputeStorageSize(1));
+        var uds = UnmanagedDataStore.Create(_allocator, udsSegment);
+        var ec = uds.EntryCountPerPage;
+
+        var handles = new UnmanagedDataStore.Handle<UnmanagedList<int>>[ec];
+        
+        for (var i = 0; i < ec; i++)
+        {
+            using var ul = new UnmanagedList<int>();
+            ul.Add(i);
+
+            handles[i] = uds.Store(ul);
+        }
+
+        Assert.Throws<ItemMaxCapacityReachedException>(() =>
+        {
+            using var ul = new UnmanagedList<int>();
+            uds.Store(ul);
+        });
     }
     
     [Test]
@@ -60,11 +75,11 @@ public class UnmanagedDataStoreTests
     public void MultiThreadTest(int threadCount)
     {
         Thread.CurrentThread.Name = $"*** Unit Test Exec Thread ***";
+        using var udsSegment = DefaultMemoryManager.GlobalInstance.Allocate(UnmanagedDataStore.ComputeStorageSize(10));
+        var uds = UnmanagedDataStore.Create(_allocator, udsSegment);
 
         {
-            var itemPack = 4;
-            var itemPerPage = (_uds.ItemCountPerPage/itemPack)*itemPack;
-            var totalItems = (int)(itemPerPage * 0.5f);
+            var totalItems = uds.EntryCountPerPage;
 
             var taskList = new List<Task>(threadCount);
             for (int ti = 0; ti < threadCount; ti++)
@@ -73,24 +88,24 @@ public class UnmanagedDataStoreTests
                 taskList.Add(Task.Run(() =>
                 {
                     Thread.CurrentThread.Name = $"*** Worker Thread #{threadI} ***";
-                    var indexList = new int[totalItems / itemPack];
-                    for (int i = 0, j = 0; i < totalItems; i+=itemPack, j++)
+                    var handleList = new UnmanagedDataStore.Handle<UnmanagedList<int>>[totalItems];
+                    for (int i = 0, j = 0; i < totalItems; i++, j++)
                     {
-                        var index = _uds.Allocate(itemPack);
-                        Assert.That(index, Is.GreaterThanOrEqualTo(i));
-                        indexList[j] = index;
+                        using var ul = new UnmanagedList<int>();
+                        var handle = uds.Store(ul);
+                        handleList[j] = handle;
 
-                        var id = _uds.GetItem(index, itemPack);
-                        for (var k = 0; k < itemPack; k++)
+                        var id = uds.Get(handle);
+                        for (var k = 0; k < 4; k++)
                         {
-                            id[k] = j * 100 + k;
+                            id.Add(j * 100 + k);
                         }
                     }
 
-                    for (int i = 0; i < indexList.Length; i++)
+                    for (int i = 0; i < handleList.Length; i++)
                     {
-                        var id = _uds.GetItem(indexList[i], itemPack);
-                        for (int k = 0; k < itemPack; k++)
+                        var id = uds.Get(handleList[i]);
+                        for (int k = 0; k < 4; k++)
                         {
                             Assert.That(id[k], Is.EqualTo(i * 100 + k));
                         }

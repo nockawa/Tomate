@@ -14,54 +14,15 @@ namespace Tomate;
 [PublicAPI]
 public unsafe struct String64 : IComparable<String64>, IEquatable<String64>
 {
+    #region Constants
+
     private const int Size = 64;
-#pragma warning disable CS0649
-    private fixed byte _data[Size];
-#pragma warning restore CS0649
 
-    /// <summary>
-    /// Construct a String64 instance from a memory area containing the string
-    /// </summary>
-    /// <param name="stringAddr">Address of the memory area containing the UTF8 string data</param>
-    /// <param name="length">Length of the <paramref name="stringAddr"/> memory area</param>
-    public String64(byte* stringAddr, int length = 64)
-    {
-        fixed (byte* a = _data)
-        {
-            var dest = new Span<byte>(a, 64);
-            dest.Clear();                                       // Need to clear the whole zone because GetHashCode() does a 64bytes hash always
-            new Span<byte>(stringAddr, length).CopyTo(dest);
-        }
-    }
+    #endregion
 
-    /// <summary>
-    /// Construct a String64 instance from a string. THROW if the string is too big!
-    /// </summary>
-    /// <param name="source">The string to use as input. If the string's UTF8 equivalent is sized more than 63bytes it will throw an exception.</param>
-    /// <exception cref="ArgumentOutOfRangeException"> is thrown if the <paramref name="source"/> contains a string that exceed the max size of 63 bytes.
-    /// </exception>
-    public String64(string source)
-    {
-        fixed (char* s = source)
-        fixed (byte* a = _data)
-        {
-            var inLength = source.Length;
-            var sizeRequired = Encoding.UTF8.GetByteCount(s, inLength);
-            if (sizeRequired > 63) ThrowHelper.StringTooBigForString64(nameof(source), source);
+    #region Public APIs
 
-            var l = Encoding.UTF8.GetBytes(s, inLength, a, 63);
-            new Span<byte>(s, 64).Slice(l).Clear();     //Null terminator until the end
-        }
-    }
-
-    public override string ToString() => AsString;
-
-    /// <summary>
-    /// Cast a string to <see cref="String64"/>.
-    /// </summary>
-    /// <param name="str">The string to cast</param>
-    /// <returns>The <see cref="String64"/> instance.</returns>
-    public static implicit operator String64(string str) => new() { AsString = str };
+    #region Properties
 
     /// <summary>
     /// Get or set the content of the string. READ remarks!
@@ -106,6 +67,21 @@ public unsafe struct String64 : IComparable<String64>, IEquatable<String64>
         }
     }
 
+    #endregion
+
+    #region Methods
+
+    public static bool operator ==(String64 left, String64 right) => left.Equals(right);
+
+    /// <summary>
+    /// Cast a string to <see cref="String64"/>.
+    /// </summary>
+    /// <param name="str">The string to cast</param>
+    /// <returns>The <see cref="String64"/> instance.</returns>
+    public static implicit operator String64(string str) => new() { AsString = str };
+
+    public static bool operator !=(String64 left, String64 right) => !left.Equals(right);
+
     public int CompareTo(String64 other)
     {
         fixed (byte* a = _data)
@@ -139,7 +115,56 @@ public unsafe struct String64 : IComparable<String64>, IEquatable<String64>
         }
     }
 
-    public static bool operator ==(String64 left, String64 right) => left.Equals(right);
+    public override string ToString() => AsString;
 
-    public static bool operator !=(String64 left, String64 right) => !left.Equals(right);
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+#pragma warning disable CS0649
+    private fixed byte _data[Size];
+#pragma warning restore CS0649
+
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Construct a String64 instance from a memory area containing the string
+    /// </summary>
+    /// <param name="stringAddr">Address of the memory area containing the UTF8 string data</param>
+    /// <param name="length">Length of the <paramref name="stringAddr"/> memory area</param>
+    public String64(byte* stringAddr, int length = 64)
+    {
+        fixed (byte* a = _data)
+        {
+            var dest = new Span<byte>(a, 64);
+            dest.Clear();                                       // Need to clear the whole zone because GetHashCode() does a 64bytes hash always
+            new Span<byte>(stringAddr, length).CopyTo(dest);
+        }
+    }
+
+    /// <summary>
+    /// Construct a String64 instance from a string. THROW if the string is too big!
+    /// </summary>
+    /// <param name="source">The string to use as input. If the string's UTF8 equivalent is sized more than 63bytes it will throw an exception.</param>
+    /// <exception cref="ArgumentOutOfRangeException"> is thrown if the <paramref name="source"/> contains a string that exceed the max size of 63 bytes.
+    /// </exception>
+    public String64(string source)
+    {
+        fixed (char* s = source)
+        fixed (byte* a = _data)
+        {
+            var inLength = source.Length;
+            var sizeRequired = Encoding.UTF8.GetByteCount(s, inLength);
+            if (sizeRequired > 63) ThrowHelper.StringTooBigForString64(nameof(source), source);
+
+            var l = Encoding.UTF8.GetBytes(s, inLength, a, 63);
+            new Span<byte>(s, 64).Slice(l).Clear();     //Null terminator until the end
+        }
+    }
+
+    #endregion
 }

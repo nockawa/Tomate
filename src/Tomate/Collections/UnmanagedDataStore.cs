@@ -1,191 +1,399 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 
 namespace Tomate;
 
 [PublicAPI]
-public unsafe struct UnmanagedDataStore<T> : IDisposable where T: unmanaged
+public unsafe struct UnmanagedDataStore
 {
-    private static readonly int EntrySize = sizeof(T);
-    private static readonly int HeaderSize = sizeof(Header).Pad8();
-    
-    private IPageAllocator _allocator;
-    private int _bitmapSize;
+    #region Constants
 
-    private struct PageInfo
+    private static readonly int EntrySize = sizeof(Entry);
+    private static readonly int HeaderSize = sizeof(PageInfoHeader).Pad8();
+
+    #endregion
+
+    #region Public APIs
+
+    #region Properties
+
+    private IPageAllocator _allocator => IPageAllocator.GetPageAllocator(_header->PageAllocatorId);
+
+    internal int EntryCountPerPage => _header->EntryCountPerPageInfo;
+
+    public bool IsDefault => _allocator == null;
+
+    #endregion
+
+    #region Methods
+
+    public static int ComputeStorageSize(int itemCount) => sizeof(Header) + sizeof(PageInfo) * itemCount;
+
+    public static UnmanagedDataStore Create(IPageAllocator pageAllocator, MemorySegment memorySegment)
     {
-        public MemorySegment PageSegment;
-        public ConcurrentBitmapL4 Bitmap;
-        public MemorySegment<T> Data;
-        public int BaseIndex;
+        return new UnmanagedDataStore(pageAllocator, memorySegment, true);
     }
 
-    private PageInfo[] _pageInfos;
-    private int _curPageIndex;
-    
-    private ref Header GetHeader(MemorySegment page) => ref page.Cast<Header>().AsRef();
+    public ref T Get<T>(Handle<T> handle) where T : unmanaged, IFacade
+    {
+        ref var entry = ref GetEntry(handle.Index);
+        Debug.Assert(entry.TypeId == InternalTypeManager.RegisterType<T>());
+        Debug.Assert(entry.Generation == handle.Generation);
 
-    private struct Header
-    {
-        public int EntryCountPerPage;
-        public int NextPageId;
-    }
-    
-    public static UnmanagedDataStore<T> Create(IPageAllocator pageAllocator)
-    {
-        return new UnmanagedDataStore<T>(pageAllocator);
+        return ref Unsafe.As<MemoryBlock, T>(ref entry.MemoryBlock);
     }
 
-    public int ItemCountPerPage { get; }
+    public ref T Get<T>(Handle handle) where T : unmanaged, IFacade
+    {
+        ref var entry = ref GetEntry(handle.Index);
+        Debug.Assert(entry.TypeId == InternalTypeManager.RegisterType<T>());
+        Debug.Assert(entry.Generation == handle.Generation);
 
-    public int Allocate(int length)
+        return ref Unsafe.As<MemoryBlock, T>(ref entry.MemoryBlock);
+    }
+
+    public void Release(Handle handle)
+    {
+        ref var entry = ref GetEntry(handle.Index, out var pageIndex, out var indexInPage);
+        Debug.Assert(entry.Generation == handle.Generation);
+
+        _pageInfos[pageIndex].Bitmap.FreeBits(indexInPage, 1);
+        entry.MemoryBlock.Dispose();
+        entry.Generation++;
+    }
+
+    public Handle<T> Store<T>(T instance) where T : unmanaged, IFacade
     { 
     Retry:
-        Debug.Assert(length <= 64, $"The Data Store supports a length up to 64, {length} is not valid.");
         var pageInfos = _pageInfos;
-        var curPageIndex = _curPageIndex;
+        var curPageIndex = _header->CurLookupPageIndex;
         ref var pageInfo = ref pageInfos[curPageIndex];
-        var index = pageInfo.Bitmap.AllocateBits(length);
+        var pageIndex = pageInfo.Bitmap.AllocateBits(1);
+        int fullIndex;
 
         // Allocation in this page succeed, return the global index
-        if (index != -1)
+        if (pageIndex != -1)
         {
-            return pageInfo.BaseIndex + index;
+            fullIndex = pageInfo.BaseIndex + pageIndex;
+            goto Epilogue;
         }
         
         // The allocation in this page failed, we retry an allocation from the page after the current, wrapping up to the current
         ++curPageIndex;
-        for (int i = 0; i < pageInfos.Length; i++)
+        for (int i = 0; i < _header->PageInfoCount - 1; i++)                    // -1 because we start after the current one, so there's one less to test
         {
-            var ii = (curPageIndex + i) % pageInfos.Length;
-            index = pageInfos[ii].Bitmap.AllocateBits(length);
-            if (index != -1)
+            var ii = (curPageIndex + i) % _header->PageInfoCount;
+            pageIndex = pageInfos[ii].Bitmap.AllocateBits(1);
+            if (pageIndex != -1)
             {
-                _curPageIndex = ii;
-                return pageInfos[ii].BaseIndex + index;
+                _header->CurLookupPageIndex = ii;
+                fullIndex = pageInfos[ii].BaseIndex + pageIndex;
+                goto Epilogue;
             }
         }
 
-        // We couldn't allocate in any pages we've parsed, add a new page
-        var newPageSegment = _allocator.AllocatePages(1);
-        if (newPageSegment.IsDefault)
+        // Check if there no longer free space
+        if (_header->PageInfoCount == _header->PageInfoLength)
         {
-            throw new OutOfMemoryException();
+            ThrowHelper.ItemMaxCapacityReachedException(_header->PageInfoLength * _header->EntryCountPerPageInfo);
         }
-        var newPageId = _allocator.ToBlockId(newPageSegment);
 
-        ref var lastPageInfo = ref pageInfos[^1];
-        ref var lastPageHeader = ref GetHeader(lastPageInfo.PageSegment);
-        
-        // Set the new page, if another thread beat us, dealloc ours and use the other thread's one
-        if (Interlocked.CompareExchange(ref lastPageHeader.NextPageId, newPageId, 0) != 0)
+        // Creating a new page is a rare event, rely on an interprocess access control
+        if (_header->AccessControl.TryTakeControl())
         {
-            _allocator.FreePages(newPageSegment);
+            try
+            {
+                // We couldn't allocate in any pages we've parsed, add a new page
+                var newPageSegment = _allocator.AllocatePages(1);
+                if (newPageSegment.IsDefault)
+                {
+                    throw new OutOfMemoryException();
+                }
+                newPageSegment.Cast<byte>().ToSpan().Clear();
+                var newPageId = _allocator.ToBlockId(newPageSegment);
+
+                // Chain the new page next to the previous one
+                ref var lastPageInfo = ref pageInfos[_header->LastPageInfoIndex];
+                ref var lastPageHeader = ref PageInfoHeader.GetHeader(lastPageInfo.PageSegment);
+                lastPageHeader.NextPageId = newPageId;
+                
+                // Initialize the new page
+                _header->LastPageInfoIndex++;
+                InitPage(newPageSegment, 0);
+                MapPage(ref _pageInfos[_header->LastPageInfoIndex], newPageSegment, _header->LastPageInfoIndex);
+                _header->CurLookupPageIndex = _header->LastPageInfoIndex;
+                _header->PageInfoCount++;
+            }
+            finally
+            {
+                _header->AccessControl.ReleaseControl();
+            }
         }
+
+        // If the lock was already held, wait until it's released and retry
         else
         {
-            InitPage(newPageSegment, 0);
+            _header->AccessControl.WaitUntilReleased();
         }
-
-        // Rebuild the pageInfos array, starting from the first page
-        var pageInfoList = new List<PageInfo>(pageInfos.Length + 1);
-
-        var curBaseIndex = 0;
-        var curPageId = _allocator.ToBlockId(pageInfos[0].PageSegment);
-        while (curPageId != 0)
-        {
-            var curPageSegment = _allocator.FromBlockId(curPageId);
-            ref var curHeader = ref GetHeader(curPageSegment);
-            var curPageInfo = new PageInfo();
-            MapPage(ref curPageInfo, curPageSegment, curBaseIndex);
-            pageInfoList.Add(curPageInfo);
-
-            curPageId = curHeader.NextPageId;
-            curBaseIndex++;
-        }
-
-        var newPageInfos = pageInfoList.ToArray();
-        _pageInfos = newPageInfos;
-        _curPageIndex = newPageInfos.Length - 1;
+        
+        // In any case, retry the allocation
         goto Retry;
+        
+    Epilogue:
+        Debug.Assert(fullIndex != -1);
+        ref var entry = ref GetEntry(fullIndex);
+        entry.MemoryBlock = instance.MemoryBlock;
+        entry.MemoryBlock.AddRef();
+        entry.TypeId = InternalTypeManager.RegisterType<T>();
+        
+        return new Handle<T>(fullIndex, entry.Generation);
     }
 
-    /// <summary>
-    /// Get a previously allocated item
-    /// </summary>
-    /// <param name="index">Index of the item</param>
-    /// <param name="length">Length of the item</param>
-    /// <returns>A reference to the first element of the requested item</returns>
-    /// <remarks>
-    /// This method won't check if the length you provide is valid, it won't check if the index is also and will assert in debug if it goes out of the
-    /// boundaries of the allocated pages
-    /// </remarks>
-    public Span<T> GetItem(int index, int length = 1)
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private Header* _header;
+    private PageInfo* _pageInfos;
+
+    #endregion
+
+    #region Constructors
+
+    private UnmanagedDataStore(IPageAllocator pageAllocator, MemorySegment memorySegment, bool create)
+    {
+        var pageSize = pageAllocator.PageSize;
+        var entryCountPerPage = pageSize / EntrySize;
+
+        // Compute how many items can fit in one page size
+        // Algo is incredibly stupid, but fast enough...
+        // ReSharper disable once NotAccessedVariable
+        var iteration = 0;
+        var bitmapSize = ConcurrentBitmapL4.ComputeRequiredSize(entryCountPerPage);
+        while (HeaderSize + bitmapSize.Pad<Entry>() + (entryCountPerPage * EntrySize) > pageSize)
+        {
+            --entryCountPerPage;
+            bitmapSize = ConcurrentBitmapL4.ComputeRequiredSize(entryCountPerPage);
+            iteration++;
+        }
+
+        // The given segment is split into two parts: the header and storing all the PageInfo we can on the remaining part
+        var (headerSegment, pageInfosSegment) = memorySegment.Split<Header, PageInfo>(sizeof(Header));
+        _header = headerSegment.Address;
+        _pageInfos = pageInfosSegment.Address;
+
+        // Setup header
+        _header->PageAllocatorId = IPageAllocator.RegisterPageAllocator(pageAllocator);
+        _header->CurLookupPageIndex = 0;
+        _header->LastPageInfoIndex = 0;
+        _header->PageInfoCount = 1;
+        _header->PageInfoLength = pageInfosSegment.Length;
+        _header->PageInfoBitmapSize = bitmapSize;
+        _header->EntryCountPerPageInfo = entryCountPerPage;
+        _header->AccessControl = new MappedExclusiveAccessControl();
+        
+        // Allocate a page that will store the content of the first PageInfo
+        var firstPage = _allocator.AllocatePages(1);
+        firstPage.Cast<byte>().ToSpan().Clear();
+
+        // Initialize the first PageInfo
+        InitPage(firstPage, 0);
+        MapPage(ref _pageInfos[0], firstPage, 0);
+    }
+
+    #endregion
+
+    #region Private methods
+
+    private ref Entry GetEntry(int index) => ref GetEntry(index, out _, out _);
+
+    private ref Entry GetEntry(int index, out int pageIndex, out int indexInPage)
     {
         Debug.Assert(index >= 0, $"Index can't be a negative number, {index} is incorrect.");
         
         // Fast path
         var pageInfos = _pageInfos;
-        if (index < ItemCountPerPage)
+        if (index < _header->EntryCountPerPageInfo)
         {
-            return pageInfos[0].Data.Slice(index, length).ToSpan();
-        }
-        
-        var pageIndex = Math.DivRem(index, ItemCountPerPage, out var indexInPage);
-        Debug.Assert(pageIndex < pageInfos.Length, $"Requested item at index {index} is out of bounds");
-        return pageInfos[pageIndex].Data.Slice(indexInPage, length).ToSpan();
-    }
-    
-    private UnmanagedDataStore(IPageAllocator pageAllocator)
-    {
-        var pageSize = pageAllocator.PageSize;
-        ItemCountPerPage = pageSize / EntrySize;
-
-        // This is incredibly stupid, but fast enough...
-        // ReSharper disable once NotAccessedVariable
-        var iteration = 0;
-        _bitmapSize = ConcurrentBitmapL4.ComputeRequiredSize(ItemCountPerPage);
-        while (HeaderSize + _bitmapSize.Pad<T>() + (ItemCountPerPage * EntrySize) > pageSize)
-        {
-            --ItemCountPerPage;
-            _bitmapSize = ConcurrentBitmapL4.ComputeRequiredSize(ItemCountPerPage);
-            iteration++;
+            pageIndex = 0;
+            indexInPage = index;
+            return ref pageInfos[0].Data.Slice(index, 1).AsRef();
         }
 
-        _allocator = pageAllocator;
-        var firstPage = _allocator.AllocatePages(1);
-
-        _pageInfos = new PageInfo[1];
-        _curPageIndex = 0;
-        InitPage(firstPage, 0);
-        MapPage(ref _pageInfos[0], firstPage, 0);
+        {
+            pageIndex = Math.DivRem(index, _header->EntryCountPerPageInfo, out indexInPage);
+            Debug.Assert(pageIndex < _header->PageInfoCount, $"Requested item at index {index} is out of bounds");
+            return ref pageInfos[pageIndex].Data.Slice(indexInPage, 1).AsRef();
+        }
     }
 
     private void InitPage(MemorySegment pageSegment, int nextPageId)
     {
-        ref var h = ref GetHeader(pageSegment);
-        h.EntryCountPerPage = ItemCountPerPage;
+        ref var h = ref PageInfoHeader.GetHeader(pageSegment);
         h.NextPageId = nextPageId;
-        ConcurrentBitmapL4.Create(ItemCountPerPage, pageSegment.Slice(HeaderSize, _bitmapSize));
+        ConcurrentBitmapL4.Create(_header->EntryCountPerPageInfo, pageSegment.Slice(HeaderSize, _header->PageInfoBitmapSize));
     }
 
     private void MapPage(ref PageInfo pageInfo, MemorySegment pageSegment, int pageIndex)
     {
         pageInfo.PageSegment = pageSegment;
-        pageInfo.Bitmap = ConcurrentBitmapL4.Map(ItemCountPerPage, pageSegment.Slice(HeaderSize, _bitmapSize));
-        pageInfo.Data = pageSegment.Slice(HeaderSize + _bitmapSize.Pad<T>()).Cast<T>();
-        pageInfo.BaseIndex = pageIndex * ItemCountPerPage;
+        pageInfo.Bitmap = ConcurrentBitmapL4.Map(_header->EntryCountPerPageInfo, pageSegment.Slice(HeaderSize, _header->PageInfoBitmapSize));
+        pageInfo.Data = pageSegment.Slice(HeaderSize + _header->PageInfoBitmapSize.Pad<Entry>()).Cast<Entry>();
+        pageInfo.BaseIndex = pageIndex * _header->EntryCountPerPageInfo;
     }
 
-    public bool IsDefault => _allocator == null;
-    public bool IsDisposed => _pageInfos == null;
-    public void Dispose()
+    #endregion
+
+    #region Inner types
+
+    private struct Entry
     {
-        if (IsDefault || IsDisposed)
+        #region Fields
+
+        public ushort Generation;
+
+        public MemoryBlock MemoryBlock;
+        public ushort TypeId;
+
+        #endregion
+    }
+
+    public struct Handle(int index, int generation)
+    {
+        #region Public APIs
+
+        #region Properties
+
+        internal int Generation { get; } = generation;
+
+        internal int Index { get; } = index;
+
+        #endregion
+
+        #endregion
+    }
+
+    public struct Handle<T>(int index, int generation) where T : unmanaged, IFacade
+    {
+        #region Public APIs
+
+        #region Properties
+
+        internal int Generation { get; } = generation;
+
+        internal int Index { get; } = index;
+
+        #endregion
+
+        #region Methods
+
+        public static implicit operator Handle<T>(Handle h)
         {
-            return;
+            return new Handle<T>(h.Index, h.Generation);
         }
 
-        _pageInfos = null;
+        public static implicit operator Handle(Handle<T> h)
+        {
+            return new Handle(h.Index, h.Generation);
+        }
+
+        #endregion
+
+        #endregion
     }
+
+    private struct Header
+    {
+        #region Fields
+
+        public MappedExclusiveAccessControl AccessControl;
+        public int CurLookupPageIndex;
+        public int EntryCountPerPageInfo;
+        public int LastPageInfoIndex;
+        public int PageAllocatorId;
+        public int PageInfoBitmapSize;
+        public int PageInfoCount;
+        public int PageInfoLength;
+
+        #endregion
+    }
+
+    private struct PageInfo
+    {
+        #region Fields
+
+        public int BaseIndex;
+        public ConcurrentBitmapL4 Bitmap;
+        public MemorySegment<Entry> Data;
+        public MemorySegment PageSegment;
+
+        #endregion
+    }
+
+    private struct PageInfoHeader
+    {
+        #region Public APIs
+
+        #region Methods
+
+        public static ref PageInfoHeader GetHeader(MemorySegment page) => ref page.Cast<PageInfoHeader>().AsRef();
+
+        #endregion
+
+        #endregion
+
+        #region Fields
+
+        public int NextPageId;
+
+        #endregion
+    }
+
+    #endregion
+}
+
+internal static class InternalTypeManager
+{
+    #region Constants
+
+    private static readonly ConcurrentDictionary<Type, int> IndexByType = new();
+    private static readonly ConcurrentDictionary<int, Type> TypeByIndex = new();
+
+    #endregion
+
+    #region Fields
+
+    private static int _curIndex = -1;
+
+    #endregion
+
+    #region Internals
+
+    #region Internals methods
+
+    [CanBeNull]
+    internal static Type GetType(ushort typeId)
+    {
+        TypeByIndex.TryGetValue(typeId, out var type);
+        return type;
+    }
+
+    internal static ushort RegisterType<T>()
+    {
+        Debug.Assert(_curIndex < ushort.MaxValue, $"there are too many (more than {ushort.MaxValue}) type registered");
+        return (ushort)IndexByType.GetOrAdd(typeof(T), type =>
+        {
+            var index =  Interlocked.Increment(ref _curIndex);
+            TypeByIndex.TryAdd(index, type);
+            return index;
+        });
+    }
+
+    #endregion
+
+    #endregion
 }

@@ -1,10 +1,21 @@
-﻿namespace Tomate;
+﻿using JetBrains.Annotations;
+
+namespace Tomate;
 
 // Ripped from here http://landman-code.blogspot.com/2009/02/c-superfasthash-and-murmurhash2.html
+[PublicAPI]
 public static unsafe class MurmurHash2
 {
+    #region Constants
+
     const uint M = 0x5bd1e995;
     const int R = 24;
+
+    #endregion
+
+    #region Public APIs
+
+    #region Methods
 
     public static uint Hash(byte[] data)
     {
@@ -68,4 +79,8 @@ public static unsafe class MurmurHash2
 
         return h;
     }
+
+    #endregion
+
+    #endregion
 }

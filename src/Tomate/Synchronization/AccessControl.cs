@@ -13,9 +13,37 @@ namespace Tomate;
 [PublicAPI]
 public struct AccessControl
 {
+    #region Constants
+
     // This type can be used on Memory Mapped File for interprocess synchronization, so the Managed Thread Id is not enough as
     //  a discriminant, we also use the Process Id to store a unique value in _lockedByThreadId
     private static readonly int ProcessId = Process.GetCurrentProcess().Id;
+
+    #endregion
+
+    #region Public APIs
+
+    #region Properties
+
+    private static int CurrentProcessThreadId => Environment.CurrentManagedThreadId ^ ProcessId;
+
+    /// <summary>
+    /// Returns the Id of the current Process/Thread that own the lock 
+    /// </summary>
+    /// <remarks>
+    /// <c>0</c> is returned if the Access Control is not locked.
+    /// The returned value is a xor combination of the Process Id and the threadId and should be used for information purpose only.
+    /// </remarks>
+    public int LockedById => _lockedByThreadId;
+
+    /// <summary>
+    /// Returns the count of concurrent accesses.
+    /// </summary>
+    public int SharedUsedCounter => _sharedUsedCounter;
+
+    #endregion
+
+    #region Methods
 
     /// <summary>
     /// Constructor an instance stored in the given memory segment
@@ -31,88 +59,12 @@ public struct AccessControl
     }
 
     /// <summary>
-    /// Reset the usage of the instance to its default state.
-    /// </summary>
-    public void Reset()
-    {
-        _lockedByThreadId = 0;
-        _sharedUsedCounter = 0;
-    }
-
-    // Don't change this data layout as there is a C++ counterpart of AccessControl and we can use this type with IPC
-    private volatile int _lockedByThreadId;
-    private volatile int _sharedUsedCounter;
-
-    /// <summary>
-    /// Returns the Id of the current Process/Thread that own the lock 
+    /// Demote from exclusive to shared access
     /// </summary>
     /// <remarks>
-    /// <c>0</c> is returned if the Access Control is not locked.
-    /// The returned value is a xor combination of the Process Id and the threadId and should be used for information purpose only.
+    /// The calling process/thread must be in a valid exclusive state for this method to be called.
     /// </remarks>
-    public int LockedById => _lockedByThreadId;
-    
-    /// <summary>
-    /// Returns the count of concurrent accesses.
-    /// </summary>
-    public int SharedUsedCounter => _sharedUsedCounter;
-
-    /// <summary>
-    /// Enter a shared access
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Shared access is typically used to allow concurrent readers, that is, many processes/threads can concurrently enter a shared access.
-    /// If there is already an exclusive access being hold, the calling thread will wait until it can enter the shared access (which is the exclusive access
-    /// to be released).
-    /// While in shared access, if a process/thread attempts to enter an exclusive access calling <see cref="EnterExclusiveAccess"/>,the calling thread will
-    /// wait until there is no shared access at all to satisfy the request.
-    /// </para>
-    /// <para>
-    /// You have the possibility to attempt transforming your shared access to an exclusive one by calling <see cref="TryPromoteToExclusiveAccess"/>. If the
-    /// calling thread is the only shared access the promotion will succeed and the thread will then become the exclusive owner. If there is at least another
-    /// process/thread holding a shared access, the promotion attempt will fail.
-    /// </para>
-    /// <para>
-    /// Be sure to call <see cref="ExitSharedAccess"/> when you want to release the access. 
-    /// </para>
-    /// </remarks>
-    public void EnterSharedAccess()
-    {
-        // Currently exclusively locked, wait it's over
-        if (_lockedByThreadId != 0)
-        {
-            var sw = new SpinWait();
-            while (_lockedByThreadId != 0)
-            {
-                sw.SpinOnce();
-            }
-        }
-
-        // Increment shared usage
-        Interlocked.Increment(ref _sharedUsedCounter);
-
-        // Double check on exclusive, in a loop because we need to restore the shared counter to prevent deadlock
-        // So we loop until we meet the criteria
-        while (_lockedByThreadId != 0)
-        {
-            Interlocked.Decrement(ref _sharedUsedCounter);
-            var sw = new SpinWait();
-            while (_lockedByThreadId != 0)
-            {
-                sw.SpinOnce();
-            }
-            Interlocked.Increment(ref _sharedUsedCounter);
-        }
-    }
-
-    /// <summary>
-    /// Exit a previously entered shared access
-    /// </summary>
-    /// <remarks>
-    /// A process/thread calling <see cref="EnterSharedAccess"/> must call this method to release the shared access.
-    /// </remarks>
-    public void ExitSharedAccess() => Interlocked.Decrement(ref _sharedUsedCounter);
+    public void DemoteFromExclusiveAccess() => _lockedByThreadId = 0;
 
     /// <summary>
     /// Enter an exclusive access
@@ -170,6 +122,77 @@ public struct AccessControl
     }
 
     /// <summary>
+    /// Enter a shared access
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Shared access is typically used to allow concurrent readers, that is, many processes/threads can concurrently enter a shared access.
+    /// If there is already an exclusive access being hold, the calling thread will wait until it can enter the shared access (which is the exclusive access
+    /// to be released).
+    /// While in shared access, if a process/thread attempts to enter an exclusive access calling <see cref="EnterExclusiveAccess"/>,the calling thread will
+    /// wait until there is no shared access at all to satisfy the request.
+    /// </para>
+    /// <para>
+    /// You have the possibility to attempt transforming your shared access to an exclusive one by calling <see cref="TryPromoteToExclusiveAccess"/>. If the
+    /// calling thread is the only shared access the promotion will succeed and the thread will then become the exclusive owner. If there is at least another
+    /// process/thread holding a shared access, the promotion attempt will fail.
+    /// </para>
+    /// <para>
+    /// Be sure to call <see cref="ExitSharedAccess"/> when you want to release the access. 
+    /// </para>
+    /// </remarks>
+    public void EnterSharedAccess()
+    {
+        // Currently exclusively locked, wait it's over
+        if (_lockedByThreadId != 0)
+        {
+            var sw = new SpinWait();
+            while (_lockedByThreadId != 0)
+            {
+                sw.SpinOnce();
+            }
+        }
+
+        // Increment shared usage
+        Interlocked.Increment(ref _sharedUsedCounter);
+
+        // Double check on exclusive, in a loop because we need to restore the shared counter to prevent deadlock
+        // So we loop until we meet the criteria
+        while (_lockedByThreadId != 0)
+        {
+            Interlocked.Decrement(ref _sharedUsedCounter);
+            var sw = new SpinWait();
+            while (_lockedByThreadId != 0)
+            {
+                sw.SpinOnce();
+            }
+            Interlocked.Increment(ref _sharedUsedCounter);
+        }
+    }
+
+    /// <summary>
+    /// Release the exclusive access on the calling process/thread
+    /// </summary>
+    public void ExitExclusiveAccess() => _lockedByThreadId = 0;
+
+    /// <summary>
+    /// Exit a previously entered shared access
+    /// </summary>
+    /// <remarks>
+    /// A process/thread calling <see cref="EnterSharedAccess"/> must call this method to release the shared access.
+    /// </remarks>
+    public void ExitSharedAccess() => Interlocked.Decrement(ref _sharedUsedCounter);
+
+    /// <summary>
+    /// Reset the usage of the instance to its default state.
+    /// </summary>
+    public void Reset()
+    {
+        _lockedByThreadId = 0;
+        _sharedUsedCounter = 0;
+    }
+
+    /// <summary>
     /// Attempt to promote a previously set shared access to exclusive
     /// </summary>
     /// <returns>
@@ -206,18 +229,15 @@ public struct AccessControl
         return true;
     }
 
-    /// <summary>
-    /// Demote from exclusive to shared access
-    /// </summary>
-    /// <remarks>
-    /// The calling process/thread must be in a valid exclusive state for this method to be called.
-    /// </remarks>
-    public void DemoteFromExclusiveAccess() => _lockedByThreadId = 0;
+    #endregion
 
-    /// <summary>
-    /// Release the exclusive access on the calling process/thread
-    /// </summary>
-    public void ExitExclusiveAccess() => _lockedByThreadId = 0;
-    
-    private static int CurrentProcessThreadId => Environment.CurrentManagedThreadId ^ ProcessId;
+    #endregion
+
+    #region Fields
+
+    // Don't change this data layout as there is a C++ counterpart of AccessControl and we can use this type with IPC
+    private volatile int _lockedByThreadId;
+    private volatile int _sharedUsedCounter;
+
+    #endregion
 }

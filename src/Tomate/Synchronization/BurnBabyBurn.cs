@@ -13,12 +13,9 @@ namespace Tomate;
 [PublicAPI]
 public readonly struct BurnBabyBurn
 {
-    private readonly DateTime _waitUntil;
+    #region Public APIs
 
-    public BurnBabyBurn(TimeSpan? waitSpan)
-    {
-        _waitUntil = (waitSpan != null) ? (DateTime.UtcNow + waitSpan.Value) : DateTime.MaxValue;
-    }
+    #region Methods
 
     /// <summary>
     /// Wait a bit
@@ -35,4 +32,23 @@ public readonly struct BurnBabyBurn
 
         return false;
     }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private readonly DateTime _waitUntil;
+
+    #endregion
+
+    #region Constructors
+
+    public BurnBabyBurn(TimeSpan? waitSpan)
+    {
+        _waitUntil = (waitSpan != null) ? (DateTime.UtcNow + waitSpan.Value) : DateTime.MaxValue;
+    }
+
+    #endregion
 }

@@ -10,10 +10,14 @@ namespace Tomate;
 /// </summary>
 public class SmallLockConcurrencyExceededException : Exception
 {
+    #region Constructors
+
     public SmallLockConcurrencyExceededException(string message) : base(message)
     {
         
     }
+
+    #endregion
 }
 
 /// <summary>
@@ -33,52 +37,51 @@ public class SmallLockConcurrencyExceededException : Exception
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct SmallLock
 {
-    private readonly Header* _header;
-    
-    // This will act as a cyclic buffer, FIFO.
-    private readonly ulong* _items;
+    #region Public APIs
 
-    //private static readonly int _processId = Environment.ProcessId;
+    #region Properties
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Header
-    {
-        public ulong LockedBy;
-        public int ReentrencyCounter;
-        public int ProcessProviderId;
-        public int QueueAccessControl;
-        // The index of the first occupied entry in the items
-        public ushort QueueHead;
-        // Index of the first free entry
-        public ushort QueueTail;
-        // The number of entries in _items
-        public ushort QueueCapacity;
-        // Number of items currently in the queue
-        public ushort QueueCount;
-    }
+    /// <summary>
+    /// Get the maximum concurrency level the lock can support.
+    /// </summary>
+    /// <remarks>
+    /// This value is determined at construction, base on the size of the data segment that is given.
+    /// The lock can't support more concurrent operations (e.g.: simultaneous/concurrent calls to <see cref="Enter"/> for instance) than given at construction.
+    /// </remarks>
+    public int ConcurrencyCapacity => _header->QueueCapacity;
 
-    private SmallLock(MemorySegment segment, IProcessProvider processProvider, bool create)
-    {
-        _header = segment.Cast<Header>().Address;
-        _items = (ulong*)(_header + 1);
-        if (create)
-        {
-            Debug.Assert(processProvider != null, "You have to pass a valid ProcessProvider");
-            var remainingSize = segment.Length - sizeof(Header);
-            var queueCapacity = remainingSize / sizeof(long);
-            if (queueCapacity > ushort.MaxValue)
-            {
-                ThrowHelper.SmallLockConcurrencyTooBig(queueCapacity);
-            }
-            _header->LockedBy = 0;
-            _header->ProcessProviderId = processProvider.ProcessProviderId;
-            _header->ReentrencyCounter = 0;
-            _header->QueueAccessControl = 0;
-            _header->QueueCapacity = (ushort)queueCapacity;
-            _header->QueueHead = 0;
-            _header->QueueTail = 0;
-        }
-    }
+    /// <summary>
+    /// Get the current concurrency level, at the time this property is accessed
+    /// </summary>
+    public int ConcurrencyCounter => _header->QueueCount;
+
+    /// <summary>
+    /// Return <c>true</c> if the lock is taken by _someone_, <c>false</c> otherwise.
+    /// </summary>
+    public bool IsEntered => _header->LockedBy != 0;
+
+    /// <summary>
+    /// Get the id of the processing holding the lock
+    /// </summary>
+    /// <remarks>
+    /// The return id is equivalent to <see cref="IProcessProvider.CurrentProcessId"/> for the calling process.
+    /// <c>0</c> means the lock is not held.
+    /// </remarks>
+    public int LockedByProcess => _header->LockedBy.HighS();
+
+    /// <summary>
+    /// Get the lockId (the one given during `Enter()`) that is currently holding the lock
+    /// </summary>
+    /// <remarks>
+    /// <c>0</c> means the lock is not held.
+    /// </remarks>
+    public int LockId => _header->LockedBy.LowS();
+
+    private int QueueCount => _header->QueueCount;
+
+    #endregion
+
+    #region Methods
 
     /// <summary>
     /// Helper method determining the size of the <see cref="MemorySegment"/> needed to store a `SmallLock` supporting the given concurrency level
@@ -88,149 +91,22 @@ public unsafe struct SmallLock
     /// </param>
     /// <returns>The size the `MemorySegment` should be to store one instance.</returns>
     public static int ComputeSegmentSize(ushort concurrencyLevel) => sizeof(Header) + sizeof(long)*concurrencyLevel;
-    
+
     /// <summary>
     /// Create a new instance, stored in the given memory location
     /// </summary>
     /// <param name="segment">The memory segment used to store the instance, the max concurrency will determined by the size of this segment.</param>
-    /// <param name="processProvider">
-    /// This type support interprocess synchronization and must rely on an instance of this interface to get access to the processes involved.
-    /// You are likely to store the instance inside a <see cref="MemoryManagerOverMMF"/> so you can use the <see cref="MemoryManagerOverMMF.ProcessProvider"/>
-    /// property.
-    /// </param>
     /// <returns>The created instance.</returns>
-    public static SmallLock Create(MemorySegment segment, IProcessProvider processProvider) => new(segment, processProvider, true);
-    
+    public static SmallLock Create(MemorySegment segment) => new(segment, true);
+
     /// <summary>
     /// Create a C# instance of `SmallLock` by mapping to an existing (and previously created) one. 
     /// </summary>
     /// <param name="segment">The memory segment that contains the data of the `SmallLock` to map against.</param>
     /// <returns>The instance</returns>
     /// <remarks>See <see cref="MemoryManagerOverMMF"/> for more detail of how this is working</remarks>
-    public static SmallLock Map(MemorySegment segment) => new(segment, null, false);
+    public static SmallLock Map(MemorySegment segment) => new(segment, false);
 
-    /// <summary>
-    /// Get the process provider instance used to identify the process involved in the synchronization
-    /// </summary>
-    public IProcessProvider ProcessProvider => IProcessProvider.GetProvider(_header->ProcessProviderId);
-    
-    /// <summary>
-    /// Return <c>true</c> if the lock is taken by _someone_, <c>false</c> otherwise.
-    /// </summary>
-    public bool IsEntered => _header->LockedBy != 0;
-    
-    /// <summary>
-    /// Get the id of the processing holding the lock
-    /// </summary>
-    /// <remarks>
-    /// The return id is equivalent to <see cref="IProcessProvider.CurrentProcessId"/> for the calling process.
-    /// <c>0</c> means the lock is not held.
-    /// </remarks>
-    public int LockedByProcess => _header->LockedBy.HighS();
-    
-    /// <summary>
-    /// Get the lockId (the one given during `Enter()`) that is currently holding the lock
-    /// </summary>
-    /// <remarks>
-    /// <c>0</c> means the lock is not held.
-    /// </remarks>
-    public int LockId => _header->LockedBy.LowS();
-    
-    /// <summary>
-    /// Get the maximum concurrency level the lock can support.
-    /// </summary>
-    /// <remarks>
-    /// This value is determined at construction, base on the size of the data segment that is given.
-    /// The lock can't support more concurrent operations (e.g.: simultaneous/concurrent calls to <see cref="Enter"/> for instance) than given at construction.
-    /// </remarks>
-    public int ConcurrencyCapacity => _header->QueueCapacity;
-    
-    /// <summary>
-    /// Get the current concurrency level, at the time this property is accessed
-    /// </summary>
-    public int ConcurrencyCounter => _header->QueueCount;
-    
-    private int QueueCount => _header->QueueCount;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private void QueueAccessBegin()
-    {
-        // Get exclusive access
-        if (Interlocked.CompareExchange(ref _header->QueueAccessControl, 1, 0) != 0)
-        {
-            var spinWait = new SpinWait();
-            while (Interlocked.CompareExchange(ref _header->QueueAccessControl, 1, 0) != 0)
-            {
-                spinWait.SpinOnce();
-            }
-        }
-    }
-
-    private void QueueAccessEnd() => Interlocked.CompareExchange(ref _header->QueueAccessControl, 0, 1);
-
-    private int Enqueue(ulong item)
-    {
-        QueueAccessBegin();
-        var capacity = _header->QueueCapacity;
-        var res = -1;
-        if (QueueCount < capacity)
-        {
-            res = _header->QueueTail;
-            _items[_header->QueueTail++] = item;
-            if (_header->QueueTail == capacity)
-            {
-                _header->QueueTail = 0;
-            }
-
-            _header->QueueCount++;
-        }
-
-        QueueAccessEnd();
-        return res;
-    }
-
-    private void Dequeue()
-    {
-        QueueAccessBegin();
-        Debug.Assert(_header->QueueCount > 0, "Dequeue of called more than Queue...");
-        
-        _header->QueueHead++;
-        if (_header->QueueHead == _header->QueueCapacity)
-        {
-            _header->QueueHead = 0;
-        }
-
-        // If we dequeue the last item, set 0 in LockedBy to signify the queue is empty and the lock is free
-        // Otherwise set the FullLockId of the next in line.
-        _header->LockedBy = (_header->QueueTail == _header->QueueHead) ? 0 : _items[_header->QueueHead];
-
-        _header->QueueCount--;
-        QueueAccessEnd();
-    }
-    
-    private void RemoveFromQueue(int entryIndex)
-    {
-        QueueAccessBegin();
-
-        // Move everything beyond entryIndex one entry before
-        var end = _header->QueueTail + (_header->QueueTail > entryIndex ? 0 : _header->QueueCapacity);
-        for (var i = entryIndex; i < end - 1; i++)
-        {
-            _items[i % _header->QueueCapacity] = _items[(i + 1) % _header->QueueCapacity];
-        }
-
-        _header->QueueTail = (ushort)((_header->QueueTail > 0) ? _header->QueueTail-1 : (_header->QueueCapacity - 1));
-        --_header->QueueCount;
-
-        // If we removed the first entry of the queue, update LockedBy with the new first entry
-        if (entryIndex == _header->QueueHead)
-        {
-            _header->LockedBy = _items[_header->QueueHead];
-        }
-        
-        QueueAccessEnd();
-    }
-    
     /// <summary>
     /// Acquire the lock with an exclusive access
     /// </summary>
@@ -243,6 +119,47 @@ public unsafe struct SmallLock
     public void Enter()
     {
         TryEnter(out _, out _);
+    }
+
+    /// <summary>
+    /// Release the exclusive access on the lock 
+    /// </summary>
+    /// <remarks>
+    /// This method must be called after a successful <see cref="Enter"/>
+    /// </remarks>
+    public void Exit() => Exit(0);
+
+    /// <summary>
+    /// Release the exclusive access on the lock 
+    /// </summary>
+    /// <remarks>
+    /// This method must be called after a successful <see cref="TryEnter(out bool,int,System.TimeSpan)"/> or <see cref="TryEnter(out bool, out bool,int,System.TimeSpan)"/>
+    /// </remarks>
+    public void Exit(int lockId)
+    {
+        // If no lockId is given we use the ManagedThreadId
+        if (lockId == 0)
+        {
+            lockId = Environment.CurrentManagedThreadId;
+        }
+        
+        // Compute the full Lock Id with the process and the given lockId
+        ulong fullLockId = default;
+        fullLockId.Pack(IProcessProvider.Singleton.CurrentProcessId, lockId);
+
+        if (_header->LockedBy != fullLockId)
+        {
+            ThrowHelper.SmallLockBadLockId(_header->LockedBy, fullLockId);
+        }
+
+        // Nested case
+        if (--_header->ReentrencyCounter > 0)
+        {
+            return;
+        }
+        
+        // We can dequeue, it's the last concerning nesting
+        Dequeue();
     }
 
     /// <summary>
@@ -291,6 +208,125 @@ public unsafe struct SmallLock
         TryEnter(out lockTaken, addr, lockId, timeOut);
     }
 
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private readonly Header* _header;
+
+    // This will act as a cyclic buffer, FIFO.
+    private readonly ulong* _items;
+
+    #endregion
+
+    #region Constructors
+
+    private SmallLock(MemorySegment segment, bool create)
+    {
+        _header = segment.Cast<Header>().Address;
+        _items = (ulong*)(_header + 1);
+        if (create)
+        {
+            var remainingSize = segment.Length - sizeof(Header);
+            var queueCapacity = remainingSize / sizeof(long);
+            if (queueCapacity > ushort.MaxValue)
+            {
+                ThrowHelper.SmallLockConcurrencyTooBig(queueCapacity);
+            }
+            _header->LockedBy = 0;
+            _header->ReentrencyCounter = 0;
+            _header->QueueAccessControl = 0;
+            _header->QueueCapacity = (ushort)queueCapacity;
+            _header->QueueHead = 0;
+            _header->QueueTail = 0;
+        }
+    }
+
+    #endregion
+
+    #region Private methods
+
+    private void Dequeue()
+    {
+        QueueAccessBegin();
+        Debug.Assert(_header->QueueCount > 0, "Dequeue of called more than Queue...");
+        
+        _header->QueueHead++;
+        if (_header->QueueHead == _header->QueueCapacity)
+        {
+            _header->QueueHead = 0;
+        }
+
+        // If we dequeue the last item, set 0 in LockedBy to signify the queue is empty and the lock is free
+        // Otherwise set the FullLockId of the next in line.
+        _header->LockedBy = (_header->QueueTail == _header->QueueHead) ? 0 : _items[_header->QueueHead];
+
+        _header->QueueCount--;
+        QueueAccessEnd();
+    }
+
+    private int Enqueue(ulong item)
+    {
+        QueueAccessBegin();
+        var capacity = _header->QueueCapacity;
+        var res = -1;
+        if (QueueCount < capacity)
+        {
+            res = _header->QueueTail;
+            _items[_header->QueueTail++] = item;
+            if (_header->QueueTail == capacity)
+            {
+                _header->QueueTail = 0;
+            }
+
+            _header->QueueCount++;
+        }
+
+        QueueAccessEnd();
+        return res;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private void QueueAccessBegin()
+    {
+        // Get exclusive access
+        if (Interlocked.CompareExchange(ref _header->QueueAccessControl, 1, 0) != 0)
+        {
+            var spinWait = new SpinWait();
+            while (Interlocked.CompareExchange(ref _header->QueueAccessControl, 1, 0) != 0)
+            {
+                spinWait.SpinOnce();
+            }
+        }
+    }
+
+    private void QueueAccessEnd() => Interlocked.CompareExchange(ref _header->QueueAccessControl, 0, 1);
+
+    private void RemoveFromQueue(int entryIndex)
+    {
+        QueueAccessBegin();
+
+        // Move everything beyond entryIndex one entry before
+        var end = _header->QueueTail + (_header->QueueTail > entryIndex ? 0 : _header->QueueCapacity);
+        for (var i = entryIndex; i < end - 1; i++)
+        {
+            _items[i % _header->QueueCapacity] = _items[(i + 1) % _header->QueueCapacity];
+        }
+
+        _header->QueueTail = (ushort)((_header->QueueTail > 0) ? _header->QueueTail-1 : (_header->QueueCapacity - 1));
+        --_header->QueueCount;
+
+        // If we removed the first entry of the queue, update LockedBy with the new first entry
+        if (entryIndex == _header->QueueHead)
+        {
+            _header->LockedBy = _items[_header->QueueHead];
+        }
+        
+        QueueAccessEnd();
+    }
+
     private void TryEnter(out bool lockTaken, bool* resumeOnCrashedProcess=null, int lockId = 0, TimeSpan timeOut = default)
     {
         // Ensure lockTaken is false at this stage
@@ -309,7 +345,7 @@ public unsafe struct SmallLock
         
         // Compute the full Lock Id with the process and the given lockId
         ulong fullLockId = default;
-        fullLockId.Pack(ProcessProvider.CurrentProcessId, lockId);
+        fullLockId.Pack(IProcessProvider.Singleton.CurrentProcessId, lockId);
         
         // Attempt to get the lock
         var currentLockedBy = Interlocked.CompareExchange(ref _header->LockedBy, fullLockId, 0);
@@ -344,7 +380,7 @@ public unsafe struct SmallLock
         // We enter a loop
         var waitUntil = (timeOut.Ticks == 0) ? null : new DateTime?(DateTime.UtcNow + timeOut);
         var sw = new SpinWait();
-        var processProvider = IProcessProvider.GetProvider(_header->ProcessProviderId);
+        var processProvider = IProcessProvider.Singleton;
         currentLockedBy = _header->LockedBy;
         while (currentLockedBy != fullLockId)
         {
@@ -379,44 +415,34 @@ public unsafe struct SmallLock
         lockTaken = currentLockedBy == fullLockId;
     }
 
-    /// <summary>
-    /// Release the exclusive access on the lock 
-    /// </summary>
-    /// <remarks>
-    /// This method must be called after a successful <see cref="Enter"/>
-    /// </remarks>
-    public void Exit() => Exit(0);
+    #endregion
 
-    /// <summary>
-    /// Release the exclusive access on the lock 
-    /// </summary>
-    /// <remarks>
-    /// This method must be called after a successful <see cref="TryEnter(out bool,int,System.TimeSpan)"/> or <see cref="TryEnter(out bool, out bool,int,System.TimeSpan)"/>
-    /// </remarks>
-    public void Exit(int lockId)
+    #region Inner types
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Header
     {
-        // If no lockId is given we use the ManagedThreadId
-        if (lockId == 0)
-        {
-            lockId = Environment.CurrentManagedThreadId;
-        }
-        
-        // Compute the full Lock Id with the process and the given lockId
-        ulong fullLockId = default;
-        fullLockId.Pack(ProcessProvider.CurrentProcessId, lockId);
+        #region Fields
 
-        if (_header->LockedBy != fullLockId)
-        {
-            ThrowHelper.SmallLockBadLockId(_header->LockedBy, fullLockId);
-        }
+        public ulong LockedBy;
 
-        // Nested case
-        if (--_header->ReentrencyCounter > 0)
-        {
-            return;
-        }
-        
-        // We can dequeue, it's the last concerning nesting
-        Dequeue();
+        public int QueueAccessControl;
+
+        // The number of entries in _items
+        public ushort QueueCapacity;
+
+        // Number of items currently in the queue
+        public ushort QueueCount;
+
+        // The index of the first occupied entry in the items
+        public ushort QueueHead;
+
+        // Index of the first free entry
+        public ushort QueueTail;
+        public int ReentrencyCounter;
+
+        #endregion
     }
+
+    #endregion
 }

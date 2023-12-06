@@ -5,31 +5,107 @@ namespace Tomate;
 
 public class SegmentConstructException : Exception
 {
+    #region Constructors
+
     public SegmentConstructException(string message) : base(message)
     {
         
     }
+
+    #endregion
 }
 
 public class ItemSetTooBigException : Exception
 {
+    #region Constructors
+
     public ItemSetTooBigException(string message) : base(message)
     {
 
     }
+
+    #endregion
 }
 
 public class CapacityTooBigException : Exception
 {
+    #region Constructors
+
     public CapacityTooBigException(string message) : base(message)
     {
 
     }
+
+    #endregion
+}
+
+public class ItemMaxCapacityReachedException : Exception
+{
+    #region Constructors
+
+    public ItemMaxCapacityReachedException(string message) : base(message)
+    {
+        
+    }
+
+    #endregion
 }
 
 [StackTraceHidden]
 internal static class ThrowHelper
 {
+    #region Internals
+
+    #region Internals methods
+
+    [DoesNotReturn]
+    internal static void AppendCollectionCapacityTooBig(int requestedCapacity, int maxAllowed)
+    {
+        throw new CapacityTooBigException($"Can't create a MappedAppendCollection withe the given capacity ({requestedCapacity}), the maximum allowed is {maxAllowed}");
+    }
+
+    [DoesNotReturn]
+    internal static void AppendCollectionItemSetTooBig(int requestedSize, int maxAllowed)
+    {
+        throw new ItemSetTooBigException($"Can't allocate the requested item number ({requestedSize}), the maximum allowed is {maxAllowed}");
+    }
+
+    [DoesNotReturn]
+    internal static void BlockSimpleDicDefKeyNotAllowed()
+    {
+        throw new ArgumentException("The key must not be of 'default(TKey)'", "key");
+    }
+
+    [DoesNotReturn]
+    internal static void EmptyQueue()
+    {
+        throw new InvalidOperationException("Cannot perform operation, queue is empty");
+    }
+
+    [DoesNotReturn]
+    internal static void EmptyStack()
+    {
+        throw new InvalidOperationException("Cannot perform operation, stack is empty");
+    }
+
+    [DoesNotReturn]
+    internal static void ItemMaxCapacityReachedException(int maxCapacity)
+    {
+        throw new ItemMaxCapacityReachedException($"The container has reached its maximum item capacity of {maxCapacity}");
+    }
+
+    [DoesNotReturn]
+    internal static void KeyNotFound<T>(T key)
+    {
+        throw new KeyNotFoundException($"The given key {key} was not found.");
+    }
+
+    [DoesNotReturn]
+    internal static void NeedNonNegIndex(string paramName)
+    {
+        throw new ArgumentOutOfRangeException(paramName, "Index can't be a negative value");
+    }
+
     [DoesNotReturn]
     internal static void ObjectDisposed(string objectName, string message)
     {
@@ -49,51 +125,9 @@ internal static class ThrowHelper
     }
 
     [DoesNotReturn]
-    internal static void StringTooBigForString64(string paramName, string source)
+    internal static void SmallLockBadLockId(ulong expected, ulong actual)
     {
-        throw new ArgumentOutOfRangeException(paramName, $"The given string '{source}' is bigger than the maximum allowed size (63 bytes).");
-    }
-
-    [DoesNotReturn]
-    internal static void BlockSimpleDicDefKeyNotAllowed()
-    {
-        throw new ArgumentException("The key must not be of 'default(TKey)'", "key");
-    }
-
-    [DoesNotReturn]
-    internal static void NeedNonNegIndex(string paramName)
-    {
-        throw new ArgumentOutOfRangeException(paramName, "Index can't be a negative value");
-    }
-
-    [DoesNotReturn]
-    internal static void EmptyStack()
-    {
-        throw new InvalidOperationException("Cannot perform operation, stack is empty");
-    }
-
-    [DoesNotReturn]
-    internal static void EmptyQueue()
-    {
-        throw new InvalidOperationException("Cannot perform operation, queue is empty");
-    }
-
-    [DoesNotReturn]
-    internal static void TimeSegmentConstructError(long start, long end)
-    {
-        throw new SegmentConstructException($"Cannot construct TimeSegment instance because start ({start}) is greater than end ({end})");
-    }
-
-    [DoesNotReturn]
-    internal static void AppendCollectionItemSetTooBig(int requestedSize, int maxAllowed)
-    {
-        throw new ItemSetTooBigException($"Can't allocate the requested item number ({requestedSize}), the maximum allowed is {maxAllowed}");
-    }
-
-    [DoesNotReturn]
-    internal static void AppendCollectionCapacityTooBig(int requestedCapacity, int maxAllowed)
-    {
-        throw new CapacityTooBigException($"Can't create a MappedAppendCollection withe the given capacity ({requestedCapacity}), the maximum allowed is {maxAllowed}");
+        throw new ArgumentException($"Trying to unlock with [{expected.HighS()};{expected.LowS()}] but [{actual.HighS()};{actual.LowS()}] is actually on the top of the queue", "lockId");
     }
 
     [DoesNotReturn]
@@ -115,14 +149,18 @@ internal static class ThrowHelper
     }
 
     [DoesNotReturn]
-    internal static void SmallLockBadLockId(ulong expected, ulong actual)
+    internal static void StringTooBigForString64(string paramName, string source)
     {
-        throw new ArgumentException($"Trying to unlock with [{expected.HighS()};{expected.LowS()}] but [{actual.HighS()};{actual.LowS()}] is actually on the top of the queue", "lockId");
+        throw new ArgumentOutOfRangeException(paramName, $"The given string '{source}' is bigger than the maximum allowed size (63 bytes).");
     }
 
     [DoesNotReturn]
-    internal static void KeyNotFound<T>(T key)
+    internal static void TimeSegmentConstructError(long start, long end)
     {
-        throw new KeyNotFoundException($"The given key {key} was not found.");
+        throw new SegmentConstructException($"Cannot construct TimeSegment instance because start ({start}) is greater than end ({end})");
     }
+
+    #endregion
+
+    #endregion
 }

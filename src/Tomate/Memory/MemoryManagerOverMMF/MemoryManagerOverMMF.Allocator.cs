@@ -386,7 +386,7 @@ public unsafe partial class MemoryManagerOverMMF
     }
     
 #if DEBUGALLOC
-    public MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
+    public MemoryBlock Allocate(int length, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
 #else
     public MemoryBlock Allocate(int length)
 #endif
@@ -520,7 +520,7 @@ public unsafe partial class MemoryManagerOverMMF
     }
 
 #if DEBUGALLOC
-    public MemoryBlock<T> Allocate<T>(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
+    public MemoryBlock<T> Allocate<T>(int length, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0) where T : unmanaged
 #else
     public MemoryBlock<T> Allocate<T>(int length) where T : unmanaged
 #endif

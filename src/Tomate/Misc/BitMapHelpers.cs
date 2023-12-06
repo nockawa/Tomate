@@ -1,10 +1,34 @@
 ﻿using System.Diagnostics;
 using System.Numerics;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
+[PublicAPI]
 public static class BitMapHelpers
 {
+    #region Public APIs
+
+    #region Methods
+
+    public static bool ClearBitConcurrent(this Span<ulong> map, int index)
+    {
+        var offset = index >> 6;
+        Debug.Assert(offset < map.Length, "Index out of range");
+        var bitMask = 1ul << (index & 0x3F);
+
+        return (Interlocked.And(ref map[offset], bitMask) & bitMask) == 0;
+    }
+
+    public static bool ClearBitsConcurrent(this Span<ulong> map, int index, int bitLength)
+    {
+        var offset = index >> 6;
+        Debug.Assert(offset < map.Length, "Index out of range");
+        var bitMask = ((1UL << bitLength) - 1UL) << (index & 0x3F);
+
+        return (Interlocked.And(ref map[offset], bitMask) & bitMask) == 0;
+    }
+
     public static int FindFreeBitConcurrent(this Span<ulong> map)
     {
         var l = map.Length;
@@ -125,22 +149,7 @@ public static class BitMapHelpers
         return (Interlocked.Or(ref map[offset], bitMask) & bitMask) == 0;
     }
 
-    public static bool ClearBitConcurrent(this Span<ulong> map, int index)
-    {
-        var offset = index >> 6;
-        Debug.Assert(offset < map.Length, "Index out of range");
-        var bitMask = 1ul << (index & 0x3F);
+    #endregion
 
-        return (Interlocked.And(ref map[offset], bitMask) & bitMask) == 0;
-    }
-
-    public static bool ClearBitsConcurrent(this Span<ulong> map, int index, int bitLength)
-    {
-        var offset = index >> 6;
-        Debug.Assert(offset < map.Length, "Index out of range");
-        var bitMask = ((1UL << bitLength) - 1UL) << (index & 0x3F);
-
-        return (Interlocked.And(ref map[offset], bitMask) & bitMask) == 0;
-    }
-
+    #endregion
 }

@@ -25,44 +25,21 @@ namespace Tomate;
 [PublicAPI]
 public struct MemoryBlock : IRefCounted
 {
-    /// <summary>
-    /// The Memory Segment corresponding to the Memory Block
-    /// </summary>
-    /// <remarks>
-    /// There is also an implicit casting operator <see cref="op_Implicit(Tomate.MemoryBlock)"/> that has the same function.
-    /// </remarks>
-    public MemorySegment MemorySegment;
-    
-    /// <summary>
-    /// Construct a MemoryBlock from a MemorySegment
-    /// </summary>
-    /// <param name="memorySegment">The segment with a starting address that matches the block</param>
-    /// <remarks>
-    /// The size of the MemorySegment should match the real size of the MemoryBlock, higher would likely result to crash, lesser would be unpredictable.
-    /// </remarks>
-    public MemoryBlock(MemorySegment memorySegment)
-    {
-        MemorySegment = memorySegment;
-    }
+    #region Public APIs
 
-    internal unsafe MemoryBlock(byte* address, int length)
-    {
-        MemorySegment = new MemorySegment(address, length);
-    }
+    #region Properties
 
     /// <summary>
-    /// Extend the MemoryBlock lifetime by incrementing its Reference Counter.
+    /// If <c>true</c> the instance doesn't refer to a valid MemoryBlock
     /// </summary>
-    /// <returns>The new Reference Counter</returns>
-    /// <remarks>
-    /// A MemoryBlock can be shared among multiple threads, the only way to guarantee ownership is to call <see cref="AddRef"/> to extend it and a matching
-    /// <see cref="Dispose"/> to release it.
-    /// </remarks>
-    public unsafe int AddRef()
-    {
-        var header = (BlockReferential.GenBlockHeader*)(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
-        return Interlocked.Increment(ref header->RefCounter);
-    }
+    public bool IsDefault => MemorySegment.IsDefault;
+
+    /// <summary>
+    /// If <c>true</c> the instance is not valid and considered as <c>Default</c> (<see cref="IsDefault"/> will be also <c>true</c>).
+    /// </summary>
+    public bool IsDisposed => MemorySegment.IsDefault;
+
+    public IMemoryManager MemoryManager => BlockReferential.GetMemoryManager(this);
 
     /// <summary>
     /// Access the value of the Reference Counter
@@ -84,22 +61,28 @@ public struct MemoryBlock : IRefCounted
         }
     }
 
-    /// <summary>
-    /// If <c>true</c> the instance doesn't refer to a valid MemoryBlock
-    /// </summary>
-    public bool IsDefault => MemorySegment.IsDefault;
-    /// <summary>
-    /// If <c>true</c> the instance is not valid and considered as <c>Default</c> (<see cref="IsDefault"/> will be also <c>true</c>).
-    /// </summary>
-    public bool IsDisposed => MemorySegment.IsDefault;
+    #endregion
 
-    public IMemoryManager MemoryManager => BlockReferential.GetMemoryManager(this);
+    #region Methods
+
+    public static implicit operator MemorySegment(MemoryBlock mb) => mb.MemorySegment;
+    public static implicit operator MemoryBlock(MemorySegment seg) => new(seg);
 
     /// <summary>
-    /// Resize the MemoryBlock
+    /// Extend the MemoryBlock lifetime by incrementing its Reference Counter.
     /// </summary>
-    /// <param name="newSize">The new size, can't be more than <see cref="IMemoryManager.MaxAllocationLength"/>.</param>
-    public void Resize(int newSize) => BlockReferential.Resize(ref this, newSize);
+    /// <returns>The new Reference Counter</returns>
+    /// <remarks>
+    /// A MemoryBlock can be shared among multiple threads, the only way to guarantee ownership is to call <see cref="AddRef"/> to extend it and a matching
+    /// <see cref="Dispose"/> to release it.
+    /// </remarks>
+    public unsafe int AddRef()
+    {
+        var header = (BlockReferential.GenBlockHeader*)(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+        return Interlocked.Increment(ref header->RefCounter);
+    }
+
+    public MemoryBlock<T> Cast<T>() where T : unmanaged => new(MemorySegment.Cast<T>());
 
     /// <summary>
     /// Attempt to Dispose and free the MemoryBlock
@@ -121,9 +104,48 @@ public struct MemoryBlock : IRefCounted
         }
     }
 
-    public MemoryBlock<T> Cast<T>() where T : unmanaged => new(MemorySegment.Cast<T>());
-    public static implicit operator MemorySegment(MemoryBlock mb) => mb.MemorySegment;
-    public static implicit operator MemoryBlock(MemorySegment seg) => new(seg);
+    /// <summary>
+    /// Resize the MemoryBlock
+    /// </summary>
+    /// <param name="newSize">The new size, can't be more than <see cref="IMemoryManager.MaxAllocationLength"/>.</param>
+    public void Resize(int newSize) => BlockReferential.Resize(ref this, newSize);
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    /// <summary>
+    /// The Memory Segment corresponding to the Memory Block
+    /// </summary>
+    /// <remarks>
+    /// There is also an implicit casting operator <see cref="op_Implicit(Tomate.MemoryBlock)"/> that has the same function.
+    /// </remarks>
+    public MemorySegment MemorySegment;
+
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Construct a MemoryBlock from a MemorySegment
+    /// </summary>
+    /// <param name="memorySegment">The segment with a starting address that matches the block</param>
+    /// <remarks>
+    /// The size of the MemorySegment should match the real size of the MemoryBlock, higher would likely result to crash, lesser would be unpredictable.
+    /// </remarks>
+    public MemoryBlock(MemorySegment memorySegment)
+    {
+        MemorySegment = memorySegment;
+    }
+
+    internal unsafe MemoryBlock(byte* address, int length)
+    {
+        MemorySegment = new MemorySegment(address, length);
+    }
+
+    #endregion
 }
 
 [DebuggerDisplay("IsDefault: {IsDefault}, RefCounter: {RefCounter}, IsDisposed: {IsDisposed}, {MemorySegment}")]
@@ -131,18 +153,16 @@ public struct MemoryBlock : IRefCounted
 [PublicAPI]
 public struct MemoryBlock<T> : IRefCounted where T : unmanaged
 {
-    public MemorySegment<T> MemorySegment;
+    #region Public APIs
 
-    public MemoryBlock(MemorySegment<T> memorySegment)
-    {
-        MemorySegment = memorySegment;
-    }
+    #region Properties
 
-    public unsafe int AddRef()
-    {
-        var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
-        return Interlocked.Increment(ref header->RefCounter);
-    }
+    public bool IsDefault => MemorySegment.IsDefault;
+    public bool IsDisposed => MemorySegment.IsDefault;
+
+    public long MaxAllocationLength => MemoryManager?.MaxAllocationLength ?? 0;
+
+    public IMemoryManager MemoryManager => BlockReferential.GetMemoryManager(this);
 
     public unsafe int RefCounter
     {
@@ -153,19 +173,19 @@ public struct MemoryBlock<T> : IRefCounted where T : unmanaged
         }
     }
 
-    public bool IsDefault => MemorySegment.IsDefault;
-    public bool IsDisposed => MemorySegment.IsDefault;
+    #endregion
 
-    public IMemoryManager MemoryManager => BlockReferential.GetMemoryManager(this);
+    #region Methods
 
-    public long MaxAllocationLength => MemoryManager?.MaxAllocationLength ?? 0;
-    
-    /// <summary>
-    /// Resize the MemoryBlock
-    /// </summary>
-    /// <param name="newSize">The new size, can't be more than <see cref="IMemoryManager.MaxAllocationLength"/>.</param>
-    /// <remarks>This method will change the <see cref="MemorySegment"/> and its address.</remarks>
-    public void Resize(int newSize) => BlockReferential.Resize(ref this, newSize);
+    public static implicit operator MemorySegment<T>(MemoryBlock<T> mb) => mb.MemorySegment;
+    public static implicit operator MemoryBlock(MemoryBlock<T> mb) => new(mb.MemorySegment.Cast());
+    public static implicit operator MemoryBlock<T>(MemorySegment<T> seg) => new(seg);
+
+    public unsafe int AddRef()
+    {
+        var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+        return Interlocked.Increment(ref header->RefCounter);
+    }
 
     public void Dispose()
     {
@@ -180,7 +200,29 @@ public struct MemoryBlock<T> : IRefCounted where T : unmanaged
         }
     }
 
-    public static implicit operator MemorySegment<T>(MemoryBlock<T> mb) => mb.MemorySegment;
-    public static implicit operator MemoryBlock(MemoryBlock<T> mb) => new(mb.MemorySegment.Cast());
-    public static implicit operator MemoryBlock<T>(MemorySegment<T> seg) => new(seg);
+    /// <summary>
+    /// Resize the MemoryBlock
+    /// </summary>
+    /// <param name="newSize">The new size, can't be more than <see cref="IMemoryManager.MaxAllocationLength"/>.</param>
+    /// <remarks>This method will change the <see cref="MemorySegment"/> and its address.</remarks>
+    public void Resize(int newSize) => BlockReferential.Resize(ref this, newSize);
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    public MemorySegment<T> MemorySegment;
+
+    #endregion
+
+    #region Constructors
+
+    public MemoryBlock(MemorySegment<T> memorySegment)
+    {
+        MemorySegment = memorySegment;
+    }
+
+    #endregion
 }

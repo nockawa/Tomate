@@ -9,37 +9,10 @@ namespace Tomate;
 [PublicAPI]
 public interface IMemoryManager
 {
-    #region Statics
+    #region Public APIs
 
-    static IMemoryManager()
-    {
-        _memoryManagerById = new ConcurrentDictionary<int, IMemoryManager>();
-        _curMemoryManagerId = 0;
-    }
+    #region Properties
 
-    private static ConcurrentDictionary<int, IMemoryManager> _memoryManagerById;
-    private static int _curMemoryManagerId;
-
-    public static int RegisterMemoryManager(IMemoryManager memoryManager)
-    {
-        var id = Interlocked.Increment(ref _curMemoryManagerId);
-        _memoryManagerById.TryAdd(id, memoryManager);
-        return id;
-    }
-
-    public static bool UnregisterMemoryManager(int memoryManagerId)
-    {
-        return _memoryManagerById.TryRemove(memoryManagerId, out _);
-    }
-
-    public static IMemoryManager GetMemoryManager(int id)
-    {
-        _memoryManagerById.TryGetValue(id, out var memoryManager);
-        return memoryManager;
-    }
-    
-
-    #endregion
     /// <summary>
     /// Check if the instance is disposed or not.
     /// </summary>
@@ -47,6 +20,42 @@ public interface IMemoryManager
 
     int MaxAllocationLength { get; }
     int MemoryManagerId { get; }
+
+    /// <summary>
+    /// This property only works in DEBUGALLOC mode, it is primarily used to change the content of a memory block being freed,
+    ///  for debugging/troubleshooting purposes.
+    /// </summary>
+    DefaultMemoryManager.DebugMemoryInit MemoryBlockContentCleanup
+    {
+#if DEBUGALLOC
+        get;
+        set;
+#else
+        get => DefaultMemoryManager.DebugMemoryInit.None;
+        // ReSharper disable once ValueParameterNotUsed
+        set {}
+#endif
+    }
+
+    /// <summary>
+    /// This property only works in DEBUGALLOC mode, it is primarily used to initialize the content of newly allocated block,
+    ///  for debugging/troubleshooting purposes.
+    /// </summary>
+    DefaultMemoryManager.DebugMemoryInit MemoryBlockContentInitialization
+    {
+#if DEBUGALLOC
+        get;
+        set;
+#else
+        get => DefaultMemoryManager.DebugMemoryInit.None;
+        // ReSharper disable once ValueParameterNotUsed
+        set {}
+#endif
+    }
+
+    #endregion
+
+    #region Methods
 
     /// <summary>
     /// Allocate a Memory Block
@@ -82,6 +91,21 @@ public interface IMemoryManager
 #else
     MemoryBlock<T> Allocate<T>(int length) where T : unmanaged;
 #endif
+
+    /// <summary>
+    /// Release all the allocated segments, free the memory allocated through .net.
+    /// </summary>
+    void Clear();
+
+    /// <summary>
+    /// Free a previously allocated block
+    /// </summary>
+    /// <param name="block">The memory block to free</param>
+    /// <returns><c>true</c> if the block was successfully released, <c>false</c> otherwise.</returns>
+    /// <exception cref="ObjectDisposedException">Can't free if the instance is disposed, all blocks have been released anyway.</exception>
+    bool Free(MemoryBlock block);
+
+    bool Free<T>(MemoryBlock<T> block) where T : unmanaged;
 
     bool Resize(ref MemoryBlock memoryBlock, int newLength, bool zeroExtra=false)
     {
@@ -123,25 +147,60 @@ public interface IMemoryManager
         return true;
     }
 
-    /// <summary>
-    /// Free a previously allocated block
-    /// </summary>
-    /// <param name="block">The memory block to free</param>
-    /// <returns><c>true</c> if the block was successfully released, <c>false</c> otherwise.</returns>
-    /// <exception cref="ObjectDisposedException">Can't free if the instance is disposed, all blocks have been released anyway.</exception>
-    bool Free(MemoryBlock block);
-    bool Free<T>(MemoryBlock<T> block) where T : unmanaged;
+    #endregion
 
-    /// <summary>
-    /// Release all the allocated segments, free the memory allocated through .net.
-    /// </summary>
-    void Clear();
+    #endregion
+
+    #region Statics
+
+    static IMemoryManager()
+    {
+        _memoryManagerById = new ConcurrentDictionary<int, IMemoryManager>();
+        _curMemoryManagerId = 0;
+    }
+
+    private static ConcurrentDictionary<int, IMemoryManager> _memoryManagerById;
+    private static int _curMemoryManagerId;
+
+    public static int RegisterMemoryManager(IMemoryManager memoryManager)
+    {
+        var id = Interlocked.Increment(ref _curMemoryManagerId);
+        _memoryManagerById.TryAdd(id, memoryManager);
+        return id;
+    }
+
+    public static bool UnregisterMemoryManager(int memoryManagerId)
+    {
+        return _memoryManagerById.TryRemove(memoryManagerId, out _);
+    }
+
+    public static IMemoryManager GetMemoryManager(int id)
+    {
+        _memoryManagerById.TryGetValue(id, out var memoryManager);
+        return memoryManager;
+    }
+
+    #endregion
 }
 
 [PublicAPI]
 internal interface IBlockAllocator : IDisposable
 {
-    IMemoryManager Owner { get; }
+    #region Public APIs
+
+    #region Properties
+
     int BlockIndex { get; }
+
+    IMemoryManager Owner { get; }
+
+    #endregion
+
+    #region Methods
+
     bool Free(MemoryBlock memoryBlock);
+
+    #endregion
+
+    #endregion
 }

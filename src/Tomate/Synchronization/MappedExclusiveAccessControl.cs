@@ -12,9 +12,15 @@ namespace Tomate;
 /// </remarks>
 [PublicAPI]
 [StructLayout(LayoutKind.Sequential)]
-public struct ExclusiveAccessControl
+public struct MappedExclusiveAccessControl
 {
     #region Public APIs
+
+    #region Properties
+
+    private static ulong CallingLock => (ulong)Environment.ProcessId << 32 | (uint)Environment.CurrentManagedThreadId;
+
+    #endregion
 
     #region Methods
 
@@ -27,7 +33,7 @@ public struct ExclusiveAccessControl
     /// </returns>
     public bool ReleaseControl()
     {
-        var tid = Environment.CurrentManagedThreadId;
+        var tid = CallingLock;
         return Interlocked.CompareExchange(ref _data, 0, tid) == tid;
     }
 
@@ -70,7 +76,7 @@ public struct ExclusiveAccessControl
     /// </example>
     public bool TakeControl(TimeSpan? wait)
     {
-        var tid = Environment.CurrentManagedThreadId;
+        var tid = CallingLock;
         if (Interlocked.CompareExchange(ref _data, tid, 0) == 0)
         {
             return true;
@@ -102,7 +108,16 @@ public struct ExclusiveAccessControl
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryTakeControl()
     {
-        return Interlocked.CompareExchange(ref _data, Environment.CurrentManagedThreadId, 0) == 0;
+        return Interlocked.CompareExchange(ref _data, CallingLock, 0) == 0;
+    }
+
+    public void WaitUntilReleased()
+    {
+        var sw = new SpinWait();
+        while (_data != 0)
+        {
+            sw.SpinOnce();
+        }
     }
 
     #endregion
@@ -111,7 +126,7 @@ public struct ExclusiveAccessControl
 
     #region Fields
 
-    private int _data;
+    private ulong _data;
 
     #endregion
 
@@ -120,7 +135,7 @@ public struct ExclusiveAccessControl
     /// <summary>
     /// Default constructor
     /// </summary>
-    public ExclusiveAccessControl()
+    public MappedExclusiveAccessControl()
     {
         _data = 0;
     }

@@ -21,12 +21,10 @@ public class MemoryManagerOverMMFTests
         var filePathName = Path.GetRandomFileName();
         var fileName = Path.GetFileNameWithoutExtension(filePathName);
         {
+            IProcessProvider.Singleton = new MockProcessProvider();
             using var mmf = MemoryManagerOverMMF.Create
             (
                 new MemoryManagerOverMMF.CreateSettings(filePathName, fileName, DefaultMMFSize, DefaultPageSize, false)
-                {
-                    ProcessProvider = new MockProcessProvider()
-                }
             );
             Assert.That(mmf, Is.Not.Null);
 

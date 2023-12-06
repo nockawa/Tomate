@@ -464,6 +464,30 @@ public partial class DefaultMemoryManager
 #if DEBUGALLOC
                 var res = _allocatedBlocks.Remove(segId);
                 Debug.Assert(res, "The block is no longer in the debug allocated block list but still considered occupied in the block chain...");
+
+                var addr = (byte*)Unsafe.AsPointer(ref header) + sizeof(SegmentHeader);
+                var span = new Span<byte>(addr, header.SegmentSize);
+                switch (Owner.MemoryBlockContentCleanup)
+                {
+                    case DebugMemoryInit.Zero:
+                        span.Clear();
+                        break;
+                    case DebugMemoryInit.Pattern:
+                        var length = header.SegmentSize;
+                        if ((length & 0x7) == 0)
+                        {
+                            span.Cast<byte, ulong>().Fill(0xdededededededede);
+                        }
+                        if ((length & 0x3) == 0)
+                        {
+                            span.Cast<byte, uint>().Fill(0xdededede);
+                        }
+                        else
+                        {
+                            span.Fill(0xde);
+                        }
+                        break;
+                }
 #endif
 
                 header.GenHeader.IsFree = true;

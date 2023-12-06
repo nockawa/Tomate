@@ -18,74 +18,20 @@ namespace Tomate;
 [PublicAPI]
 public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey : unmanaged where TValue : unmanaged
 {
-    [DebuggerDisplay("Key {Key}, Value {Value}")]
-    private struct KeyValuePairInternal
-    {
-        public TKey Key;
-        public TValue Value;
-    }
+    #region Constants
 
-    [DebuggerDisplay("Key {Key}, Value {Value}")]
-    public struct KeyValuePair
-    {
-        // ReSharper disable once UnassignedReadonlyField
-        public readonly TKey Key;
-        public TValue Value;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Header
-    {
-        public int Count;
-        public int FreeCount;
-        public int FreeList;
-    }
-    
     private const int StartOfFreeList = -3;
 
-    private struct Entry
-    {
-        public uint HashCode;
-        /// <summary>
-        /// 0-based index of next entry in chain: -1 means end of chain
-        /// also encodes whether this entry _itself_ is part of the free list by changing sign and subtracting 3,
-        /// so -2 means end of free list, -3 means index 0 but on free list, -4 means index 1 but on free list, etc.
-        /// </summary>
-        public int Next;
-        // ReSharper disable once MemberHidesStaticFromOuterClass
-        public KeyValuePairInternal KeyValuePair;
-    }
+    #endregion
 
-    internal enum InsertionBehavior : byte
-    {
-        /// <summary>
-        /// The default insertion behavior. If there's already a item with the given Key, do nothing return false
-        /// </summary>
-        None = 0,
+    #region Public APIs
 
-        /// <summary>
-        /// Specifies that an existing entry with the same key should be overwritten if encountered.
-        /// </summary>
-        OverwriteExisting = 1,
-
-        /// <summary>
-        /// Specifies that if an existing entry with the same key is encountered, an exception should be thrown.
-        /// </summary>
-        ThrowOnExisting = 2,
-
-        /// <summary>
-        /// If there's already an item with the given key, return the ref of the value
-        /// </summary>
-        GetExisting = 3
-    }
-
-    private MemoryBlock _memoryBlock;
-    private Header* _header;
-    private readonly IEqualityComparer<TKey> _comparer;
-    private MemorySegment<int> _buckets;
-    private MemorySegment<Entry> _entries;
+    #region Properties
 
     public int Count => _header!=null ? (_header->Count - _header->FreeCount) : 0;
+
+    public bool IsDefault => _memoryBlock.IsDefault;
+    public bool IsDisposed => _memoryBlock.IsDefault;
 
     public TValue this[TKey key]
     {
@@ -101,34 +47,14 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
             return default;
         }
     }
-    
+
+    #endregion
+
+    #region Methods
+
     public static UnmanagedDictionary<TKey, TValue> Create(IMemoryManager owner, int capacity = 8, IEqualityComparer<TKey> comparer = null) => new(owner, capacity, comparer, true);
-    //public static MappedBlockingDictionary<TKey, TValue> Map(IPageAllocator allocator, int rootPageId) => new(allocator, rootPageId, false);
-    private UnmanagedDictionary(IMemoryManager owner, int capacity, IEqualityComparer<TKey> comparer, bool create)
-    {
-        Debug.Assert(capacity >= 3, "Capacity must be at least 3 to be valid.");
-        owner ??= DefaultMemoryManager.GlobalInstance;
-        _comparer = default;
-        // ReSharper disable once PossibleUnintendedReferenceComparison
-        if (comparer is not null && comparer != EqualityComparer<TKey>.Default) // first check for null to avoid forcing default comparer instantiation unnecessarily
-        {
-            _comparer = comparer;
-        }
 
-        _buckets = default;
-        _entries = default;
-
-        var size = PrimeHelpers.GetPrime(capacity);
-        _memoryBlock = owner.Allocate(sizeof(Header) + size * (sizeof(int) + sizeof(Entry)));
-        _memoryBlock.MemorySegment.ToSpan<byte>().Clear();
-        var (h, m) = _memoryBlock.MemorySegment.Split(sizeof(Header));
-        _header = (Header*)h.Address;
-        _header->FreeList = -1;
-
-        var (b, e) = m.Split(size * sizeof(int));
-        _buckets = b.Cast<int>();
-        _entries = e.Cast<Entry>();
-    }
+    public void Add(TKey key, TValue value) => TryInsert(key, value, InsertionBehavior.ThrowOnExisting, out _);
 
     public void Dispose()
     {
@@ -140,8 +66,28 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
         _memoryBlock = default;
     }
 
-    public bool IsDefault => _memoryBlock.IsDefault;
-    public bool IsDisposed => _memoryBlock.IsDefault;
+    /// <summary>
+    /// Ensures that the dictionary can hold up to 'capacity' entries without any further expansion of its backing storage
+    /// </summary>
+    public int EnsureCapacity(int capacity)
+    {
+        if (capacity < 0)
+        {
+            //TODO Exception
+            //ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.capacity);
+        }
+
+        var currentCapacity = _entries.Length;
+        if (currentCapacity >= capacity)
+        {
+            return currentCapacity;
+        }
+
+        var newSize = PrimeHelpers.GetPrime(capacity);
+        Resize(newSize);
+        return newSize;
+    }
+
     public Enumerator GetEnumerator() => new(this);
 
     /// <summary>
@@ -155,28 +101,6 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
     /// The value of the element corresponding to the given key
     /// </returns>
     public TValue GetOrAdd(TKey key, out bool found) => TryInsert(key, default, InsertionBehavior.GetExisting, out found);
-
-    public void Add(TKey key, TValue value) => TryInsert(key, value, InsertionBehavior.ThrowOnExisting, out _);
-
-    public bool TryAdd(TKey key, TValue value)
-    {
-        TryInsert(key, value, InsertionBehavior.None, out var res);
-        return res;
-    }
-
-    /// <summary>
-    /// Try to get the value corresponding to the given key
-    /// </summary>
-    /// <param name="key">The key of the element to access its value from.</param>
-    /// <param name="value">The value corresponding to the key</param>
-    /// <returns>
-    /// Will return <c>true</c> if the element was found, <c>false</c> otherwise.
-    /// </returns>
-    public bool TryGetValue(TKey key, out TValue value)
-    {
-        value = FindValue(key, out var res);
-        return res;
-    }
 
     public bool Remove(TKey key, out TValue value)
     {
@@ -235,33 +159,209 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
         return false;
     }
 
-    /// <summary>
-    /// Ensures that the dictionary can hold up to 'capacity' entries without any further expansion of its backing storage
-    /// </summary>
-    public int EnsureCapacity(int capacity)
+    public bool TryAdd(TKey key, TValue value)
     {
-        if (capacity < 0)
-        {
-            //TODO Exception
-            //ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.capacity);
-        }
-
-        var currentCapacity = _entries.Length;
-        if (currentCapacity >= capacity)
-        {
-            return currentCapacity;
-        }
-
-        var newSize = PrimeHelpers.GetPrime(capacity);
-        Resize(newSize);
-        return newSize;
+        TryInsert(key, value, InsertionBehavior.None, out var res);
+        return res;
     }
+
+    /// <summary>
+    /// Try to get the value corresponding to the given key
+    /// </summary>
+    /// <param name="key">The key of the element to access its value from.</param>
+    /// <param name="value">The value corresponding to the key</param>
+    /// <returns>
+    /// Will return <c>true</c> if the element was found, <c>false</c> otherwise.
+    /// </returns>
+    public bool TryGetValue(TKey key, out TValue value)
+    {
+        value = FindValue(key, out var res);
+        return res;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private readonly IEqualityComparer<TKey> _comparer;
+    private MemorySegment<int> _buckets;
+    private MemorySegment<Entry> _entries;
+    private Header* _header;
+
+    private MemoryBlock _memoryBlock;
+
+    #endregion
+
+    #region Constructors
+
+    //public static MappedBlockingDictionary<TKey, TValue> Map(IPageAllocator allocator, int rootPageId) => new(allocator, rootPageId, false);
+    private UnmanagedDictionary(IMemoryManager owner, int capacity, IEqualityComparer<TKey> comparer, bool create)
+    {
+        Debug.Assert(capacity >= 3, "Capacity must be at least 3 to be valid.");
+        owner ??= DefaultMemoryManager.GlobalInstance;
+        _comparer = default;
+        // ReSharper disable once PossibleUnintendedReferenceComparison
+        if (comparer is not null && comparer != EqualityComparer<TKey>.Default) // first check for null to avoid forcing default comparer instantiation unnecessarily
+        {
+            _comparer = comparer;
+        }
+
+        _buckets = default;
+        _entries = default;
+
+        var size = PrimeHelpers.GetPrime(capacity);
+        _memoryBlock = owner.Allocate(sizeof(Header) + size * (sizeof(int) + sizeof(Entry)));
+        _memoryBlock.MemorySegment.ToSpan<byte>().Clear();
+        var (h, m) = _memoryBlock.MemorySegment.Split(sizeof(Header));
+        _header = (Header*)h.Address;
+        _header->FreeList = -1;
+
+        var (b, e) = m.Split(size * sizeof(int));
+        _buckets = b.Cast<int>();
+        _entries = e.Cast<Entry>();
+    }
+
+    #endregion
+
+    #region Internals
+
+    #region Internals methods
+
+    // Must execute under shared lock
+    internal TValue FindValue(TKey key, out bool found)
+    {
+        ref var entry = ref Unsafe.NullRef<Entry>();
+        if (_buckets.IsDefault == false)
+        {
+            Debug.Assert(_entries.IsDefault == false, "expected entries to be allocated");
+            var comparer = _comparer;
+            if (comparer == null)
+            {
+                var hashCode = (uint)key.GetHashCode();
+                var i = GetBucket(hashCode);
+                var entries = _entries.ToSpan();
+                uint collisionCount = 0;
+                if (typeof(TKey).IsValueType)
+                {
+                    // ValueType: Devirtualize with EqualityComparer<TValue>.Default intrinsic
+
+                    i--; // Value in _buckets is 1-based; subtract 1 from i. We do it here so it fuses with the following conditional.
+                    do
+                    {
+                        // Should be a while loop https://github.com/dotnet/runtime/issues/9422
+                        // Test in if to drop range check for following array access
+                        if ((uint)i >= (uint)entries.Length)
+                        {
+                            goto ReturnNotFound;
+                        }
+
+                        entry = ref entries[i];
+                        if (entry.HashCode == hashCode && EqualityComparer<TKey>.Default.Equals(entry.KeyValuePair.Key, key))
+                        {
+                            goto ReturnFound;
+                        }
+
+                        i = entry.Next;
+
+                        collisionCount++;
+                    } while (collisionCount <= (uint)entries.Length);
+                }
+            }
+            else
+            {
+                var hashCode = (uint)comparer.GetHashCode(key);
+                var i = GetBucket(hashCode);
+                var entries = _entries.ToSpan();
+                uint collisionCount = 0;
+                i--; // Value in _buckets is 1-based; subtract 1 from i. We do it here so it fuses with the following conditional.
+                do
+                {
+                    // Should be a while loop https://github.com/dotnet/runtime/issues/9422
+                    // Test in if to drop range check for following array access
+                    if ((uint)i >= (uint)entries.Length)
+                    {
+                        goto ReturnNotFound;
+                    }
+
+                    entry = ref entries[i];
+                    if (entry.HashCode == hashCode && comparer.Equals(entry.KeyValuePair.Key, key))
+                    {
+                        goto ReturnFound;
+                    }
+
+                    i = entry.Next;
+
+                    collisionCount++;
+                } while (collisionCount <= (uint)entries.Length);
+            }
+        }
+
+        goto ReturnNotFound;
+
+ReturnFound:
+        found = true;
+        return entry.KeyValuePair.Value;
+ReturnNotFound:
+        found = false;
+        return default;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Private methods
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private ref int GetBucket(uint hashCode)
     {
         var buckets = _buckets.ToSpan();
         return ref buckets[(int)(hashCode % (uint)buckets.Length)];
+    }
+
+    private void Resize() => Resize(PrimeHelpers.ExpandPrime(_header->Count));
+
+    // Must execute under exclusive lock
+    private void Resize(int newSize)
+    {
+        // Value types never rehash
+        Debug.Assert(_entries.IsDefault == false, "_entries should be allocated");
+        Debug.Assert(newSize >= _entries.Length);
+
+        // Allocate the data buffer for the new size, this buffer contains space for the header, buckets and entries
+        var newDataBlock = _memoryBlock.MemoryManager.Allocate(sizeof(Header) + newSize * (sizeof(int) + sizeof(Entry)));
+        
+        // Copy the header to the new header and replace the old by the new
+        var (h, m) = newDataBlock.MemorySegment.Split(sizeof(Header));
+        new Span<Header>(_header, 1).CopyTo(h.ToSpan<Header>());
+        _header = (Header*)h.Address;
+
+        var (bms, ems) = m.Split(newSize * sizeof(int));
+        var entries = ems.Cast<Entry>();
+
+        var count = _header->Count;
+        _entries.ToSpan().CopyTo(entries.ToSpan());
+        entries.ToSpan()[count..].Clear();
+
+        _buckets = bms.Cast<int>();
+        _buckets.ToSpan().Clear();
+
+        var e = entries.ToSpan();
+        for (var i = 0; i < count; i++)
+        {
+            if (e[i].Next >= -1)
+            {
+                ref var bucket = ref GetBucket(e[i].HashCode);
+                e[i].Next = bucket - 1; // Value in _buckets is 1-based
+                bucket = i + 1;
+            }
+        }
+
+        _entries = entries;
+        _memoryBlock.Dispose();
+        _memoryBlock = newDataBlock;
     }
 
     private TValue TryInsert(TKey key, TValue value, InsertionBehavior behavior, out bool result)
@@ -404,141 +504,41 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
         return entry.KeyValuePair.Value;
     }
 
-    // Must execute under shared lock
-    internal TValue FindValue(TKey key, out bool found)
+    #endregion
+
+    #region Inner types
+
+    private struct Entry
     {
-        ref var entry = ref Unsafe.NullRef<Entry>();
-        if (_buckets.IsDefault == false)
-        {
-            Debug.Assert(_entries.IsDefault == false, "expected entries to be allocated");
-            var comparer = _comparer;
-            if (comparer == null)
-            {
-                var hashCode = (uint)key.GetHashCode();
-                var i = GetBucket(hashCode);
-                var entries = _entries.ToSpan();
-                uint collisionCount = 0;
-                if (typeof(TKey).IsValueType)
-                {
-                    // ValueType: Devirtualize with EqualityComparer<TValue>.Default intrinsic
+        #region Fields
 
-                    i--; // Value in _buckets is 1-based; subtract 1 from i. We do it here so it fuses with the following conditional.
-                    do
-                    {
-                        // Should be a while loop https://github.com/dotnet/runtime/issues/9422
-                        // Test in if to drop range check for following array access
-                        if ((uint)i >= (uint)entries.Length)
-                        {
-                            goto ReturnNotFound;
-                        }
+        public uint HashCode;
 
-                        entry = ref entries[i];
-                        if (entry.HashCode == hashCode && EqualityComparer<TKey>.Default.Equals(entry.KeyValuePair.Key, key))
-                        {
-                            goto ReturnFound;
-                        }
+        // ReSharper disable once MemberHidesStaticFromOuterClass
+        public KeyValuePairInternal KeyValuePair;
 
-                        i = entry.Next;
+        /// <summary>
+        /// 0-based index of next entry in chain: -1 means end of chain
+        /// also encodes whether this entry _itself_ is part of the free list by changing sign and subtracting 3,
+        /// so -2 means end of free list, -3 means index 0 but on free list, -4 means index 1 but on free list, etc.
+        /// </summary>
+        public int Next;
 
-                        collisionCount++;
-                    } while (collisionCount <= (uint)entries.Length);
-                }
-            }
-            else
-            {
-                var hashCode = (uint)comparer.GetHashCode(key);
-                var i = GetBucket(hashCode);
-                var entries = _entries.ToSpan();
-                uint collisionCount = 0;
-                i--; // Value in _buckets is 1-based; subtract 1 from i. We do it here so it fuses with the following conditional.
-                do
-                {
-                    // Should be a while loop https://github.com/dotnet/runtime/issues/9422
-                    // Test in if to drop range check for following array access
-                    if ((uint)i >= (uint)entries.Length)
-                    {
-                        goto ReturnNotFound;
-                    }
-
-                    entry = ref entries[i];
-                    if (entry.HashCode == hashCode && comparer.Equals(entry.KeyValuePair.Key, key))
-                    {
-                        goto ReturnFound;
-                    }
-
-                    i = entry.Next;
-
-                    collisionCount++;
-                } while (collisionCount <= (uint)entries.Length);
-            }
-        }
-
-        goto ReturnNotFound;
-
-ReturnFound:
-        found = true;
-        return entry.KeyValuePair.Value;
-ReturnNotFound:
-        found = false;
-        return default;
-    }
-
-    private void Resize() => Resize(PrimeHelpers.ExpandPrime(_header->Count));
-
-    // Must execute under exclusive lock
-    private void Resize(int newSize)
-    {
-        // Value types never rehash
-        Debug.Assert(_entries.IsDefault == false, "_entries should be allocated");
-        Debug.Assert(newSize >= _entries.Length);
-
-        // Allocate the data buffer for the new size, this buffer contains space for the header, buckets and entries
-        var newDataBlock = _memoryBlock.MemoryManager.Allocate(sizeof(Header) + newSize * (sizeof(int) + sizeof(Entry)));
-        
-        // Copy the header to the new header and replace the old by the new
-        var (h, m) = newDataBlock.MemorySegment.Split(sizeof(Header));
-        new Span<Header>(_header, 1).CopyTo(h.ToSpan<Header>());
-        _header = (Header*)h.Address;
-
-        var (bms, ems) = m.Split(newSize * sizeof(int));
-        var entries = ems.Cast<Entry>();
-
-        var count = _header->Count;
-        _entries.ToSpan().CopyTo(entries.ToSpan());
-        entries.ToSpan()[count..].Clear();
-
-        _buckets = bms.Cast<int>();
-        _buckets.ToSpan().Clear();
-
-        var e = entries.ToSpan();
-        for (var i = 0; i < count; i++)
-        {
-            if (e[i].Next >= -1)
-            {
-                ref var bucket = ref GetBucket(e[i].HashCode);
-                e[i].Next = bucket - 1; // Value in _buckets is 1-based
-                bucket = i + 1;
-            }
-        }
-
-        _entries = entries;
-        _memoryBlock.Dispose();
-        _memoryBlock = newDataBlock;
+        #endregion
     }
 
     [PublicAPI]
     public struct Enumerator
     {
-        private readonly UnmanagedDictionary<TKey, TValue> _dictionary;
-        private readonly Entry* _entries;
-        private int _index;
+        #region Public APIs
 
-        internal Enumerator(UnmanagedDictionary<TKey, TValue> dictionary)
-        {
-            _dictionary = dictionary;
-            _index = 0;
-            _entries = _dictionary._entries.Address;
-        }
+        #region Properties
+
+        public ref KeyValuePair Current => ref *(KeyValuePair*)&_entries[_index - 1].KeyValuePair;
+
+        #endregion
+
+        #region Methods
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public bool MoveNext()
@@ -554,6 +554,87 @@ ReturnNotFound:
             return false;
         }
 
-        public ref KeyValuePair Current => ref *(KeyValuePair*)&_entries[_index - 1].KeyValuePair;
+        #endregion
+
+        #endregion
+
+        #region Fields
+
+        private readonly UnmanagedDictionary<TKey, TValue> _dictionary;
+        private readonly Entry* _entries;
+        private int _index;
+
+        #endregion
+
+        #region Constructors
+
+        internal Enumerator(UnmanagedDictionary<TKey, TValue> dictionary)
+        {
+            _dictionary = dictionary;
+            _index = 0;
+            _entries = _dictionary._entries.Address;
+        }
+
+        #endregion
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Header
+    {
+        #region Fields
+
+        public int Count;
+        public int FreeCount;
+        public int FreeList;
+
+        #endregion
+    }
+
+    [DebuggerDisplay("Key {Key}, Value {Value}")]
+    public struct KeyValuePair
+    {
+        #region Fields
+
+        // ReSharper disable once UnassignedReadonlyField
+        public readonly TKey Key;
+        public TValue Value;
+
+        #endregion
+    }
+
+    [DebuggerDisplay("Key {Key}, Value {Value}")]
+    private struct KeyValuePairInternal
+    {
+        #region Fields
+
+        public TKey Key;
+        public TValue Value;
+
+        #endregion
+    }
+
+    #endregion
+
+    internal enum InsertionBehavior : byte
+    {
+        /// <summary>
+        /// The default insertion behavior. If there's already a item with the given Key, do nothing return false
+        /// </summary>
+        None = 0,
+
+        /// <summary>
+        /// Specifies that an existing entry with the same key should be overwritten if encountered.
+        /// </summary>
+        OverwriteExisting = 1,
+
+        /// <summary>
+        /// Specifies that if an existing entry with the same key is encountered, an exception should be thrown.
+        /// </summary>
+        ThrowOnExisting = 2,
+
+        /// <summary>
+        /// If there's already an item with the given key, return the ref of the value
+        /// </summary>
+        GetExisting = 3
     }
 }

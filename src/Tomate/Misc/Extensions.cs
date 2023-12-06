@@ -1,17 +1,31 @@
 ﻿using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
 internal static class SpanHelpers
 {
+    #region Public APIs
+
+    #region Methods
+
     public static Span<TTo> Cast<TFRom, TTo>(this Span<TFRom> span) where TFRom : struct where TTo : struct => MemoryMarshal.Cast<TFRom, TTo>(span);
     public static ReadOnlySpan<TTo> Cast<TFRom, TTo>(this ReadOnlySpan<TFRom> span) where TFRom : struct where TTo : struct => MemoryMarshal.Cast<TFRom, TTo>(span);
+
+    #endregion
+
+    #endregion
 }
 
+[PublicAPI]
 public static class DisposeExtensions
 {
+    #region Public APIs
+
+    #region Methods
+
     public static void DisposeAndNull<T>(this object owner, ref T obj) where T : class, IDisposable
     {
         if (owner == null) return;
@@ -19,24 +33,46 @@ public static class DisposeExtensions
         obj.Dispose();
         obj = null;
     }
+
+    #endregion
+
+    #endregion
 }
 
+[PublicAPI]
 public static class PaddingExtensions
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static int Pad4(this int v) => v + 3 & -4;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static int Pad8(this int v) => v + 7 & -8;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static int Pad16(this int v) => v + 15 & -16;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static int Pad32(this int v) => v + 31 & -32;
+    #region Public APIs
+
+    #region Methods
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static unsafe int Pad<T>(this int v) where T : unmanaged => (v + sizeof(T) - 1) & -sizeof(T);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static int Pad16(this int v) => v + 15 & -16;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static int Pad32(this int v) => v + 31 & -32;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static int Pad4(this int v) => v + 3 & -4;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static int Pad8(this int v) => v + 7 & -8;
+
+    #endregion
+
+    #endregion
 }
 
+[PublicAPI]
 public static class AlignmentExtensions
 {
+    #region Public APIs
+
+    #region Methods
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static unsafe void* Align(this ref int size, void* address, int alignment)
     {
@@ -45,105 +81,36 @@ public static class AlignmentExtensions
         size += (int)(newAddress - a);
         return (void*)newAddress;
     }
+
+    #endregion
+
+    #endregion
 }
 
+[PublicAPI]
 public static class StoreInExtensions
 {
+    #region Public APIs
+
+    #region Methods
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static int SizeInLong(this ushort bytes) => (bytes + 7) / 8;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static int SizeInLong(this int bytes) => (bytes + 7) / 8;
+
+    #endregion
+
+    #endregion
 }
 
+[PublicAPI]
 public static class PackExtensions
 {
-    // 16-bits with unsigned
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref ushort n, byte high, byte low) => n = (ushort)(high << 8 | low);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static (byte, byte) Unpack(this ushort n) => ((byte)(n >> 8), (byte)(n & 0xFF));
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static byte High(this ushort n) => (byte)(n >> 8);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static byte Low(this ushort n) => (byte)n;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void High(this ref ushort n, byte val) => n = (ushort)(val << 8 | (n & 0xFF));
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Low(this ref ushort n, byte val) => n = (ushort)((n & 0xFF00) | val);
+    #region Public APIs
 
-    // 16-bits with signed
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref ushort n, sbyte high, sbyte low) => n = (ushort)(high << 8 | (byte)low);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static (sbyte, sbyte) UnpackS(this ushort n) => ((sbyte)(n >> 8), (sbyte)(n & 0xFF));
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static sbyte HighS(this ushort n) => (sbyte)(n >> 8);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static sbyte LowS(this ushort n) => (sbyte)n;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void High(this ref ushort n, sbyte val) => n = (ushort)(val << 8 | (n & 0xFF));
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Low(this ref ushort n, sbyte val) => n = (ushort)((n & 0xFF00) | (byte)val);
-
-    // 32-bits with unsigned
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref uint n, ushort high, ushort low) => n = (uint)high << 16 | low;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref int n, ushort high, ushort low) => n = (int)high << 16 | low;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static (ushort, ushort) Unpack(this uint n) => ((ushort)(n >> 16), (ushort)(n & 0xFFFF));
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static ushort High(this uint n) => (ushort)(n >> 16);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static ushort Low(this uint n) => (ushort)n;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void High(this ref uint n, ushort val) => n = (uint)val << 16 | (n & 0xFFFF);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Low(this ref uint n, ushort val) => n = (n & 0xFFFF0000) | val;
-
-    // 32-bits with signed
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref uint n, short high, short low) => n = (uint)high << 16 | (ushort)low;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref int n, short high, short low) => n = (int)high << 16 | (ushort)low;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static (short, short) UnpackS(this uint n) => ((short)(n >> 16), (short)(n & 0xFFFF));
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static short HighS(this uint n) => (short)(n >> 16);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static short LowS(this uint n) => (short)n;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void High(this ref uint n, short val) => n = (uint)val << 16 | (n & 0xFFFF);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Low(this ref uint n, short val) => n = (n & 0xFFFF0000) | (ushort)val;
-
-    // 64-bits with unsigned
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref ulong n, uint high, uint low) => n = (ulong)high << 32 | low;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static (uint, uint) Unpack(this ulong n) => ((uint)(n >> 32), (uint)(n & 0xFFFFFFFF));
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static uint High(this ulong n) => (uint)(n >> 32);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static uint Low(this ulong n) => (uint)n;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void High(this ref ulong n, uint val) => n = (ulong)val << 32 | (n & 0xFFFFFFFF);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Low(this ref ulong n, uint val) => n = (n & 0xFFFFFFFF00000000) | val;
-
-    // 64-bits with signed
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref ulong n, int high, int low) => n = (ulong)high << 32 | (uint)low;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static (int, int) UnpackS(this ulong n) => ((int)(n >> 32), (int)(n & 0xFFFFFFFF));
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static int HighS(this ulong n) => (int)(n >> 32);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static int LowS(this ulong n) => (int)n;
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void High(this ref ulong n, int val) => n = (ulong)val << 32 | (n & 0xFFFFFFFF);
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Low(this ref ulong n, int val) => n = (n & 0xFFFFFFFF00000000) | (uint)val;
+    #region Methods
 
     // Byte level packing
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -156,32 +123,107 @@ public static class PackExtensions
         return (byte)(writeZero ? 1 : 0);
     }
 
-    public static unsafe int WriteByteLevel(this uint n, ref byte* dest, bool writeZero=false)
-    {
-        var s = n.ByteLevelSize(writeZero);
-        switch (s)
-        {
-            case 0:
-                return 0;
-            case 1:
-                *dest = (byte)n;
-                ++dest;
-                return 1;
-            case 2:
-                *((ushort*)dest) = (ushort)n;
-                dest += 2;
-                return 2;
-            case 3:
-                *((ushort*)dest) = (ushort)n;
-                dest[2] = (byte)(n >> 16);
-                dest += 3;
-                return 3;
-            default:
-                *((uint*)dest) = n;
-                dest += 4;
-                return 4;
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static byte High(this ushort n) => (byte)(n >> 8);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void High(this ref ushort n, byte val) => n = (ushort)(val << 8 | (n & 0xFF));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void High(this ref ushort n, sbyte val) => n = (ushort)(val << 8 | (n & 0xFF));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static ushort High(this uint n) => (ushort)(n >> 16);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void High(this ref uint n, ushort val) => n = (uint)val << 16 | (n & 0xFFFF);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void High(this ref uint n, short val) => n = (uint)val << 16 | (n & 0xFFFF);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static uint High(this ulong n) => (uint)(n >> 32);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void High(this ref ulong n, uint val) => n = (ulong)val << 32 | (n & 0xFFFFFFFF);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void High(this ref ulong n, int val) => n = (ulong)val << 32 | (n & 0xFFFFFFFF);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static sbyte HighS(this ushort n) => (sbyte)(n >> 8);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static short HighS(this uint n) => (short)(n >> 16);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static int HighS(this ulong n) => (int)(n >> 32);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static byte Low(this ushort n) => (byte)n;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Low(this ref ushort n, byte val) => n = (ushort)((n & 0xFF00) | val);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Low(this ref ushort n, sbyte val) => n = (ushort)((n & 0xFF00) | (byte)val);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static ushort Low(this uint n) => (ushort)n;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Low(this ref uint n, ushort val) => n = (n & 0xFFFF0000) | val;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Low(this ref uint n, short val) => n = (n & 0xFFFF0000) | (ushort)val;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static uint Low(this ulong n) => (uint)n;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Low(this ref ulong n, uint val) => n = (n & 0xFFFFFFFF00000000) | val;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Low(this ref ulong n, int val) => n = (n & 0xFFFFFFFF00000000) | (uint)val;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static sbyte LowS(this ushort n) => (sbyte)n;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static short LowS(this uint n) => (short)n;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static int LowS(this ulong n) => (int)n;
+
+    // 16-bits with unsigned
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Pack(this ref ushort n, byte high, byte low) => n = (ushort)(high << 8 | low);
+
+    // 16-bits with signed
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Pack(this ref ushort n, sbyte high, sbyte low) => n = (ushort)(high << 8 | (byte)low);
+
+    // 32-bits with unsigned
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Pack(this ref uint n, ushort high, ushort low) => n = (uint)high << 16 | low;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Pack(this ref int n, ushort high, ushort low) => n = (int)high << 16 | low;
+
+    // 32-bits with signed
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Pack(this ref uint n, short high, short low) => n = (uint)high << 16 | (ushort)low;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Pack(this ref int n, short high, short low) => n = (int)high << 16 | (ushort)low;
+
+    // 64-bits with unsigned
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Pack(this ref ulong n, uint high, uint low) => n = (ulong)high << 32 | low;
+
+    // 64-bits with signed
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Pack(this ref ulong n, int high, int low) => n = (ulong)high << 32 | (uint)low;
 
     public static void ReadByteLevel(this ref uint n, ref MemoryView<byte> src, int byteSize)
     {
@@ -245,76 +287,93 @@ public static class PackExtensions
         }
     }
 
-}
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static (byte, byte) Unpack(this ushort n) => ((byte)(n >> 8), (byte)(n & 0xFF));
 
-public static class MiscExtensions
-{
-    public static TimeSpan ToTimeSpan(this long v) => TimeSpan.FromTicks(v);
-}
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static (ushort, ushort) Unpack(this uint n) => ((ushort)(n >> 16), (ushort)(n & 0xFFFF));
 
-public static class MathExtensions
-{
-    public static bool IsPowerOf2(this int x) => (x & (x - 1)) == 0;
-    public static bool IsPowerOf2(this long x) => (x & (x - 1)) == 0;
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static (uint, uint) Unpack(this ulong n) => ((uint)(n >> 32), (uint)(n & 0xFFFFFFFF));
 
-    /// <summary>
-    /// Return the next power of 2 of the given value
-    /// </summary>
-    /// <param name="v">The value</param>
-    /// <returns>The next power of 2</returns>
-    /// <remarks>
-    /// If the given value is already a power of 2, this method will return the next one.
-    /// </remarks>
-    public static int NextPowerOf2(this int v)
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static (sbyte, sbyte) UnpackS(this ushort n) => ((sbyte)(n >> 8), (sbyte)(n & 0xFF));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static (short, short) UnpackS(this uint n) => ((short)(n >> 16), (short)(n & 0xFFFF));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static (int, int) UnpackS(this ulong n) => ((int)(n >> 32), (int)(n & 0xFFFFFFFF));
+
+    public static unsafe int WriteByteLevel(this uint n, ref byte* dest, bool writeZero=false)
     {
-        v |= v >> 1;         v |= v >> 2;
-        v |= v >> 4;         v |= v >> 8;
-        v |= v >> 16;
-        v++;
-        return v;
+        var s = n.ByteLevelSize(writeZero);
+        switch (s)
+        {
+            case 0:
+                return 0;
+            case 1:
+                *dest = (byte)n;
+                ++dest;
+                return 1;
+            case 2:
+                *((ushort*)dest) = (ushort)n;
+                dest += 2;
+                return 2;
+            case 3:
+                *((ushort*)dest) = (ushort)n;
+                dest[2] = (byte)(n >> 16);
+                dest += 3;
+                return 3;
+            default:
+                *((uint*)dest) = n;
+                dest += 4;
+                return 4;
+        }
     }
 
-    public static double TotalSeconds(this int ticks) => TimeSpan.FromTicks(ticks).TotalSeconds;
-    public static double TotalSeconds(this long ticks) => TimeSpan.FromTicks(ticks).TotalSeconds;
+    #endregion
+
+    #endregion
+}
+
+[PublicAPI]
+public static class MiscExtensions
+{
+    #region Public APIs
+
+    #region Methods
+
+    public static TimeSpan ToTimeSpan(this long v) => TimeSpan.FromTicks(v);
+
+    #endregion
+
+    #endregion
+}
+
+[PublicAPI]
+public static class MathExtensions
+{
+    #region Constants
 
     private static readonly CultureInfo DefaultCulture = new("en-us");
 
-    public static string FriendlyTime(this double elapsed, bool displayRate = true)
+    #endregion
+
+    #region Public APIs
+
+    #region Methods
+
+    public static string Bandwidth(int size, double elapsed)
     {
-        var scalesE = new[] { "sec", "ms", "µs", "ns" };
-        var e = elapsed;
-        var iE = 0;
-        for (; iE < 3; iE++)
-        {
-            if (Math.Abs(e) > 1)
-            {
-                break;
-            }
-
-            e *= 1000;
-        }
-
-        if (displayRate)
-        {
-            var scalesF = new[] { "", "K", "M", "B" };
-            var f = 1 / elapsed;
-            var iF = 0;
-            for (; iF < 3; iF++)
-            {
-                if (f < 1000)
-                {
-                    break;
-                }
-
-                f /= 1000;
-            }
-            return string.Create(DefaultCulture, $"{e:0.###}{scalesE[iE]} ({f:0.###}{scalesF[iF]}/sec)");
-        }
-        else
-        {
-            return string.Create(DefaultCulture, $"{e:0.###}{scalesE[iE]}");
-        }
+        return string.Create(DefaultCulture, $"{(size / elapsed).FriendlySize()}/sec");
     }
+
+    public static string Bandwidth(long size, double elapsed)
+    {
+        return string.Create(DefaultCulture, $"{(size / elapsed).FriendlySize()}/sec");
+    }
+
     public static string FriendlySize(this long val)
     {
         var scalesF = new[] { "", "K", "M", "B" };
@@ -366,15 +425,69 @@ public static class MathExtensions
         return string.Create(DefaultCulture, $"{f:0.###}{scalesF[iF]}");
     }
 
+    public static string FriendlyTime(this double elapsed, bool displayRate = true)
+    {
+        var scalesE = new[] { "sec", "ms", "µs", "ns" };
+        var e = elapsed;
+        var iE = 0;
+        for (; iE < 3; iE++)
+        {
+            if (Math.Abs(e) > 1)
+            {
+                break;
+            }
+
+            e *= 1000;
+        }
+
+        if (displayRate)
+        {
+            var scalesF = new[] { "", "K", "M", "B" };
+            var f = 1 / elapsed;
+            var iF = 0;
+            for (; iF < 3; iF++)
+            {
+                if (f < 1000)
+                {
+                    break;
+                }
+
+                f /= 1000;
+            }
+            return string.Create(DefaultCulture, $"{e:0.###}{scalesE[iE]} ({f:0.###}{scalesF[iF]}/sec)");
+        }
+        else
+        {
+            return string.Create(DefaultCulture, $"{e:0.###}{scalesE[iE]}");
+        }
+    }
+
+    public static bool IsPowerOf2(this int x) => (x & (x - 1)) == 0;
+    public static bool IsPowerOf2(this long x) => (x & (x - 1)) == 0;
+
+    /// <summary>
+    /// Return the next power of 2 of the given value
+    /// </summary>
+    /// <param name="v">The value</param>
+    /// <returns>The next power of 2</returns>
+    /// <remarks>
+    /// If the given value is already a power of 2, this method will return the next one.
+    /// </remarks>
+    public static int NextPowerOf2(this int v)
+    {
+        v |= v >> 1;         v |= v >> 2;
+        v |= v >> 4;         v |= v >> 8;
+        v |= v >> 16;
+        v++;
+        return v;
+    }
+
     public static double TicksToSeconds(this long ticks) => ((double)ticks / TimeSpan.TicksPerSecond);
 
-    public static string Bandwidth(int size, double elapsed)
-    {
-        return string.Create(DefaultCulture, $"{(size / elapsed).FriendlySize()}/sec");
-    }
+    public static double TotalSeconds(this int ticks) => TimeSpan.FromTicks(ticks).TotalSeconds;
+    public static double TotalSeconds(this long ticks) => TimeSpan.FromTicks(ticks).TotalSeconds;
 
-    public static string Bandwidth(long size, double elapsed)
-    {
-        return string.Create(DefaultCulture, $"{(size / elapsed).FriendlySize()}/sec");
-    }
+    #endregion
+
+    #endregion
 }

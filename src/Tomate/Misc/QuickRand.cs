@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
@@ -8,10 +9,12 @@ namespace Tomate;
 /// <remarks>
 /// Also known as the Marsaglia's xor-shift generator, it's very fast and pretty decent for the distribution
 /// </remarks>
+[PublicAPI]
 public static class QuickRand
 {
-    // https://stackoverflow.com/a/1640399/802124
-    static int randx = 123456789, randy = 362436069, randz = 521288629;
+    #region Public APIs
+
+    #region Methods
 
     /// <summary>
     /// Get the next randomly generated number
@@ -32,4 +35,15 @@ public static class QuickRand
 
         return randz;
     }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    // https://stackoverflow.com/a/1640399/802124
+    static int randx = 123456789, randy = 362436069, randz = 521288629;
+
+    #endregion
 }

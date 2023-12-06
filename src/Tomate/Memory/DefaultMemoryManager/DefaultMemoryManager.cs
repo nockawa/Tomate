@@ -164,6 +164,21 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 #endif
     }
 
+    /// <summary>
+    /// This property only works in DEBUGALLOC mode, it is primarily used to change the content of a memory block being freed,
+    ///  for debugging/troubleshooting purposes.
+    /// </summary>
+    public DebugMemoryInit MemoryBlockContentCleanup
+    {
+#if DEBUGALLOC
+        get;
+        set;
+#else
+        get => DebugMemoryInit.None;
+        // ReSharper disable once ValueParameterNotUsed
+        set {}
+#endif
+    }
     
     // Note: seems like ThreadLocal doesn't release data allocated for a given thread when this one is destroyed.
     // Which means if the program create/destroy thousand of threads, this won't be good for us...
@@ -332,7 +347,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 
 
 #if DEBUGALLOC
-    public unsafe MemoryBlock Allocate(int size, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
+    public unsafe MemoryBlock Allocate(int length, [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0)
 #else
     public MemoryBlock Allocate(int length)
 #endif
@@ -348,9 +363,9 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 #if DEBUGALLOC
         if (_blockOverrunDetection)
         {
-            size += BlockMargingSize * 2;
+            length += BlockMargingSize * 2;
         }
-        var sai = new MemoryBlockInfo(size, sourceFile, lineNb);
+        var sai = new MemoryBlockInfo(length, sourceFile, lineNb);
 #else
         var sai = new MemoryBlockInfo(length);
 #endif
@@ -371,11 +386,11 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
                 res.MemorySegment.ToSpan<byte>().Clear();
                 break;
             case DebugMemoryInit.Pattern:
-                if ((size & 0x7) == 0)
+                if ((length & 0x7) == 0)
                 {
                     res.MemorySegment.ToSpan<ulong>().Fill(0xdededededededede);
                 }
-                if ((size & 0x3) == 0)
+                if ((length & 0x3) == 0)
                 {
                     res.MemorySegment.ToSpan<uint>().Fill(0xdededede);
                 }
@@ -442,8 +457,6 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
             {
                 throw new BlockOverrunException(block, "Block was corrupted by write overrun");
             }
-
-            return BlockReferential.Free(realBlock);
         }
 #endif
         return BlockReferential.Free(block);
