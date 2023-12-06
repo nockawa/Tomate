@@ -18,28 +18,199 @@ namespace Tomate;
 [DebuggerDisplay("Count = {Count}")]
 public unsafe struct UnmanagedQueue<T> : IDisposable where T : unmanaged
 {
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Header
+    #region Constants
+
+    //private T* _buffer;
+
+    private const int DefaultCapacity = 8;
+
+    #endregion
+
+    #region Public APIs
+
+    #region Properties
+
+    private T* _buffer => (T*)(_header + 1);
+    private ref int _capacity => ref _header->_capacity;
+    private ref int _head => ref _header->_head;
+
+    private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
+
+    private ref int _size => ref _header->_size;
+    private ref int _tail => ref _header->_tail;
+    public int Count => _size;
+
+    public bool IsDefault => _memoryBlock.IsDefault;
+    public bool IsDisposed => _size < 0;
+
+    public ref T this[int index]
     {
-        public int _size;
-        public int _head;
-        public int _tail;
-        public int _capacity;
+        get
+        {
+            Debug.Assert((uint)index < _size);
+            return ref _buffer[index];
+        }
     }
+
+    #endregion
+
+    #region Methods
+
+    public void Clear()
+    {
+        _size = 0;
+    }
+
+    /// <summary>
+    /// Removes the object at the head of the queue and returns it.
+    /// </summary>
+    /// <returns>A reference to the item that was dequeued, don't use this reference after a <see cref="Queue{T}"/> operation as it may induce a resize of the
+    /// internal buffer.
+    /// </returns>
+    /// <remarks>
+    /// If the queue is empty, this method throws an InvalidOperationException.
+    /// </remarks>
+    public ref T Dequeue()
+    {
+        int head = _head;
+
+        if (_size == 0)
+        {
+            ThrowForEmptyQueue();
+        }
+
+        MoveNext(ref _head);
+        _size--;
+        return ref _buffer[head];
+    }
+
+    public void Dispose()
+    {
+        if (IsDefault)
+        {
+            return;
+        }
+        _memoryBlock.Dispose();
+        //_memoryManager.Free(_memoryBlock);
+        //_size = -1;
+        _memoryBlock = default;
+    }
+
+    public ref T Enqueue()
+    {
+        if (_size == _capacity)
+        {
+            Grow(_size + 1);
+        }
+
+        var curTail = _tail;
+        MoveNext(ref _tail);
+        _size++;
+        return ref _buffer[curTail];
+    }
+
+    public void Enqueue(ref T item)
+    {
+        if (_size == _capacity)
+        {
+            Grow(_size + 1);
+        }
+
+        _buffer[_tail] = item;
+        MoveNext(ref _tail);
+        _size++;
+    }
+
+    public void Enqueue(T item)
+    {
+        if (_size == _capacity)
+        {
+            Grow(_size + 1);
+        }
+
+        _buffer[_tail] = item;
+        MoveNext(ref _tail);
+        _size++;
+    }
+
+    public ref T Peek()
+    {
+        if (_size == 0)
+        {
+            ThrowForEmptyQueue();
+        }
+
+        return ref _buffer[_head];
+    }
+
+    // Iterates over the objects in the queue, returning an array of the
+    // objects in the Queue, or an empty array if the queue is empty.
+    // The order of elements in the array is first in to last in, the same
+    // order produced by successive calls to Dequeue.
+    public T[] ToArray()
+    {
+        if (_size == 0)
+        {
+            return Array.Empty<T>();
+        }
+
+        T[] arr = new T[_size];
+
+        var src = new Span<T>(_buffer, _capacity);
+        var dst = arr.AsSpan();
+        
+        if (_head < _tail)
+        {
+            src.Slice(_head, _size).CopyTo(dst);
+        }
+        else
+        {
+            src.Slice(_head, _capacity - _head).CopyTo(dst);
+            src.Slice(0, _tail).CopyTo(dst.Slice(_capacity - _head));
+        }
+        return arr;
+    }
+
+    public bool TryDequeue(out T result)
+    {
+        int head = _head;
+        if (_size == 0)
+        {
+            result = default;
+            return false;
+        }
+
+        result = _buffer[head];
+        MoveNext(ref _head);
+        _size--;
+        return true;
+    }
+
+    // ReSharper disable once RedundantAssignment
+    public bool TryPeek(ref T result)
+    {
+        if (_size == 0)
+        {
+            result = default;
+            return false;
+        }
+
+        result = _buffer[_head];
+        return true;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
 
 //    private readonly IMemoryManager _memoryManager;
     private MemoryBlock _memoryBlock;
 
-    private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
-    private T* _buffer => (T*)(_header + 1);
-    
-    private ref int _size => ref _header->_size;
-    private ref int _head => ref _header->_head;
-    private ref int _tail => ref _header->_tail;
-    private ref int _capacity => ref _header->_capacity;
-    //private T* _buffer;
+    #endregion
 
-    private const int DefaultCapacity = 8;
+    #region Constructors
 
     public UnmanagedQueue() : this(null)
     {
@@ -67,135 +238,10 @@ public unsafe struct UnmanagedQueue<T> : IDisposable where T : unmanaged
         _size = 0;
         _capacity = capacity;
     }
-    public int Count => _size;
 
-    public ref T this[int index]
-    {
-        get
-        {
-            Debug.Assert((uint)index < _size);
-            return ref _buffer[index];
-        }
-    }
+    #endregion
 
-    public bool IsDefault => _memoryBlock.IsDefault;
-    public bool IsDisposed => _size < 0;
-
-    public void Clear()
-    {
-        _size = 0;
-    }
-
-    public ref T Enqueue()
-    {
-        if (_size == _capacity)
-        {
-            Grow(_size + 1);
-        }
-
-        var curTail = _tail;
-        MoveNext(ref _tail);
-        _size++;
-        return ref _buffer[curTail];
-    }
-
-    public void Enqueue(ref T item)
-    {
-        if (_size == _capacity)
-        {
-            Grow(_size + 1);
-        }
-
-        _buffer[_tail] = item;
-        MoveNext(ref _tail);
-        _size++;
-    }
-    
-    public void Enqueue(T item)
-    {
-        if (_size == _capacity)
-        {
-            Grow(_size + 1);
-        }
-
-        _buffer[_tail] = item;
-        MoveNext(ref _tail);
-        _size++;
-    }
-    
-    private void MoveNext(ref int index)
-    {
-        // It is tempting to use the remainder operator here but it is actually much slower
-        // than a simple comparison and a rarely taken branch.
-        // JIT produces better code than with ternary operator ?:
-        int tmp = index + 1;
-        if (tmp == _capacity)
-        {
-            tmp = 0;
-        }
-        index = tmp;
-    }
-    
-    /// <summary>
-    /// Removes the object at the head of the queue and returns it.
-    /// </summary>
-    /// <returns>A reference to the item that was dequeued, don't use this reference after a <see cref="Queue{T}"/> operation as it may induce a resize of the
-    /// internal buffer.
-    /// </returns>
-    /// <remarks>
-    /// If the queue is empty, this method throws an InvalidOperationException.
-    /// </remarks>
-    public ref T Dequeue()
-    {
-        int head = _head;
-
-        if (_size == 0)
-        {
-            ThrowForEmptyQueue();
-        }
-
-        MoveNext(ref _head);
-        _size--;
-        return ref _buffer[head];
-    }
-
-    public bool TryDequeue(out T result)
-    {
-        int head = _head;
-        if (_size == 0)
-        {
-            result = default;
-            return false;
-        }
-
-        result = _buffer[head];
-        MoveNext(ref _head);
-        _size--;
-        return true;
-    }
-
-    public ref T Peek()
-    {
-        if (_size == 0)
-        {
-            ThrowForEmptyQueue();
-        }
-
-        return ref _buffer[_head];
-    }
-
-    // ReSharper disable once RedundantAssignment
-    public bool TryPeek(ref T result)
-    {
-        if (_size == 0)
-        {
-            result = default;
-            return false;
-        }
-
-        result = _buffer[_head];
-        return true;
-    }
+    #region Private methods
 
     private void Grow(int capacity)
     {
@@ -247,32 +293,17 @@ public unsafe struct UnmanagedQueue<T> : IDisposable where T : unmanaged
         //_buffer = _memoryBlock.MemorySegment.Address;
     }
 
-    // Iterates over the objects in the queue, returning an array of the
-    // objects in the Queue, or an empty array if the queue is empty.
-    // The order of elements in the array is first in to last in, the same
-    // order produced by successive calls to Dequeue.
-    public T[] ToArray()
+    private void MoveNext(ref int index)
     {
-        if (_size == 0)
+        // It is tempting to use the remainder operator here but it is actually much slower
+        // than a simple comparison and a rarely taken branch.
+        // JIT produces better code than with ternary operator ?:
+        int tmp = index + 1;
+        if (tmp == _capacity)
         {
-            return Array.Empty<T>();
+            tmp = 0;
         }
-
-        T[] arr = new T[_size];
-
-        var src = new Span<T>(_buffer, _capacity);
-        var dst = arr.AsSpan();
-        
-        if (_head < _tail)
-        {
-            src.Slice(_head, _size).CopyTo(dst);
-        }
-        else
-        {
-            src.Slice(_head, _capacity - _head).CopyTo(dst);
-            src.Slice(0, _tail).CopyTo(dst.Slice(_capacity - _head));
-        }
-        return arr;
+        index = tmp;
     }
 
     private void ThrowForEmptyQueue()
@@ -281,14 +312,15 @@ public unsafe struct UnmanagedQueue<T> : IDisposable where T : unmanaged
         ThrowHelper.EmptyQueue();
     }
 
+    #endregion
+
+    #region Inner types
+
     internal sealed class DebugView
     {
-        private UnmanagedQueue<T> _queue;
+        #region Public APIs
 
-        public DebugView(UnmanagedQueue<T> queue)
-        {
-            _queue = queue;
-        }
+        #region Properties
 
         [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
         public T[] Items
@@ -302,17 +334,35 @@ public unsafe struct UnmanagedQueue<T> : IDisposable where T : unmanaged
                 return dst;
             }
         }
+
+        #endregion
+
+        #endregion
+
+        #region Fields
+
+        private UnmanagedQueue<T> _queue;
+
+        #endregion
+
+        #region Constructors
+
+        public DebugView(UnmanagedQueue<T> queue)
+        {
+            _queue = queue;
+        }
+
+        #endregion
     }
 
-    public void Dispose()
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Header
     {
-        if (IsDefault)
-        {
-            return;
-        }
-        _memoryBlock.Dispose();
-        //_memoryManager.Free(_memoryBlock);
-        //_size = -1;
-        _memoryBlock = default;
+        public int _size;
+        public int _head;
+        public int _tail;
+        public int _capacity;
     }
+
+    #endregion
 }

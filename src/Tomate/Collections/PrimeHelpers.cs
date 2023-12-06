@@ -5,12 +5,10 @@ namespace Tomate;
 // Ripped from .net source code...
 internal static class PrimeHelpers
 {
-    public const uint HashCollisionThreshold = 100;
-
     // This is the maximum prime smaller than Array.MaxLength.
-    public const int MaxPrimeArrayLength = 0x7FFFFFC3;
+    private const int MaxPrimeArrayLength = 0x7FFFFFC3;
 
-    public const int HashPrime = 101;
+    private const int HashPrime = 101;
 
     // Table of prime numbers to use as hash table sizes.
     // A typical resize algorithm would pick the smallest prime number in this array
@@ -25,7 +23,7 @@ internal static class PrimeHelpers
     // h1(key) + i*h2(key), 0 <= i < size.  h2 and the size must be relatively prime.
     // We prefer the low computation costs of higher prime numbers over the increased
     // memory allocation of a fixed prime number i.e. when right sizing a HashSet.
-    private static readonly int[] s_primes =
+    private static readonly int[] SPrimes =
     {
         3, 7, 11, 17, 23, 29, 37, 47, 59, 71, 89, 107, 131, 163, 197, 239, 293, 353, 431, 521, 631, 761, 919,
         1103, 1327, 1597, 1931, 2333, 2801, 3371, 4049, 4861, 5839, 7013, 8419, 10103, 12143, 14591,
@@ -34,7 +32,7 @@ internal static class PrimeHelpers
         1674319, 2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471, 7199369
     };
 
-    public static bool IsPrime(int candidate)
+    private static bool IsPrime(int candidate)
     {
         if ((candidate & 1) != 0)
         {
@@ -56,7 +54,7 @@ internal static class PrimeHelpers
             //throw new ArgumentException(SR.Arg_HTCapacityOverflow);
         }
 
-        foreach (int prime in s_primes)
+        foreach (int prime in SPrimes)
         {
             if (prime >= min)
                 return prime;

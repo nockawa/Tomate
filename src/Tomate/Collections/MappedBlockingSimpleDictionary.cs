@@ -17,59 +17,52 @@ namespace Tomate;
 [PublicAPI]
 public unsafe struct MappedBlockingSimpleDictionary<TKey, TValue> where TKey : unmanaged where TValue : unmanaged
 {
-    private readonly Header* _header;
-    private KeyValuePair* _items;
-    private readonly EqualityComparer<TKey> _comparer;
+    #region Constants
 
     // ReSharper disable once RedundantDefaultMemberInitializer
     private static readonly TKey DefaultKey = default;
+
+    #endregion
+
+    #region Public APIs
+
+    #region Properties
 
     /// <summary>
     /// Number of KVP items the dictionary can hold
     /// </summary>
     public int Capacity => _header->Capacity;
-    
+
     /// <summary>
     /// Actual count of items stored
     /// </summary>
     public int Count => _header->Count;
 
     /// <summary>
-    /// Store an item
+    /// Get or add/update the value associated with the given key
     /// </summary>
-    public struct KeyValuePair
+    /// <param name="key">The key</param>
+    /// <returns>The value associated with the key or default(TValue) if the key doesn't exist in the dictionary</returns>
+    /// <remarks>
+    /// The getter does a <see cref="TryGet"/>. The setter does a <see cref="AddOrUpdate"/>.
+    /// </remarks>
+    public TValue this[TKey key]
     {
-        public KeyValuePair(TKey k, TValue v)
+        get
         {
-            Key = k;
-            Value = v;
+            if (TryGet(key, out var val))
+            {
+                return val;
+            }
+
+            return default;
         }
-
-        /// <summary>
-        /// Key, can't be default(TKey).
-        /// </summary>
-        public TKey Key;
-
-        /// <summary>
-        /// Value associated to the key
-        /// </summary>
-        public TValue Value;
+        set => AddOrUpdate(key, value);
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Header
-    {
-        public AccessControl AccessControl;
-        public int Capacity;
-        public int Count;
-    }
+    #endregion
 
-    /// <summary>
-    /// Compute the memory size taken to store a given amount of items
-    /// </summary>
-    /// <param name="itemCount">Item count to compute the storage size from</param>
-    /// <returns>The required size, a <see cref="MemorySegment"/> of this size would store the request amount of items</returns>
-    public static int ComputeStorageSize(int itemCount) => sizeof(KeyValuePair) * itemCount + sizeof(Header);
+    #region Methods
 
     /// <summary>
     /// Compute the item capacity from a given storage size
@@ -78,186 +71,15 @@ public unsafe struct MappedBlockingSimpleDictionary<TKey, TValue> where TKey : u
     /// <returns>The item capacity</returns>
     public static int ComputeItemCapacity(int storageSize) => (storageSize - sizeof(Header)) / sizeof(KeyValuePair);
 
+    /// <summary>
+    /// Compute the memory size taken to store a given amount of items
+    /// </summary>
+    /// <param name="itemCount">Item count to compute the storage size from</param>
+    /// <returns>The required size, a <see cref="MemorySegment"/> of this size would store the request amount of items</returns>
+    public static int ComputeStorageSize(int itemCount) => sizeof(KeyValuePair) * itemCount + sizeof(Header);
+
     public static MappedBlockingSimpleDictionary<TKey, TValue> Create(MemorySegment segment) => new(segment, true);
     public static MappedBlockingSimpleDictionary<TKey, TValue> Map(MemorySegment segment) => new(segment, false);
-
-    /// <summary>
-    /// Construct the dictionary over the given memory segment
-    /// </summary>
-    /// <param name="segment">The memory area used to store the dictionary</param>
-    /// <param name="create"><c>true</c> to create a new instance, <c>false</c> to map the struct to an existing instance</param>
-    /// <remarks>
-    /// <para>
-    /// The memory segment can be a shared memory (through the use of a <see cref="MemoryManagerOverMMF"/> instance) area for the dictionary to be shared among
-    /// multiple processes.
-    /// </para>
-    /// <para>
-    /// You can call <see cref="ComputeStorageSize"/> to compute the size required for a given item capacity, or conversely call <see cref="ComputeItemCapacity"/>
-    /// from a given memory size to know how many items would fit.
-    /// </para>
-    /// </remarks>
-    private MappedBlockingSimpleDictionary(MemorySegment segment, bool create)
-    {
-        _header = segment.Cast<Header>().Address;
-        _items = (KeyValuePair*)(_header + 1);
-        _comparer = EqualityComparer<TKey>.Default;
-        if (create)
-        {
-            var remainingSize = segment.Length - sizeof(Header);
-            _header->Capacity = remainingSize / sizeof(KeyValuePair);
-            _header->Count = 0;
-            _header->AccessControl.Reset();
-            Clear();
-        }
-    }
-
-    /// <summary>
-    /// Try to get the value from a given key
-    /// </summary>
-    /// <param name="key">The key to use</param>
-    /// <param name="value">The value corresponding</param>
-    /// <returns><c>true</c> if the dictionary stores the requested key, <c>false</c> otherwise.</returns>
-    /// <remarks>
-    /// This operation relies on a shared access.
-    /// </remarks>
-    public bool TryGet(TKey key, out TValue value)
-    {
-        try
-        {
-            _header->AccessControl.EnterSharedAccess();
-
-            var capacity = _header->Capacity;
-            var count = _header->Count;
-            var curCount = 0;
-            var items = _items;
-            for (int i = 0; i < capacity && curCount < count; i++, ++items)
-            {
-                if (_comparer.Equals(items->Key, DefaultKey))
-                {
-                    continue;
-                }
-
-                ++curCount;
-                if (_comparer.Equals(items->Key, key))
-                {
-                    value = items->Value;
-                    return true;
-                }
-            }
-
-            value = default;
-            return false;
-        }
-        finally
-        {
-            _header->AccessControl.ExitSharedAccess();
-        }
-    }
-
-    /// <summary>
-    /// Check if there's a key of the given value stored in the dictionary
-    /// </summary>
-    /// <param name="key">The key</param>
-    /// <returns><c>true</c> if the dictionary stores the requested key, <c>false</c> otherwise.</returns>
-    /// <remarks>
-    /// This operation relies on a shared access.
-    /// </remarks>
-    public bool Contains(TKey key)
-    {
-        try
-        {
-            _header->AccessControl.EnterSharedAccess();
-
-            var capacity = _header->Capacity;
-            var count = _header->Count;
-            var curCount = 0;
-            var items = _items;
-            for (int i = 0; i < capacity && curCount < count; i++, ++items)
-            {
-                if (_comparer.Equals(items->Key, DefaultKey))
-                {
-                    continue;
-                }
-
-                ++curCount;
-                if (_comparer.Equals(items->Key, key))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-        finally
-        {
-            _header->AccessControl.ExitSharedAccess();
-        }
-    }
-
-    /// <summary>
-    /// Try to add a key/value to the dictionary
-    /// </summary>
-    /// <param name="key">The key, can't be default(TKey).</param>
-    /// <param name="value">The value.</param>
-    /// <returns><c>true</c> if the dictionary added the requested key/value, <c>false</c> if there were already a key with this value.</returns>
-    /// <remarks>
-    /// This operation relies on an exclusive access.
-    /// </remarks>
-    public bool TryAdd(TKey key, TValue value)
-    {
-        try
-        {
-            if (_comparer.Equals(key, DefaultKey))
-            {
-                ThrowHelper.BlockSimpleDicDefKeyNotAllowed();
-            }
-
-            _header->AccessControl.EnterExclusiveAccess();
-
-            // Check for capacity limit reached
-            var capacity = _header->Capacity;
-            var count = _header->Count;
-            if (count == capacity)
-            {
-                return false;
-            }
-
-            // First check if there's an entry with a key of the same value and return false if it's the case
-            var curCount = 0;
-            var items = _items;
-            for (int i = 0; i < capacity && curCount < count; i++, ++items)
-            {
-                if (_comparer.Equals(items->Key, DefaultKey))
-                {
-                    continue;
-                }
-
-                ++curCount;
-                if (_comparer.Equals(items->Key, key))
-                {
-                    return false;
-                }
-            }
-
-            // Now look for an empty entry and store the KVP
-            items = _items;
-            for (int i = 0; i < capacity; i++, ++items)
-            {
-                if (_comparer.Equals(items->Key, DefaultKey))
-                {
-                    items->Key = key;
-                    items->Value = value;
-                    ++_header->Count;
-                    return true;
-                }
-            }
-            Debug.Assert(false, "We should never get here!");
-            return false;
-        }
-        finally
-        {
-            _header->AccessControl.ExitExclusiveAccess();
-        }
-    }
 
     /// <summary>
     /// Add the given key/value pair or update the value of the given key if it's already present in the dictionary
@@ -324,113 +146,28 @@ public unsafe struct MappedBlockingSimpleDictionary<TKey, TValue> where TKey : u
     }
 
     /// <summary>
-    /// Change the value associated with a given key
+    /// Clear the whole dictionary
     /// </summary>
-    /// <param name="key">The key.</param>
-    /// <param name="newValue">The new value to set</param>
-    /// <returns><c>true</c> if the value has been set, <c>false</c> if there were no key of the given value.</returns>
-    /// <remarks>
-    /// This operation relies on an exclusive access.
-    /// </remarks>
-    public bool TryUpdateValue(TKey key, TValue newValue)
+    public void Clear()
     {
-        try
-        {
-            if (_comparer.Equals(key, DefaultKey))
-            {
-                ThrowHelper.BlockSimpleDicDefKeyNotAllowed();
-            }
-
-            _header->AccessControl.EnterExclusiveAccess();
-
-            // First check if there's an entry with a key of the same value and return false if it's the case
-            var capacity = _header->Capacity;
-            var count = _header->Count;
-            var curCount = 0;
-            var items = _items;
-            for (int i = 0; i < capacity && curCount < count; i++, ++items)
-            {
-                if (_comparer.Equals(items->Key, DefaultKey))
-                {
-                    continue;
-                }
-
-                ++curCount;
-                if (_comparer.Equals(items->Key, key))
-                {
-                    items->Value = newValue;
-                    return true;
-                }
-            }
-            return false;
-        }
-        finally
-        {
-            _header->AccessControl.ExitExclusiveAccess();
-        }
+        _header->Count = 0;
+        new Span<KeyValuePair>(_items, Capacity).Clear();
     }
 
     /// <summary>
-    /// Remove a key/value from the dictionary
+    /// Check if there's a key of the given value stored in the dictionary
     /// </summary>
-    /// <param name="key">The key.</param>
-    /// <param name="value">The value, is <c>default</c> if the call is unsuccessful.</param>
-    /// <returns><c>true</c> if the key/value were removed, <c>false</c> if there were no key of the given value.</returns>
-    /// <remarks>
-    /// This operation relies on an exclusive access.
-    /// </remarks>
-    public bool TryRemove(TKey key, out TValue value)
-    {
-        try
-        {
-            _header->AccessControl.EnterExclusiveAccess();
-
-            // Look for the key
-            var capacity = _header->Capacity;
-            var count = _header->Count;
-            var curCount = 0;
-            var items = _items;
-            for (int i = 0; i < capacity && curCount < count; i++, ++items)
-            {
-                if (_comparer.Equals(items->Key, DefaultKey))
-                {
-                    continue;
-                }
-
-                ++curCount;
-                if (_comparer.Equals(items->Key, key))
-                {
-                    items->Key = default;
-                    value = items->Value;
-                    --_header->Count;
-                    return true;
-                }
-            }
-
-            value = default;
-            return false;
-        }
-        finally
-        {
-            _header->AccessControl.ExitExclusiveAccess();
-        }
-    }
-
-    /// <summary>
-    /// Project all the items of the dictionary to a KeyValuePair array
-    /// </summary>
-    /// <returns>The array containing the items</returns>
+    /// <param name="key">The key</param>
+    /// <returns><c>true</c> if the dictionary stores the requested key, <c>false</c> otherwise.</returns>
     /// <remarks>
     /// This operation relies on a shared access.
-    /// You would typically use this method over content enumeration if you want to hold the shared lock the shortest time possible.
     /// </remarks>
-    public KeyValuePair[] ToArray()
+    public bool Contains(TKey key)
     {
         try
         {
-            _header->AccessControl.EnterExclusiveAccess();
+            _header->AccessControl.EnterSharedAccess();
 
-            var res = new KeyValuePair[Count];
             var capacity = _header->Capacity;
             var count = _header->Count;
             var curCount = 0;
@@ -442,17 +179,28 @@ public unsafe struct MappedBlockingSimpleDictionary<TKey, TValue> where TKey : u
                     continue;
                 }
 
-                res[curCount++] = new KeyValuePair(items->Key, items->Value);
+                ++curCount;
+                if (_comparer.Equals(items->Key, key))
+                {
+                    return true;
+                }
             }
-
-            return res;
+            return false;
         }
         finally
         {
-            _header->AccessControl.ExitExclusiveAccess();
+            _header->AccessControl.ExitSharedAccess();
         }
     }
-    
+
+    /// <summary>Gets an enumerator for this dictionary</summary>
+    /// <remarks>
+    /// A shared lock will be created before enumeration and released at the end. 
+    /// The enumeration is not meant to change the content of the dictionary.
+    /// Don't call any operation on the dictionary that leads to a shared/exclusive access, it would lead to a dead-lock as locks are not re-entrant on this type.
+    /// </remarks>
+    public Enumerator GetEnumerator() => new(this);
+
     /// <summary>
     /// Get a value associated with the given key or add a new key/value pair.
     /// </summary>
@@ -527,62 +275,313 @@ public unsafe struct MappedBlockingSimpleDictionary<TKey, TValue> where TKey : u
     }
 
     /// <summary>
-    /// Get or add/update the value associated with the given key
+    /// Project all the items of the dictionary to a KeyValuePair array
     /// </summary>
-    /// <param name="key">The key</param>
-    /// <returns>The value associated with the key or default(TValue) if the key doesn't exist in the dictionary</returns>
+    /// <returns>The array containing the items</returns>
     /// <remarks>
-    /// The getter does a <see cref="TryGet"/>. The setter does a <see cref="AddOrUpdate"/>.
+    /// This operation relies on a shared access.
+    /// You would typically use this method over content enumeration if you want to hold the shared lock the shortest time possible.
     /// </remarks>
-    public TValue this[TKey key]
+    public KeyValuePair[] ToArray()
     {
-        get
+        try
         {
-            if (TryGet(key, out var val))
+            _header->AccessControl.EnterExclusiveAccess();
+
+            var res = new KeyValuePair[Count];
+            var capacity = _header->Capacity;
+            var count = _header->Count;
+            var curCount = 0;
+            var items = _items;
+            for (int i = 0; i < capacity && curCount < count; i++, ++items)
             {
-                return val;
+                if (_comparer.Equals(items->Key, DefaultKey))
+                {
+                    continue;
+                }
+
+                res[curCount++] = new KeyValuePair(items->Key, items->Value);
             }
 
-            return default;
+            return res;
         }
-        set => AddOrUpdate(key, value);
+        finally
+        {
+            _header->AccessControl.ExitExclusiveAccess();
+        }
     }
 
     /// <summary>
-    /// Clear the whole dictionary
+    /// Try to add a key/value to the dictionary
     /// </summary>
-    public void Clear()
+    /// <param name="key">The key, can't be default(TKey).</param>
+    /// <param name="value">The value.</param>
+    /// <returns><c>true</c> if the dictionary added the requested key/value, <c>false</c> if there were already a key with this value.</returns>
+    /// <remarks>
+    /// This operation relies on an exclusive access.
+    /// </remarks>
+    public bool TryAdd(TKey key, TValue value)
     {
-        _header->Count = 0;
-        new Span<KeyValuePair>(_items, Capacity).Clear();
+        try
+        {
+            if (_comparer.Equals(key, DefaultKey))
+            {
+                ThrowHelper.BlockSimpleDicDefKeyNotAllowed();
+            }
+
+            _header->AccessControl.EnterExclusiveAccess();
+
+            // Check for capacity limit reached
+            var capacity = _header->Capacity;
+            var count = _header->Count;
+            if (count == capacity)
+            {
+                return false;
+            }
+
+            // First check if there's an entry with a key of the same value and return false if it's the case
+            var curCount = 0;
+            var items = _items;
+            for (int i = 0; i < capacity && curCount < count; i++, ++items)
+            {
+                if (_comparer.Equals(items->Key, DefaultKey))
+                {
+                    continue;
+                }
+
+                ++curCount;
+                if (_comparer.Equals(items->Key, key))
+                {
+                    return false;
+                }
+            }
+
+            // Now look for an empty entry and store the KVP
+            items = _items;
+            for (int i = 0; i < capacity; i++, ++items)
+            {
+                if (_comparer.Equals(items->Key, DefaultKey))
+                {
+                    items->Key = key;
+                    items->Value = value;
+                    ++_header->Count;
+                    return true;
+                }
+            }
+            Debug.Assert(false, "We should never get here!");
+            return false;
+        }
+        finally
+        {
+            _header->AccessControl.ExitExclusiveAccess();
+        }
     }
 
-    /// <summary>Gets an enumerator for this dictionary</summary>
+    /// <summary>
+    /// Try to get the value from a given key
+    /// </summary>
+    /// <param name="key">The key to use</param>
+    /// <param name="value">The value corresponding</param>
+    /// <returns><c>true</c> if the dictionary stores the requested key, <c>false</c> otherwise.</returns>
     /// <remarks>
-    /// A shared lock will be created before enumeration and released at the end. 
-    /// The enumeration is not meant to change the content of the dictionary.
-    /// Don't call any operation on the dictionary that leads to a shared/exclusive access, it would lead to a dead-lock as locks are not re-entrant on this type.
+    /// This operation relies on a shared access.
     /// </remarks>
-    public Enumerator GetEnumerator() => new(this);
+    public bool TryGet(TKey key, out TValue value)
+    {
+        try
+        {
+            _header->AccessControl.EnterSharedAccess();
+
+            var capacity = _header->Capacity;
+            var count = _header->Count;
+            var curCount = 0;
+            var items = _items;
+            for (int i = 0; i < capacity && curCount < count; i++, ++items)
+            {
+                if (_comparer.Equals(items->Key, DefaultKey))
+                {
+                    continue;
+                }
+
+                ++curCount;
+                if (_comparer.Equals(items->Key, key))
+                {
+                    value = items->Value;
+                    return true;
+                }
+            }
+
+            value = default;
+            return false;
+        }
+        finally
+        {
+            _header->AccessControl.ExitSharedAccess();
+        }
+    }
+
+    /// <summary>
+    /// Remove a key/value from the dictionary
+    /// </summary>
+    /// <param name="key">The key.</param>
+    /// <param name="value">The value, is <c>default</c> if the call is unsuccessful.</param>
+    /// <returns><c>true</c> if the key/value were removed, <c>false</c> if there were no key of the given value.</returns>
+    /// <remarks>
+    /// This operation relies on an exclusive access.
+    /// </remarks>
+    public bool TryRemove(TKey key, out TValue value)
+    {
+        try
+        {
+            _header->AccessControl.EnterExclusiveAccess();
+
+            // Look for the key
+            var capacity = _header->Capacity;
+            var count = _header->Count;
+            var curCount = 0;
+            var items = _items;
+            for (int i = 0; i < capacity && curCount < count; i++, ++items)
+            {
+                if (_comparer.Equals(items->Key, DefaultKey))
+                {
+                    continue;
+                }
+
+                ++curCount;
+                if (_comparer.Equals(items->Key, key))
+                {
+                    items->Key = default;
+                    value = items->Value;
+                    --_header->Count;
+                    return true;
+                }
+            }
+
+            value = default;
+            return false;
+        }
+        finally
+        {
+            _header->AccessControl.ExitExclusiveAccess();
+        }
+    }
+
+    /// <summary>
+    /// Change the value associated with a given key
+    /// </summary>
+    /// <param name="key">The key.</param>
+    /// <param name="newValue">The new value to set</param>
+    /// <returns><c>true</c> if the value has been set, <c>false</c> if there were no key of the given value.</returns>
+    /// <remarks>
+    /// This operation relies on an exclusive access.
+    /// </remarks>
+    public bool TryUpdateValue(TKey key, TValue newValue)
+    {
+        try
+        {
+            if (_comparer.Equals(key, DefaultKey))
+            {
+                ThrowHelper.BlockSimpleDicDefKeyNotAllowed();
+            }
+
+            _header->AccessControl.EnterExclusiveAccess();
+
+            // First check if there's an entry with a key of the same value and return false if it's the case
+            var capacity = _header->Capacity;
+            var count = _header->Count;
+            var curCount = 0;
+            var items = _items;
+            for (int i = 0; i < capacity && curCount < count; i++, ++items)
+            {
+                if (_comparer.Equals(items->Key, DefaultKey))
+                {
+                    continue;
+                }
+
+                ++curCount;
+                if (_comparer.Equals(items->Key, key))
+                {
+                    items->Value = newValue;
+                    return true;
+                }
+            }
+            return false;
+        }
+        finally
+        {
+            _header->AccessControl.ExitExclusiveAccess();
+        }
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private readonly EqualityComparer<TKey> _comparer;
+    private readonly Header* _header;
+    private KeyValuePair* _items;
+
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Construct the dictionary over the given memory segment
+    /// </summary>
+    /// <param name="segment">The memory area used to store the dictionary</param>
+    /// <param name="create"><c>true</c> to create a new instance, <c>false</c> to map the struct to an existing instance</param>
+    /// <remarks>
+    /// <para>
+    /// The memory segment can be a shared memory (through the use of a <see cref="MemoryManagerOverMMF"/> instance) area for the dictionary to be shared among
+    /// multiple processes.
+    /// </para>
+    /// <para>
+    /// You can call <see cref="ComputeStorageSize"/> to compute the size required for a given item capacity, or conversely call <see cref="ComputeItemCapacity"/>
+    /// from a given memory size to know how many items would fit.
+    /// </para>
+    /// </remarks>
+    private MappedBlockingSimpleDictionary(MemorySegment segment, bool create)
+    {
+        _header = segment.Cast<Header>().Address;
+        _items = (KeyValuePair*)(_header + 1);
+        _comparer = EqualityComparer<TKey>.Default;
+        if (create)
+        {
+            var remainingSize = segment.Length - sizeof(Header);
+            _header->Capacity = remainingSize / sizeof(KeyValuePair);
+            _header->Count = 0;
+            _header->AccessControl.Reset();
+            Clear();
+        }
+    }
+
+    #endregion
+
+    #region Inner types
 
     /// <summary>Enumerates the elements of the dictionary.</summary>
     public struct Enumerator : IDisposable
     {
-        /// <summary>The segment being enumerated.</summary>
-        private readonly MappedBlockingSimpleDictionary<TKey, TValue> _dic;
+        #region Public APIs
 
-        private int _curCount;
-        private readonly int _count;
-        private KeyValuePair* _curItem;
+        #region Properties
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Enumerator(MappedBlockingSimpleDictionary<TKey, TValue> dic)
+        /// <summary>Gets the element at the current position of the enumerator.</summary>
+        public KeyValuePair Current
         {
-            _dic = dic;
-            _curCount = 0;
-            _count = dic.Count;
-            _curItem = dic._items - 1;
-            _dic._header->AccessControl.EnterSharedAccess();
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => *_curItem;
+        }
+
+        #endregion
+
+        #region Methods
+
+        public void Dispose()
+        {
+            _dic._header->AccessControl.ExitSharedAccess();
         }
 
         /// <summary>Advances the enumerator to the next element of the segment.</summary>
@@ -603,16 +602,74 @@ public unsafe struct MappedBlockingSimpleDictionary<TKey, TValue> where TKey : u
             return true;
         }
 
-        /// <summary>Gets the element at the current position of the enumerator.</summary>
-        public KeyValuePair Current
+        #endregion
+
+        #endregion
+
+        #region Fields
+
+        private readonly int _count;
+
+        /// <summary>The segment being enumerated.</summary>
+        private readonly MappedBlockingSimpleDictionary<TKey, TValue> _dic;
+
+        private int _curCount;
+        private KeyValuePair* _curItem;
+
+        #endregion
+
+        #region Constructors
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal Enumerator(MappedBlockingSimpleDictionary<TKey, TValue> dic)
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => *_curItem;
+            _dic = dic;
+            _curCount = 0;
+            _count = dic.Count;
+            _curItem = dic._items - 1;
+            _dic._header->AccessControl.EnterSharedAccess();
         }
 
-        public void Dispose()
-        {
-            _dic._header->AccessControl.ExitSharedAccess();
-        }
+        #endregion
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Header
+    {
+        public AccessControl AccessControl;
+        public int Capacity;
+        public int Count;
+    }
+
+    /// <summary>
+    /// Store an item
+    /// </summary>
+    public struct KeyValuePair
+    {
+        #region Fields
+
+        /// <summary>
+        /// Key, can't be default(TKey).
+        /// </summary>
+        public TKey Key;
+
+        /// <summary>
+        /// Value associated to the key
+        /// </summary>
+        public TValue Value;
+
+        #endregion
+
+        #region Constructors
+
+        public KeyValuePair(TKey k, TValue v)
+        {
+            Key = k;
+            Value = v;
+        }
+
+        #endregion
+    }
+
+    #endregion
 }

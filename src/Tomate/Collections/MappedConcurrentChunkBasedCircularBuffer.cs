@@ -8,49 +8,21 @@ namespace Tomate;
 [PublicAPI]
 public unsafe struct MappedConcurrentChunkBasedCircularBuffer
 {
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Header
-    {
-        public long WriteOffset;
-        private readonly int _padding0;
-        public int WriteCounter;
+    #region Public APIs
 
-        public long ReadOffset;
-        private readonly int _padding1;
-        public int ReadCounter;
-    }
-
-    private readonly Header* _header;
-    private readonly byte* _dataStart;
-    private readonly byte* _dataEnd;
-    private readonly int _bufferSize;
-    private int _sizeToNext;
-
-    public static MappedConcurrentChunkBasedCircularBuffer Create(MemorySegment memorySegment) => new(memorySegment, true);
-    public static MappedConcurrentChunkBasedCircularBuffer Map(MemorySegment memorySegment) => new(memorySegment, false);
-
-    private MappedConcurrentChunkBasedCircularBuffer(MemorySegment segment, bool create)
-    {
-        _header = segment.Cast<Header>().Address;
-        _dataStart = (byte*)(_header + 1);
-        _dataEnd = segment.End;
-        _bufferSize = (int)(_dataEnd - _dataStart);
-        _sizeToNext = 0;
-        TotalWaitedCount = 0;
-
-        if (create)
-        {
-            _header->ReadOffset = 0;
-            _header->WriteOffset = 0;
-            _header->ReadCounter = 0;
-            _header->WriteCounter = 0;
-        }
-    }
+    #region Properties
 
     public double Occupancy => (_header->WriteOffset - _header->ReadOffset) / (double)_bufferSize;
 
     /// For analysis purpose, gives the total number of times this instance SpinWait due to being full.
     public int TotalWaitedCount { get; private set; }
+
+    #endregion
+
+    #region Methods
+
+    public static MappedConcurrentChunkBasedCircularBuffer Create(MemorySegment memorySegment) => new(memorySegment, true);
+    public static MappedConcurrentChunkBasedCircularBuffer Map(MemorySegment memorySegment) => new(memorySegment, false);
 
     public MemorySegment<T> ConcurrentReserve<T>(short chunkid, bool waitIfFull) where T : unmanaged =>
         ConcurrentReserve(chunkid, (short)sizeof(T), waitIfFull).Cast<T>();
@@ -132,6 +104,14 @@ public unsafe struct MappedConcurrentChunkBasedCircularBuffer
 
     public void ConcurrentReserveNext() => Interlocked.Increment(ref Unsafe.AsRef<int>(&_header->WriteCounter));
 
+    public void SingleThreadedNext()
+    {
+        Debug.Assert(_sizeToNext > 0, "You must call SingleThreadedNext after a successful SingleThreadedPeek");
+        _header->ReadOffset += _sizeToNext;
+        ++_header->ReadCounter;
+        _sizeToNext = 0;
+    }
+
     public MemorySegment SingleThreadedPeek(out short chunkId)
     {
         var bufferSize = _bufferSize;
@@ -175,12 +155,56 @@ public unsafe struct MappedConcurrentChunkBasedCircularBuffer
         return new MemorySegment(addr, segmentSize);
     }
 
-    public void SingleThreadedNext()
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private readonly int _bufferSize;
+    private readonly byte* _dataEnd;
+    private readonly byte* _dataStart;
+
+    private readonly Header* _header;
+    private int _sizeToNext;
+
+    #endregion
+
+    #region Constructors
+
+    private MappedConcurrentChunkBasedCircularBuffer(MemorySegment segment, bool create)
     {
-        Debug.Assert(_sizeToNext > 0, "You must call SingleThreadedNext after a successful SingleThreadedPeek");
-        _header->ReadOffset += _sizeToNext;
-        ++_header->ReadCounter;
+        _header = segment.Cast<Header>().Address;
+        _dataStart = (byte*)(_header + 1);
+        _dataEnd = segment.End;
+        _bufferSize = (int)(_dataEnd - _dataStart);
         _sizeToNext = 0;
+        TotalWaitedCount = 0;
+
+        if (create)
+        {
+            _header->ReadOffset = 0;
+            _header->WriteOffset = 0;
+            _header->ReadCounter = 0;
+            _header->WriteCounter = 0;
+        }
     }
 
+    #endregion
+
+    #region Inner types
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Header
+    {
+        public long WriteOffset;
+        private readonly int _padding0;
+        public int WriteCounter;
+
+        public long ReadOffset;
+        private readonly int _padding1;
+        public int ReadCounter;
+    }
+
+    #endregion
 }

@@ -29,7 +29,7 @@ public class MappedBlockingDictionaryTests
             Assert.That(dic.Count, Is.EqualTo(1000));
 
             var enumCount = 0;
-            foreach (ref var kvp in dic)
+            foreach (var kvp in dic)
             {
                 ++enumCount;
                 var isOdd = (kvp.Key & 1) != 0;
@@ -56,7 +56,7 @@ public class MappedBlockingDictionaryTests
 
             var h = new HashSet<int>();
             enumCount = 0;
-            foreach (ref var kvp in dic)
+            foreach (var kvp in dic)
             {
                 ++enumCount;
                 Assert.That(h.Add(kvp.Key), Is.True, $"Key {kvp.Key}, Value {kvp.Value}");

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
@@ -11,28 +12,23 @@ namespace Tomate;
 /// This type allows to enqueue and dequeue chunks of data. Each chunk has a type (from 1 to 16383) and a size (up to 32767).
 /// Multiple threads can enqueue/dequeue concurrently, everything is thread safe.
 /// </remarks>
+[PublicAPI]
 public unsafe struct MappedConcurrentChunkQueue
 {
+    #region Public APIs
+
+    #region Properties
+
+    public double Occupancy => (_header->WriteOffset - _header->ReadOffset) / (double)_bufferSize;
+
     /// <summary>
     /// For debug/info purpose only, number of time we iterate the wait loop
     /// </summary>
     public int TotalWaitedCount { get; private set; }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Header
-    {
-        public long WriteOffset;
-        private readonly long _padding0;
+    #endregion
 
-        public long ReadOffset;
-        private readonly long _padding1;
-    }
-
-    private readonly Header* _header;
-    private readonly byte* _dataStart;
-    private readonly int _bufferSize;
-
-    public double Occupancy => (_header->WriteOffset - _header->ReadOffset) / (double)_bufferSize;
+    #region Methods
 
     /// <summary>
     /// Create a new Queue using the given memory segment to store its data
@@ -48,119 +44,6 @@ public unsafe struct MappedConcurrentChunkQueue
     /// <returns>The instance</returns>
     public static MappedConcurrentChunkQueue Map(MemorySegment memorySegment) => new(memorySegment, false);
 
-    private MappedConcurrentChunkQueue(MemorySegment segment, bool create)
-    {
-        _header = segment.Cast<Header>().Address;
-        _dataStart = (byte*)(_header + 1);
-        var dataEnd = segment.End - 4;        // - 4 is the size of the chunk header, we need to be able to overflow at least a header size. Well header size -1 in fact
-        _bufferSize = (int)(dataEnd - _dataStart);
-
-        if (create)
-        {
-            segment.ToSpan<byte>().Clear();
-            _header->ReadOffset = 0;
-            _header->WriteOffset = 0;
-        }
-
-        TotalWaitedCount = 0;
-    }
-
-    /// <summary>
-    /// Enqueue handle used to set the queued chunk's data
-    /// </summary>
-    /// <typeparam name="T">The type of data to store</typeparam>
-    /// <remarks>
-    /// DON'T FORGET TO CALL <see cref="Dispose"/> when you've stored the data, otherwise the queue will likely fails at some point to enqueue more items
-    /// </remarks>
-    public readonly struct EnqueueHandle<T> : IDisposable where T : unmanaged
-    {
-        private readonly MemorySegment<T> _memorySegment;
-
-        internal EnqueueHandle(MemorySegment<T> memorySegment)
-        {
-            _memorySegment = memorySegment;
-        }
-
-        /// <summary>
-        /// Dispose the handle, make the item ready for dequeue
-        /// </summary>
-        public void Dispose()
-        {
-            if (_memorySegment.IsDefault == false)
-            {
-                var header = (ushort*)_memorySegment.Address - 2;
-                header[0] |= 0x4000;
-            }
-        }
-
-        /// <summary>
-        /// The memory segment spanning the chunk's data
-        /// </summary>
-        public MemorySegment<T> MemorySegment => _memorySegment;
-        
-        /// <summary>
-        /// First item of the chunk
-        /// </summary>
-        public ref T Value => ref _memorySegment.AsRef();
-
-        /// <summary>
-        /// Will be <c>true</c> if the chunk failed to be enqueued
-        /// </summary>
-        public bool IsDefault => _memorySegment.IsDefault;
-
-        /// <summary>
-        /// Indexer accessor to the chunk's data
-        /// </summary>
-        public ref T this[int i] => ref _memorySegment[i];
-    }
-
-    /// <summary>
-    /// Dequeue handle used to access the dequeued chunk's type and data
-    /// </summary>
-    public readonly struct DequeueHandle : IDisposable
-    {
-        private readonly MemorySegment _memorySegment;
-        private readonly long _newRead;
-        private readonly long* _readOffsetAddr;
-        
-        /// <summary>
-        /// Chunk's id
-        /// </summary>
-        public ushort ChunkId { get; }
-
-        /// <summary>
-        /// If there was no chunk to dequeue, will be <c>true</c>
-        /// </summary>
-        public bool IsDefault => ChunkId == 0;
-
-        /// <summary>
-        /// Memory Segment spanning the chunk's data
-        /// </summary>
-        public MemorySegment MemorySegment => _memorySegment;
-
-        internal DequeueHandle(ushort chunkId, MemorySegment memorySegment, long newRead, long* readOffsetAddr)
-        {
-            _memorySegment = memorySegment;
-            _newRead = newRead;
-            _readOffsetAddr = readOffsetAddr;
-            ChunkId = chunkId;
-        }
-
-        /// <summary>
-        /// Dispose the handle, make the chunk no longer accessible
-        /// </summary>
-        public void Dispose()
-        {
-            if (_memorySegment.IsDefault == false)
-            {
-                var header = (ushort*)_memorySegment.Address - 2;
-                header[0] &= 0x3FFF;
-
-                *_readOffsetAddr = _newRead;
-            }
-        }
-    }
-    
     /// <summary>
     /// Enqueue a new chunk
     /// </summary>
@@ -324,4 +207,188 @@ public unsafe struct MappedConcurrentChunkQueue
 
         return h;
     }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private readonly int _bufferSize;
+    private readonly byte* _dataStart;
+
+    private readonly Header* _header;
+
+    #endregion
+
+    #region Constructors
+
+    private MappedConcurrentChunkQueue(MemorySegment segment, bool create)
+    {
+        _header = segment.Cast<Header>().Address;
+        _dataStart = (byte*)(_header + 1);
+        var dataEnd = segment.End - 4;        // - 4 is the size of the chunk header, we need to be able to overflow at least a header size. Well header size -1 in fact
+        _bufferSize = (int)(dataEnd - _dataStart);
+
+        if (create)
+        {
+            segment.ToSpan<byte>().Clear();
+            _header->ReadOffset = 0;
+            _header->WriteOffset = 0;
+        }
+
+        TotalWaitedCount = 0;
+    }
+
+    #endregion
+
+    #region Inner types
+
+    /// <summary>
+    /// Dequeue handle used to access the dequeued chunk's type and data
+    /// </summary>
+    public readonly struct DequeueHandle : IDisposable
+    {
+        #region Public APIs
+
+        #region Properties
+
+        /// <summary>
+        /// Chunk's id
+        /// </summary>
+        public ushort ChunkId { get; }
+
+        /// <summary>
+        /// If there was no chunk to dequeue, will be <c>true</c>
+        /// </summary>
+        public bool IsDefault => ChunkId == 0;
+
+        /// <summary>
+        /// Memory Segment spanning the chunk's data
+        /// </summary>
+        public MemorySegment MemorySegment => _memorySegment;
+
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Dispose the handle, make the chunk no longer accessible
+        /// </summary>
+        public void Dispose()
+        {
+            if (_memorySegment.IsDefault == false)
+            {
+                var header = (ushort*)_memorySegment.Address - 2;
+                header[0] &= 0x3FFF;
+
+                *_readOffsetAddr = _newRead;
+            }
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Fields
+
+        private readonly MemorySegment _memorySegment;
+        private readonly long _newRead;
+        private readonly long* _readOffsetAddr;
+
+        #endregion
+
+        #region Constructors
+
+        internal DequeueHandle(ushort chunkId, MemorySegment memorySegment, long newRead, long* readOffsetAddr)
+        {
+            _memorySegment = memorySegment;
+            _newRead = newRead;
+            _readOffsetAddr = readOffsetAddr;
+            ChunkId = chunkId;
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Enqueue handle used to set the queued chunk's data
+    /// </summary>
+    /// <typeparam name="T">The type of data to store</typeparam>
+    /// <remarks>
+    /// DON'T FORGET TO CALL <see cref="Dispose"/> when you've stored the data, otherwise the queue will likely fails at some point to enqueue more items
+    /// </remarks>
+    public readonly struct EnqueueHandle<T> : IDisposable where T : unmanaged
+    {
+        #region Public APIs
+
+        #region Properties
+
+        /// <summary>
+        /// Will be <c>true</c> if the chunk failed to be enqueued
+        /// </summary>
+        public bool IsDefault => _memorySegment.IsDefault;
+
+        /// <summary>
+        /// Indexer accessor to the chunk's data
+        /// </summary>
+        public ref T this[int i] => ref _memorySegment[i];
+
+        /// <summary>
+        /// The memory segment spanning the chunk's data
+        /// </summary>
+        public MemorySegment<T> MemorySegment => _memorySegment;
+
+        /// <summary>
+        /// First item of the chunk
+        /// </summary>
+        public ref T Value => ref _memorySegment.AsRef();
+
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Dispose the handle, make the item ready for dequeue
+        /// </summary>
+        public void Dispose()
+        {
+            if (_memorySegment.IsDefault == false)
+            {
+                var header = (ushort*)_memorySegment.Address - 2;
+                header[0] |= 0x4000;
+            }
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Fields
+
+        private readonly MemorySegment<T> _memorySegment;
+
+        #endregion
+
+        #region Constructors
+
+        internal EnqueueHandle(MemorySegment<T> memorySegment)
+        {
+            _memorySegment = memorySegment;
+        }
+
+        #endregion
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Header
+    {
+        public long WriteOffset;
+        private readonly long _padding0;
+
+        public long ReadOffset;
+        private readonly long _padding1;
+    }
+
+    #endregion
 }

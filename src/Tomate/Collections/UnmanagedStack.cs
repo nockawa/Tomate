@@ -19,57 +19,27 @@ namespace Tomate;
 [DebuggerDisplay("Count = {Count}")]
 public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
 {
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Header
-    {
-        public int _size;
-        public int _capacity;
-        private ulong _padding;
-    }
-
-    private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
-    private T* _buffer => (T*)(_header + 1);
-
-    private ref int _size => ref _header->_size;
-    private ref int _capacity => ref _header->_capacity;
-
-    //private readonly IMemoryManager _memoryManager;
-    private MemoryBlock _memoryBlock;
-    /*
-    private int _size;
-    private int _capacity;
-    private T* _buffer;
-    */
+    #region Constants
 
     private const int DefaultCapacity = 8;
 
-    public UnmanagedStack() : this(null)
-    {
-        
-    }
+    #endregion
 
-    public UnmanagedStack(IMemoryManager memoryManager=null, int capacity=DefaultCapacity)
-    {
-        if (capacity < 0)
-        {
-            ThrowHelper.NeedNonNegIndex(nameof(capacity));
-        }
-        memoryManager ??= DefaultMemoryManager.GlobalInstance;
-        _memoryBlock = default;
-        if (capacity > 0)
-        {
-            _memoryBlock = memoryManager.Allocate(sizeof(Header) + sizeof(T) * capacity);
-        }
-        else
-        {
-            _memoryBlock = memoryManager.Allocate(sizeof(Header));
-        }
+    #region Public APIs
 
-        //_buffer = _memoryBlock.MemorySegment.Address;
-        _size = 0;
-        _capacity = capacity;
-    }
+    #region Properties
+
+    private T* _buffer => (T*)(_header + 1);
+    private ref int _capacity => ref _header->_capacity;
+
+    private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
+
+    private ref int _size => ref _header->_size;
+
+    public MemorySegment<T> Content => new ((_buffer), _size);
     public int Count => _size;
+    public bool IsDefault => _memoryBlock.IsDefault;
+    public bool IsDisposed => _size < 0;
 
     public ref T this[int index]
     {
@@ -80,13 +50,52 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         }
     }
 
-    public MemorySegment<T> Content => new ((_buffer), _size);
-    public bool IsDefault => _memoryBlock.IsDefault;
-    public bool IsDisposed => _size < 0;
+    #endregion
+
+    #region Methods
 
     public void Clear()
     {
         _size = 0;
+    }
+
+    public void Dispose()
+    {
+        if (IsDefault || IsDisposed)
+        {
+            return;
+        }
+        
+        // _memoryManager.Free(_memoryBlock);
+        _memoryBlock.Dispose();
+        _memoryBlock = default;
+        // _size = -1;
+    }
+
+    public ref T Peek()
+    {
+        int size = _size - 1;
+
+        if ((uint)size >= (uint)_capacity)
+        {
+            ThrowForEmptyStack();
+        }
+
+        return ref _buffer[size];
+    }
+
+    // Returns the top object on the stack without removing it.  If the stack
+    // is empty, Peek throws an InvalidOperationException.
+    public ref T Pop()
+    {
+        --_size;
+
+        if ((uint)_size >= (uint)_capacity)
+        {
+            ThrowForEmptyStack();
+        }
+
+        return ref _buffer[_size];
     }
 
     public ref T Push()
@@ -126,28 +135,36 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         }
     }
 
-    // Non-inline from Stack.Push to improve its code quality as uncommon path
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private void PushWithResize(ref T item)
+    // Copies the Stack to an array, in the same order Pop would return the items.
+    public T[] ToArray()
     {
-        Debug.Assert(_size == _capacity);
-        Grow(_size + 1);
-        _buffer[_size] = item;
-        _size++;
-    }
-
-    // Returns the top object on the stack without removing it.  If the stack
-    // is empty, Peek throws an InvalidOperationException.
-    public ref T Pop()
-    {
-        --_size;
-
-        if ((uint)_size >= (uint)_capacity)
+        if (_size == 0)
         {
-            ThrowForEmptyStack();
+            return Array.Empty<T>();
         }
 
-        return ref _buffer[_size];
+        var objArray = new T[_size];
+        int i = 0;
+        while (i < _size)
+        {
+            objArray[i] = _buffer[_size - i - 1];
+            i++;
+        }
+        return objArray;
+    }
+
+    // ReSharper disable once RedundantAssignment
+    public bool TryPeek(ref T result)
+    {
+        int size = _size - 1;
+
+        if ((uint)size >= (uint)_capacity)
+        {
+            result = default!;
+            return false;
+        }
+        result = ref _buffer[size];
+        return true;
     }
 
     public bool TryPop(out T result)
@@ -164,31 +181,49 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         return true;
     }
 
-    public ref T Peek()
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    //private readonly IMemoryManager _memoryManager;
+    private MemoryBlock _memoryBlock;
+
+    #endregion
+
+    #region Constructors
+
+    public UnmanagedStack() : this(null)
     {
-        int size = _size - 1;
-
-        if ((uint)size >= (uint)_capacity)
-        {
-            ThrowForEmptyStack();
-        }
-
-        return ref _buffer[size];
+        
     }
 
-    // ReSharper disable once RedundantAssignment
-    public bool TryPeek(ref T result)
+    public UnmanagedStack(IMemoryManager memoryManager=null, int capacity=DefaultCapacity)
     {
-        int size = _size - 1;
-
-        if ((uint)size >= (uint)_capacity)
+        if (capacity < 0)
         {
-            result = default!;
-            return false;
+            ThrowHelper.NeedNonNegIndex(nameof(capacity));
         }
-        result = ref _buffer[size];
-        return true;
+        memoryManager ??= DefaultMemoryManager.GlobalInstance;
+        _memoryBlock = default;
+        if (capacity > 0)
+        {
+            _memoryBlock = memoryManager.Allocate(sizeof(Header) + sizeof(T) * capacity);
+        }
+        else
+        {
+            _memoryBlock = memoryManager.Allocate(sizeof(Header));
+        }
+
+        //_buffer = _memoryBlock.MemorySegment.Address;
+        _size = 0;
+        _capacity = capacity;
     }
+
+    #endregion
+
+    #region Private methods
 
     // Pops an item from the top of the stack.  If the stack is empty, Pop
     // throws an InvalidOperationException.
@@ -225,22 +260,14 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     */
     }
 
-    // Copies the Stack to an array, in the same order Pop would return the items.
-    public T[] ToArray()
+    // Non-inline from Stack.Push to improve its code quality as uncommon path
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void PushWithResize(ref T item)
     {
-        if (_size == 0)
-        {
-            return Array.Empty<T>();
-        }
-
-        var objArray = new T[_size];
-        int i = 0;
-        while (i < _size)
-        {
-            objArray[i] = _buffer[_size - i - 1];
-            i++;
-        }
-        return objArray;
+        Debug.Assert(_size == _capacity);
+        Grow(_size + 1);
+        _buffer[_size] = item;
+        _size++;
     }
 
     private void ThrowForEmptyStack()
@@ -249,14 +276,15 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         ThrowHelper.EmptyStack();
     }
 
+    #endregion
+
+    #region Inner types
+
     internal sealed class DebugView
     {
-        private UnmanagedStack<T> _stack;
+        #region Public APIs
 
-        public DebugView(UnmanagedStack<T> stack)
-        {
-            _stack = stack;
-        }
+        #region Properties
 
         [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
         public T[] Items
@@ -277,18 +305,34 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
                 return items;
             }
         }
+
+        #endregion
+
+        #endregion
+
+        #region Fields
+
+        private UnmanagedStack<T> _stack;
+
+        #endregion
+
+        #region Constructors
+
+        public DebugView(UnmanagedStack<T> stack)
+        {
+            _stack = stack;
+        }
+
+        #endregion
     }
 
-    public void Dispose()
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Header
     {
-        if (IsDefault || IsDisposed)
-        {
-            return;
-        }
-        
-        // _memoryManager.Free(_memoryBlock);
-        _memoryBlock.Dispose();
-        _memoryBlock = default;
-        // _size = -1;
+        public int _size;
+        public int _capacity;
+        private ulong _padding;
     }
+
+    #endregion
 }

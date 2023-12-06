@@ -5,22 +5,36 @@ namespace Tomate;
 
 public partial class DefaultMemoryManager
 {
+    #region Inner types
+
     internal class BlockAllocatorSequence : IDisposable
     {
         internal struct DebugData
         {
-            public long TotalCommitted;
-            public long TotalAllocatedMemory;
-            public long TotalFreeMemory;
-            public long ScanFreeListCount;
-            public int FreeSegmentDefragCount;
-            public int AllocatedSegmentCount;
-            public int FreeSegmentCount;
-            public int TotalHeaderSize;
-            public int TotalPaddingSize;
-            public int TotalBlockCount;
+            #region Public APIs
+
+            #region Properties
 
             public bool IsCoherent => TotalCommitted == TotalAllocatedMemory + TotalFreeMemory + TotalHeaderSize + TotalPaddingSize;
+
+            #endregion
+
+            #endregion
+
+            #region Fields
+
+            public int AllocatedSegmentCount;
+            public int FreeSegmentCount;
+            public int FreeSegmentDefragCount;
+            public long ScanFreeListCount;
+            public long TotalAllocatedMemory;
+            public int TotalBlockCount;
+            public long TotalCommitted;
+            public long TotalFreeMemory;
+            public int TotalHeaderSize;
+            public int TotalPaddingSize;
+
+            #endregion
         }
 
         private ExclusiveAccessControl _control;
@@ -291,4 +305,6 @@ public partial class DefaultMemoryManager
         }
 #endif
     }
+
+    #endregion
 }

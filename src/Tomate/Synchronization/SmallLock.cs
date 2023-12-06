@@ -34,7 +34,6 @@ public class SmallLockConcurrencyExceededException : Exception
 /// </para>
 /// </remarks>
 [PublicAPI]
-[StructLayout(LayoutKind.Sequential)]
 public unsafe struct SmallLock
 {
     #region Public APIs
@@ -422,11 +421,9 @@ public unsafe struct SmallLock
     [StructLayout(LayoutKind.Sequential)]
     private struct Header
     {
-        #region Fields
-
         public ulong LockedBy;
-
         public int QueueAccessControl;
+        public int ReentrencyCounter;
 
         // The number of entries in _items
         public ushort QueueCapacity;
@@ -439,9 +436,6 @@ public unsafe struct SmallLock
 
         // Index of the first free entry
         public ushort QueueTail;
-        public int ReentrencyCounter;
-
-        #endregion
     }
 
     #endregion

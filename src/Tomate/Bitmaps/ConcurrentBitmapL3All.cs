@@ -32,205 +32,27 @@ namespace Tomate;
 [PublicAPI]
 public class ConcurrentBitmapL3All
 {
+    #region Constants
+
     private const int L0All = 0;
     private const int L1All = 1;
     private const int L1Any = 2;
     private const int L2All = 3;
 
-    private volatile int _control;
-    private Memory<long>[] _maps;
+    #endregion
+
+    #region Public APIs
+
+    #region Properties
+
+    public bool IsFull => Capacity == TotalBitSet;
 
     public int Capacity { get; private set; }
     public int TotalBitSet { get; private set; }
-    public bool IsFull => Capacity == TotalBitSet;
 
-    /// <summary>
-    /// Construct an instance
-    /// </summary>
-    /// <param name="bitCount">Number of bits to host</param>
-    public ConcurrentBitmapL3All(int bitCount)
-    {
-        // Note: could do one array allocation instead of four to store all the map.
-        // We could also take the memory from a cheap Memory Manager.
+    #endregion
 
-        Capacity = bitCount;
-        TotalBitSet = 0;
-
-        _maps = new Memory<long>[4];
-        var length = Math.Max(1, (bitCount + 63) / 64);
-        _maps[L0All] = new long[length];
-
-        length = Math.Max(1, (length + 63) / 64);
-        _maps[L1All] = new long[length];
-        _maps[L1Any] = new long[length];
-
-        length = Math.Max(1, (length + 63) / 64);
-        _maps[L2All] = new long[length];
-    }
-
-    public void Resize(int newBitCount)
-    {
-        TakeControl();
-
-        var shrink = newBitCount < Capacity;
-        Capacity = newBitCount;
-
-        var maps = new Memory<long>[4];
-        var length = Math.Max(1, (newBitCount + 63) / 64);
-        var copySize = Math.Min(length, _maps[L0All].Length);
-
-        maps[L0All] = new long[length];
-        _maps[L0All].Span.Slice(0, copySize).CopyTo(maps[L0All].Span);
-
-        length = Math.Max(1, (length + 63) / 64);
-        maps[L1All] = new long[length];
-        maps[L1Any] = new long[length];
-
-        copySize = Math.Max(1, (copySize + 63) / 64);
-        _maps[L1All].Span.Slice(0, copySize).CopyTo(maps[L1All].Span);
-        _maps[L1Any].Span.Slice(0, copySize).CopyTo(maps[L1Any].Span);
-
-        length = Math.Max(1, (length + 63) / 64);
-        maps[L2All] = new long[length];
-
-        copySize = Math.Max(1, (copySize + 63) / 64);
-        _maps[L2All].Span.Slice(0, copySize).CopyTo(maps[L2All].Span);
-
-        _maps = maps;
-
-        if (shrink)
-        {
-            var span = maps[L0All].Span.Cast<long, ulong>();
-            var spanLength = span.Length;
-            var newCount = 0;
-
-            for (int i = 0; i < spanLength; i++)
-            {
-                newCount += BitOperations.PopCount(span[i]);
-            }
-
-            TotalBitSet = newCount;
-        }
-
-        _control = 0;
-    }
-
-
-    /// <summary>
-    /// Private method called to take control of the instance to ensure thread-safeness 
-    /// </summary>
-    private void TakeControl()
-    {
-        if (Interlocked.CompareExchange(ref _control, 1, 0) != 0)
-        {
-            var sw = new SpinWait();
-            while (Interlocked.CompareExchange(ref _control, 1, 0) != 0)
-            {
-                // Note: SpinWait may yield too much for us, wasting latency because of unnecessary context switch provoked by Thread.Yield() or Thread.Sleep().
-                //  maybe it would be better to avoid yielding on non single processor platform, like this code commented below
-
-                //if (Environment.ProcessorCount == 1)
-                //{
-                //    sw.SpinOnce(-1);
-                //}
-                //else
-                //{
-                //    if (sw.NextSpinWillYield)   sw.Reset();     // Reset to avoid Yield
-                //    sw.SpinOnce(-1);
-                //}
-
-                sw.SpinOnce();
-            }
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public bool SetL0(int bitIndex)
-    {
-        var l0Offset = bitIndex >> 6;
-        var l0Mask = 1L << (bitIndex & 0x3F);
-
-        TakeControl();
-
-        var prevL0 = Interlocked.Or(ref _maps[L0All].Span[l0Offset], l0Mask);
-        if ((prevL0 & l0Mask) != 0)
-        {
-            _control = 0;
-            // The bit was concurrently set by someone else
-            return false;
-        }
-
-        if (prevL0 != -1 && (prevL0 | l0Mask) == -1)
-        {
-            var l1Offset = l0Offset >> 6;
-            var l1Mask = 1L << (l0Offset & 0x3F);
-
-            var prevL1 = _maps[L1All].Span[l1Offset];
-            _maps[L1All].Span[l1Offset] |= l1Mask;
-
-            if (prevL1 != -1 && (prevL1 | l1Mask) == -1)
-            {
-                var l2Offset = l1Offset >> 6;
-                var l2Mask = 1L << (l1Offset & 0x3F);
-                _maps[L2All].Span[l2Offset] |= l2Mask;
-            }
-        }
-
-        if (prevL0 == 0 && (prevL0 | l0Mask) != 0)
-        {
-            var l1Offset = l0Offset >> 6;
-            var l1Mask = 1L << (l0Offset & 0x3F);
-            _maps[L1Any].Span[l1Offset] |= l1Mask;
-        }
-
-        ++TotalBitSet;
-        _control = 0;
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public bool SetL1(int index)
-    {
-        var l0Offset = index;
-        var l0Mask = -1L;
-
-        TakeControl();
-        var prevL0 = Interlocked.Or(ref _maps[L0All].Span[l0Offset], l0Mask);
-        if (prevL0 != 0)
-        {
-            _control = 0;
-            // Can't allocate the whole L1, some bits are set at L0
-            return false;
-        }
-
-        if (prevL0 != -1 && (prevL0 | l0Mask) == -1)
-        {
-            var l1Offset = l0Offset >> 6;
-            var l1Mask = 1L << (l0Offset & 0x3F);
-
-            var prevL1 = _maps[L1All].Span[l1Offset];
-            _maps[L1All].Span[l1Offset] |= l1Mask;
-
-            if (prevL1 != -1 && (prevL1 | l1Mask) == -1)
-            {
-                var l2Offset = l1Offset >> 6;
-                var l2Mask = 1L << (l1Offset & 0x3F);
-                _maps[L2All].Span[l2Offset] |= l2Mask;
-            }
-        }
-
-        if (prevL0 == 0 && (prevL0 | l0Mask) != 0)
-        {
-            var l1Offset = l0Offset >> 6;
-            var l1Mask = 1L << (l0Offset & 0x3F);
-
-            _maps[L1Any].Span[l1Offset] |= l1Mask;
-        }
-
-        TotalBitSet += 64;
-        _control = 0;
-        return true;
-    }
+    #region Methods
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void ClearL0(int index)
@@ -266,15 +88,6 @@ public class ConcurrentBitmapL3All
 
         --TotalBitSet;
         _control = 0;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public bool IsSet(int index)
-    {
-        var offset = index >> 6;
-        var mask = 1L << (index & 0x3F);
-
-        return (_maps[L0All].Span[offset] & mask) != 0L;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -395,4 +208,219 @@ public class ConcurrentBitmapL3All
 
         return false;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool IsSet(int index)
+    {
+        var offset = index >> 6;
+        var mask = 1L << (index & 0x3F);
+
+        return (_maps[L0All].Span[offset] & mask) != 0L;
+    }
+
+    public void Resize(int newBitCount)
+    {
+        TakeControl();
+
+        var shrink = newBitCount < Capacity;
+        Capacity = newBitCount;
+
+        var maps = new Memory<long>[4];
+        var length = Math.Max(1, (newBitCount + 63) / 64);
+        var copySize = Math.Min(length, _maps[L0All].Length);
+
+        maps[L0All] = new long[length];
+        _maps[L0All].Span.Slice(0, copySize).CopyTo(maps[L0All].Span);
+
+        length = Math.Max(1, (length + 63) / 64);
+        maps[L1All] = new long[length];
+        maps[L1Any] = new long[length];
+
+        copySize = Math.Max(1, (copySize + 63) / 64);
+        _maps[L1All].Span.Slice(0, copySize).CopyTo(maps[L1All].Span);
+        _maps[L1Any].Span.Slice(0, copySize).CopyTo(maps[L1Any].Span);
+
+        length = Math.Max(1, (length + 63) / 64);
+        maps[L2All] = new long[length];
+
+        copySize = Math.Max(1, (copySize + 63) / 64);
+        _maps[L2All].Span.Slice(0, copySize).CopyTo(maps[L2All].Span);
+
+        _maps = maps;
+
+        if (shrink)
+        {
+            var span = maps[L0All].Span.Cast<long, ulong>();
+            var spanLength = span.Length;
+            var newCount = 0;
+
+            for (int i = 0; i < spanLength; i++)
+            {
+                newCount += BitOperations.PopCount(span[i]);
+            }
+
+            TotalBitSet = newCount;
+        }
+
+        _control = 0;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool SetL0(int bitIndex)
+    {
+        var l0Offset = bitIndex >> 6;
+        var l0Mask = 1L << (bitIndex & 0x3F);
+
+        TakeControl();
+
+        var prevL0 = Interlocked.Or(ref _maps[L0All].Span[l0Offset], l0Mask);
+        if ((prevL0 & l0Mask) != 0)
+        {
+            _control = 0;
+            // The bit was concurrently set by someone else
+            return false;
+        }
+
+        if (prevL0 != -1 && (prevL0 | l0Mask) == -1)
+        {
+            var l1Offset = l0Offset >> 6;
+            var l1Mask = 1L << (l0Offset & 0x3F);
+
+            var prevL1 = _maps[L1All].Span[l1Offset];
+            _maps[L1All].Span[l1Offset] |= l1Mask;
+
+            if (prevL1 != -1 && (prevL1 | l1Mask) == -1)
+            {
+                var l2Offset = l1Offset >> 6;
+                var l2Mask = 1L << (l1Offset & 0x3F);
+                _maps[L2All].Span[l2Offset] |= l2Mask;
+            }
+        }
+
+        if (prevL0 == 0 && (prevL0 | l0Mask) != 0)
+        {
+            var l1Offset = l0Offset >> 6;
+            var l1Mask = 1L << (l0Offset & 0x3F);
+            _maps[L1Any].Span[l1Offset] |= l1Mask;
+        }
+
+        ++TotalBitSet;
+        _control = 0;
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public bool SetL1(int index)
+    {
+        var l0Offset = index;
+        var l0Mask = -1L;
+
+        TakeControl();
+        var prevL0 = Interlocked.Or(ref _maps[L0All].Span[l0Offset], l0Mask);
+        if (prevL0 != 0)
+        {
+            _control = 0;
+            // Can't allocate the whole L1, some bits are set at L0
+            return false;
+        }
+
+        if (prevL0 != -1 && (prevL0 | l0Mask) == -1)
+        {
+            var l1Offset = l0Offset >> 6;
+            var l1Mask = 1L << (l0Offset & 0x3F);
+
+            var prevL1 = _maps[L1All].Span[l1Offset];
+            _maps[L1All].Span[l1Offset] |= l1Mask;
+
+            if (prevL1 != -1 && (prevL1 | l1Mask) == -1)
+            {
+                var l2Offset = l1Offset >> 6;
+                var l2Mask = 1L << (l1Offset & 0x3F);
+                _maps[L2All].Span[l2Offset] |= l2Mask;
+            }
+        }
+
+        if (prevL0 == 0 && (prevL0 | l0Mask) != 0)
+        {
+            var l1Offset = l0Offset >> 6;
+            var l1Mask = 1L << (l0Offset & 0x3F);
+
+            _maps[L1Any].Span[l1Offset] |= l1Mask;
+        }
+
+        TotalBitSet += 64;
+        _control = 0;
+        return true;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private volatile int _control;
+    private Memory<long>[] _maps;
+
+    #endregion
+
+    #region Constructors
+
+    /// <summary>
+    /// Construct an instance
+    /// </summary>
+    /// <param name="bitCount">Number of bits to host</param>
+    public ConcurrentBitmapL3All(int bitCount)
+    {
+        // Note: could do one array allocation instead of four to store all the map.
+        // We could also take the memory from a cheap Memory Manager.
+
+        Capacity = bitCount;
+        TotalBitSet = 0;
+
+        _maps = new Memory<long>[4];
+        var length = Math.Max(1, (bitCount + 63) / 64);
+        _maps[L0All] = new long[length];
+
+        length = Math.Max(1, (length + 63) / 64);
+        _maps[L1All] = new long[length];
+        _maps[L1Any] = new long[length];
+
+        length = Math.Max(1, (length + 63) / 64);
+        _maps[L2All] = new long[length];
+    }
+
+    #endregion
+
+    #region Private methods
+
+    /// <summary>
+    /// Private method called to take control of the instance to ensure thread-safeness 
+    /// </summary>
+    private void TakeControl()
+    {
+        if (Interlocked.CompareExchange(ref _control, 1, 0) != 0)
+        {
+            var sw = new SpinWait();
+            while (Interlocked.CompareExchange(ref _control, 1, 0) != 0)
+            {
+                // Note: SpinWait may yield too much for us, wasting latency because of unnecessary context switch provoked by Thread.Yield() or Thread.Sleep().
+                //  maybe it would be better to avoid yielding on non single processor platform, like this code commented below
+
+                //if (Environment.ProcessorCount == 1)
+                //{
+                //    sw.SpinOnce(-1);
+                //}
+                //else
+                //{
+                //    if (sw.NextSpinWillYield)   sw.Reset();     // Reset to avoid Yield
+                //    sw.SpinOnce(-1);
+                //}
+
+                sw.SpinOnce();
+            }
+        }
+    }
+
+    #endregion
 }

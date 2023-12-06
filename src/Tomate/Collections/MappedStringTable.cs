@@ -6,15 +6,13 @@ namespace Tomate;
 [PublicAPI]
 public struct MappedStringTable : IDisposable
 {
-    private MappedAppendCollection<byte> _storage;
+    #region Public APIs
+
+    #region Methods
 
     public static MappedStringTable Create(IPageAllocator allocator, int pageCapacity)
     {
         return new MappedStringTable(allocator, pageCapacity, true);
-    }
-    private MappedStringTable(IPageAllocator allocator, int pageCapacity, bool create)
-    {
-        _storage = MappedAppendCollection<byte>.Create(allocator, pageCapacity);
     }
 
     public unsafe int AddString(string str)
@@ -35,4 +33,23 @@ public struct MappedStringTable : IDisposable
     {
         _storage.Dispose();
     }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private MappedAppendCollection<byte> _storage;
+
+    #endregion
+
+    #region Constructors
+
+    private MappedStringTable(IPageAllocator allocator, int pageCapacity, bool create)
+    {
+        _storage = MappedAppendCollection<byte>.Create(allocator, pageCapacity);
+    }
+
+    #endregion
 }

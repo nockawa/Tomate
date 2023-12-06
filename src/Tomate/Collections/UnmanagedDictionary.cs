@@ -12,8 +12,6 @@ namespace Tomate;
 /// <typeparam name="TValue"></typeparam>
 /// <remarks>
 /// This implementation is a big copy/paste of the .net Dictionary{TKey, TValue} class and adapted to this usage.
-/// Methods returning the value will return it as a reference for you to have a direct access of the data. It is your choice to mutate the value or not.
-/// The enumerator also returns reference to the actual data and you're free to mutate the value if needed.
 /// </remarks>
 [PublicAPI]
 public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey : unmanaged where TValue : unmanaged
@@ -45,6 +43,11 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
 
             ThrowHelper.KeyNotFound(key);
             return default;
+        }
+        set
+        {
+            TryInsert(key, value, InsertionBehavior.OverwriteExisting, out var modified);
+            Debug.Assert(modified);
         }
     }
 
@@ -179,6 +182,12 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IDisposable where TKey 
         return res;
     }
 
+    public bool TrySetValue(TKey key, TValue value)
+    {
+        TryInsert(key, value, InsertionBehavior.OverwriteExisting, out var modified);
+        return modified;
+    }
+    
     #endregion
 
     #endregion
@@ -534,7 +543,7 @@ ReturnNotFound:
 
         #region Properties
 
-        public ref KeyValuePair Current => ref *(KeyValuePair*)&_entries[_index - 1].KeyValuePair;
+        public KeyValuePair Current => *(KeyValuePair*)&_entries[_index - 1].KeyValuePair;
 
         #endregion
 
@@ -581,13 +590,9 @@ ReturnNotFound:
     [StructLayout(LayoutKind.Sequential)]
     private struct Header
     {
-        #region Fields
-
         public int Count;
         public int FreeCount;
         public int FreeList;
-
-        #endregion
     }
 
     [DebuggerDisplay("Key {Key}, Value {Value}")]

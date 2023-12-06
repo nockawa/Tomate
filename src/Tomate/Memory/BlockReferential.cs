@@ -237,9 +237,6 @@ public static class BlockReferential
 
         #region Fields
 
-        // A mix of BlockId and IsFree
-        private uint _data;
-
         /// <summary>
         /// The actual RefCounter of the <see cref="MemoryBlock"/>
         /// </summary>
@@ -248,6 +245,9 @@ public static class BlockReferential
         /// ensure thread-safeness
         /// </remarks>
         public int RefCounter;
+
+        // A mix of BlockId and IsFree
+        private uint _data;
 
         #endregion
     }

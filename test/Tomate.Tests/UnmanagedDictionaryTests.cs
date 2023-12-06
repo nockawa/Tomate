@@ -8,7 +8,7 @@ public class UnmanagedDictionaryTests
     public void DictionaryTest()
     {
         using var mm = new DefaultMemoryManager();
-        using var dic = new UnmanagedDictionaryOld<int, int>(mm);
+        using var dic = UnmanagedDictionary<int, int>.Create(mm);
 
         for (int i = 0; i < 1000; i++)
         {
@@ -17,7 +17,7 @@ public class UnmanagedDictionaryTests
         Assert.That(dic.Count, Is.EqualTo(1000));
 
         var enumCount = 0;
-        foreach (ref var kvp in dic)
+        foreach (var kvp in dic)
         {
             ++enumCount;
             var isOdd = (kvp.Key & 1) != 0;
@@ -33,24 +33,24 @@ public class UnmanagedDictionaryTests
 
         for (int i = 1; i < 500; i += 2)
         {
-            ref var v = ref dic.GetOrAdd(i, out var found);
+            dic.GetOrAdd(i, out var found);
             Assert.That(found, Is.False);
-            v = i;
+            dic.TrySetValue(i, i);
         }
         Assert.That(dic.Count, Is.EqualTo(750));
 
         var h = new HashSet<int>();
         enumCount = 0;
-        foreach (ref var kvp in dic)
+        foreach (var kvp in dic)
         {
             ++enumCount;
             Assert.That(h.Add(kvp.Key), Is.True, $"Key {kvp.Key}, Value {kvp.Value}");
-            kvp.Value += 10;
+            dic.TrySetValue(kvp.Key, kvp.Value + 10);
         }
         Assert.That(enumCount, Is.EqualTo(750));
 
         enumCount = 0;
-        foreach (ref var kvp in dic)
+        foreach (var kvp in dic)
         {
             ++enumCount;
             Assert.That(kvp.Key + 10, Is.EqualTo(kvp.Value));

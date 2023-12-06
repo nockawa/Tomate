@@ -461,13 +461,9 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
     [StructLayout(LayoutKind.Sequential)]
     private struct Header
     {
-        #region Fields
-
-        public ulong _padding;      // We want Header to be 16 bytes to be aligned with a cache line
         public uint Capacity;
         public int Count;
-
-        #endregion
+        public ulong _padding;      // We want Header to be 16 bytes to be aligned with a cache line
     }
 
     #endregion

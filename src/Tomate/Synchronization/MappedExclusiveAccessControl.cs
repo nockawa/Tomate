@@ -5,20 +5,19 @@ using JetBrains.Annotations;
 namespace Tomate;
 
 /// <summary>
-/// Simple access control supporting a single process and only exclusive access
+/// Access control supporting multiple processes and only exclusive access
 /// </summary>
 /// <remarks>
-/// The size of this struct is only 4 bytes.
+/// The size of this struct is only 8 bytes.
 /// </remarks>
 [PublicAPI]
-[StructLayout(LayoutKind.Sequential)]
 public struct MappedExclusiveAccessControl
 {
     #region Public APIs
 
     #region Properties
 
-    private static ulong CallingLock => (ulong)Environment.ProcessId << 32 | (uint)Environment.CurrentManagedThreadId;
+    private static ulong CallingLock => (ulong)IProcessProvider.Singleton.CurrentProcessId << 32 | (uint)Environment.CurrentManagedThreadId;
 
     #endregion
 

@@ -33,52 +33,115 @@ namespace Tomate;
 [PublicAPI]
 public unsafe struct MappedAppendCollection<T> : IDisposable where T : unmanaged
 {
-    private readonly IPageAllocator _allocator;
-    private readonly Header* _header;
+    #region Public APIs
 
-    private readonly int _entriesPerPage;
-    private readonly int _entriesRootPage;
-    private readonly long* _pageDirectory;
-    private readonly byte* _baseAddress;
-    private readonly int _pageSize;
-    private readonly int _rootPageOffsetToData;
-    private T* _curAddress;
-    private T* _endAddress;
+    #region Properties
 
-#if DEBUGALLOC
-    private long _totalAllocated;
-#endif
-
-    public int RootPageId { get; }
-    public int PageSize => _allocator.PageSize;
-    public int Capacity => _header->PageCapacity;
     public int AllocatedPageCount => _header->AllocatedPageCount;
-    public int MaxItemCountPerPage => _entriesPerPage;
 
     public (long totalAllocatedByte, float efficiency) AllocationStats
     {
         get
         {
-#if DEBUGALLOC
             var totalPagedSize = _header->AllocatedPageCount * _allocator.PageSize;
             return (_totalAllocated, _totalAllocated / (float)totalPagedSize);
-#else
-            return (0, 1);
-#endif
         }
     }
+
+    public int Capacity => _header->PageCapacity;
+    public int MaxItemCountPerPage => _entriesPerPage;
+    public int PageSize => _allocator.PageSize;
+
+    public int RootPageId { get; }
+
+    #endregion
+
+    #region Methods
 
     public static MappedAppendCollection<T> Create(IPageAllocator allocator, int pageCapacity) => new(allocator, pageCapacity, true);
     public static MappedAppendCollection<T> Map(IPageAllocator allocator, int rootPageId) => new(allocator, rootPageId, false);
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Header
+    public void Dispose()
     {
-        public int PageCapacity;
-        public int AllocatedPageCount;
-        public int CurOffset;
-        private readonly int _padding0;
+        
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public MemorySegment<T> Get(int id, int length)
+    {
+        var res = GetLocation(id);
+        var off = res.pageIndex == 0 ? _rootPageOffsetToData : 0;
+        return new MemorySegment<T>(_baseAddress + _pageDirectory[res.pageIndex] + off + res.offsetInPage * sizeof(T), length);
+    }
+
+    public ref TN Get<TN>(int nodeId) where TN : unmanaged
+    {
+        var res = GetLocation(nodeId);
+        var off = res.pageIndex == 0 ? _rootPageOffsetToData : 0;
+        return ref Unsafe.AsRef<TN>(_baseAddress + _pageDirectory[res.pageIndex] + off + res.offsetInPage * sizeof(T));
+    }
+
+    public MemorySegment<T> Reserve(int length, out int id)
+    {
+        if (length > _entriesPerPage)
+        {
+            ThrowHelper.AppendCollectionItemSetTooBig(length, _entriesPerPage);
+        }
+        if (_curAddress + length > _endAddress)
+        {
+            if (_header->AllocatedPageCount == _header->PageCapacity)
+            {
+                id = -1;
+                return MemorySegment<T>.Empty;
+            }
+
+            _header->CurOffset += (int)(_endAddress - _curAddress);
+            var newPage = _allocator.AllocatePages(1);
+            _pageDirectory[_header->AllocatedPageCount++] = newPage.Address - _baseAddress;
+            GetBoundariesFromOffset(_header->CurOffset, out _curAddress, out _endAddress);
+        }
+
+        _totalAllocated += length * sizeof(T);
+
+        id = _header->CurOffset;
+        _header->CurOffset += length;
+
+        var res = new MemorySegment<T>(_curAddress, length);
+        _curAddress += length;
+        return res;
+    }
+
+    public ref TN Reserve<TN>(out int id) where TN : unmanaged
+    {
+        var sizeTN = sizeof(TN);
+        var sizeT = sizeof(T);
+        var l = (sizeTN + sizeT - 1) / sizeT;
+        return ref Reserve(l, out id).Cast<TN>().AsRef();
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Fields
+
+    private readonly IPageAllocator _allocator;
+    private readonly byte* _baseAddress;
+
+    private readonly int _entriesPerPage;
+    private readonly int _entriesRootPage;
+    private readonly Header* _header;
+    private readonly long* _pageDirectory;
+    private readonly int _pageSize;
+    private readonly int _rootPageOffsetToData;
+    private T* _curAddress;
+    private T* _endAddress;
+
+    private long _totalAllocated;
+
+    #endregion
+
+    #region Constructors
 
     private MappedAppendCollection(IPageAllocator allocator, int pageCapacityOrRootId, bool create)
     {
@@ -124,10 +187,23 @@ public unsafe struct MappedAppendCollection<T> : IDisposable where T : unmanaged
             _curAddress = _endAddress = null;
             GetBoundariesFromOffset(_header->CurOffset, out _curAddress, out _endAddress);
 
-#if DEBUGALLOC
             _totalAllocated = _header->AllocatedPageCount * _allocator.PageSize;
-#endif
         }
+    }
+
+    #endregion
+
+    #region Private methods
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private void GetBoundariesFromOffset(int offset, out T* curAddress, out T* endAddress)
+    {
+        var res = GetLocation(offset);
+
+        var off = res.pageIndex == 0 ? _rootPageOffsetToData : 0;
+        var pageAddress = _baseAddress + _pageDirectory[res.pageIndex];
+        curAddress = (T*)(pageAddress + off + res.offsetInPage*sizeof(T));
+        endAddress = (T*)(pageAddress + _pageSize);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
@@ -144,74 +220,18 @@ public unsafe struct MappedAppendCollection<T> : IDisposable where T : unmanaged
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private void GetBoundariesFromOffset(int offset, out T* curAddress, out T* endAddress)
-    {
-        var res = GetLocation(offset);
+    #endregion
 
-        var off = res.pageIndex == 0 ? _rootPageOffsetToData : 0;
-        var pageAddress = _baseAddress + _pageDirectory[res.pageIndex];
-        curAddress = (T*)(pageAddress + off + res.offsetInPage*sizeof(T));
-        endAddress = (T*)(pageAddress + _pageSize);
+    #region Inner types
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Header
+    {
+        public int PageCapacity;
+        public int AllocatedPageCount;
+        public int CurOffset;
+        private readonly int _padding0;
     }
 
-    public MemorySegment<T> Reserve(int length, out int id)
-    {
-        if (length > _entriesPerPage)
-        {
-            ThrowHelper.AppendCollectionItemSetTooBig(length, _entriesPerPage);
-        }
-        if (_curAddress + length > _endAddress)
-        {
-            if (_header->AllocatedPageCount == _header->PageCapacity)
-            {
-                id = -1;
-                return MemorySegment<T>.Empty;
-            }
-
-            _header->CurOffset += (int)(_endAddress - _curAddress);
-            var newPage = _allocator.AllocatePages(1);
-            _pageDirectory[_header->AllocatedPageCount++] = newPage.Address - _baseAddress;
-            GetBoundariesFromOffset(_header->CurOffset, out _curAddress, out _endAddress);
-        }
-
-#if DEBUGALLOC
-        _totalAllocated += length * sizeof(T);
-#endif
-
-        id = _header->CurOffset;
-        _header->CurOffset += length;
-
-        var res = new MemorySegment<T>(_curAddress, length);
-        _curAddress += length;
-        return res;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public MemorySegment<T> Get(int id, int length)
-    {
-        var res = GetLocation(id);
-        var off = res.pageIndex == 0 ? _rootPageOffsetToData : 0;
-        return new MemorySegment<T>(_baseAddress + _pageDirectory[res.pageIndex] + off + res.offsetInPage * sizeof(T), length);
-    }
-
-    public ref TN Reserve<TN>(out int id) where TN : unmanaged
-    {
-        var sizeTN = sizeof(TN);
-        var sizeT = sizeof(T);
-        var l = (sizeTN + sizeT - 1) / sizeT;
-        return ref Reserve(l, out id).Cast<TN>().AsRef();
-    }
-
-    public ref TN Get<TN>(int nodeId) where TN : unmanaged
-    {
-        var res = GetLocation(nodeId);
-        var off = res.pageIndex == 0 ? _rootPageOffsetToData : 0;
-        return ref Unsafe.AsRef<TN>(_baseAddress + _pageDirectory[res.pageIndex] + off + res.offsetInPage * sizeof(T));
-    }
-
-    public void Dispose()
-    {
-        
-    }
+    #endregion
 }
