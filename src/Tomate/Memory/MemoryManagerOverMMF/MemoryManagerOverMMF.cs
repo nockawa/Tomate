@@ -254,7 +254,8 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
             // File-backed
             if (MMFFilePathName != null)
             {
-                _mmf = MemoryMappedFile.CreateFromFile(MMFFilePathName, fileMode, MMFName, fileSize);
+                // TO CHECK : Giving a name doesn't work on Unix based, but we need to make sure IPC is working as expected on Windows
+                _mmf = MemoryMappedFile.CreateFromFile(MMFFilePathName, fileMode, null /*MMFName*/, fileSize);
                 _compactOnFinalClose = settings.CompactOnFinalClose;
             }
 

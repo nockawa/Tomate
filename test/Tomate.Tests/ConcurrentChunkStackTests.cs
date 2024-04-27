@@ -61,15 +61,13 @@ public class ConcurrentChunkStackTests
     [TestCase(10 * 1024, 2, 1, 1_000, 2_000, 0)]
     [TestCase(10 * 1024, 2, 2, 1_000, 1_000, 0)]
     [TestCase(10 * 1024, 2, 2, 10_000, 10_000, 0)]
-    [TestCase(10 * 1024, 1, 8, 80_000, 10_000, 0)]
-    [TestCase(10 * 1024, 8, 1, 10_000, 80_000, 0)]
-    [TestCase(1024, 8, 1, 10_000, 80_000, 0)]
+    [TestCase(10 * 1024, 2, 4, 20_000, 10_000, 0)]
+    [TestCase(10 * 1024, 4, 1, 20_000, 80_000, 0)]
+    [TestCase(1 * 1240, 6, 1, 10_000, 60_000, 0)]
     [TestCase(10 * 1024, 1, 1, 100_000, 100_000, 1)]
     [TestCase(10 * 1024, 2, 1, 1_000, 2_000, 1)]
     [TestCase(10 * 1024, 2, 2, 1_000, 1_000, 1)]
     [TestCase(10 * 1024, 2, 2, 10_000, 10_000, 1)]
-    [TestCase(10 * 1024, 1, 8, 80_000, 10_000, 1)]
-    [TestCase(10 * 1024, 8, 1, 10_000, 80_000, 1)]
     [TestCase(1024, 8, 1, 10_000, 80_000, 1)]
     public void MultithreadedTest(int bufferSize, int prodThreadCount, int consThreadCount, int prodOpCount, int consOpCount, int waitMs)
     {

@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
 using JetBrains.Annotations;
@@ -42,7 +43,8 @@ public struct ConcurrentBitmapL4
 {
     #region Constants
 
-    private static readonly Vector256<byte> _64broadcast;
+    private static readonly Vector256<byte> _64broadcast256;
+    private static readonly Vector128<byte> _64broadcast128;
 
     // L2/L3 will be activated if this threshold is met
     const int LevelThreshold = 4;
@@ -346,7 +348,15 @@ public struct ConcurrentBitmapL4
     static ConcurrentBitmapL4()
     {
         var b = Vector128.CreateScalar((byte)64);
-        _64broadcast = Avx2.BroadcastScalarToVector256(b);
+
+        if (Avx2.IsSupported)
+        {
+            _64broadcast256 = Avx2.BroadcastScalarToVector256(b);
+        }
+        else if (AdvSimd.Arm64.IsSupported)
+        {
+            _64broadcast128 = Vector128.Create((byte)64);
+        }
     }
 
     private unsafe ConcurrentBitmapL4(int capacity, MemorySegment storage)
@@ -490,24 +500,43 @@ public struct ConcurrentBitmapL4
                 return;
             }
 
-            // We want to aggregate the 64 max segments size of the previous level to this level, which is finding with byte has the biggest value
-            // But we want to do it fast, so let's use SIMD
-            var curLevelBank = curLevelIndex & ~0x3F;
-            var v1 = Avx.LoadVector256(prevLevel.Address + curLevelBank);        // Load 32 bytes
-            var v2 = Avx.LoadVector256(prevLevel.Address + curLevelBank + 32);   //  and the rest
+            byte m = default;              // Get the max value from the min of the two lanes that we invert back
+            
+            // Intel/AMD implementation
+            if (Avx2.IsSupported)
+            {
+                // We want to aggregate the 64 max segments size of the previous level to this level, which is finding with byte has the biggest value
+                // But we want to do it fast, so let's use SIMD
+                var curLevelBank = curLevelIndex & ~0x3F;
+                var v1 = Avx.LoadVector256(prevLevel.Address + curLevelBank);        // Load 32 bytes
+                var v2 = Avx.LoadVector256(prevLevel.Address + curLevelBank + 32);   //  and the rest
 
-            v1 = Avx2.Subtract(_64broadcast, v1);                                           // We want the max, but SIMD only does min on horizontal, so let's invert the values
-            v2 = Avx2.Subtract(_64broadcast, v2);
-            var v = Avx2.Min(v1, v2);                                         // Min of the two 32 bytes lanes
+                v1 = Avx2.Subtract(_64broadcast256, v1);                                           // We want the max, but SIMD only does min on horizontal, so let's invert the values
+                v2 = Avx2.Subtract(_64broadcast256, v2);
+                var v = Avx2.Min(v1, v2);                                         // Min of the two 32 bytes lanes
 
-            v = Avx2.Min(v, Avx2.ShiftRightLogical(v.AsInt16(), 8).AsByte());    // Nice trick to get the min of the remaining values and shifting from byte to short
+                v = Avx2.Min(v, Avx2.ShiftRightLogical(v.AsInt16(), 8).AsByte());    // Nice trick to get the min of the remaining values and shifting from byte to short
 
-            var lv = v.GetLower().AsUInt16();                                          // Need to get a v128 packed as ushort
-            var hv = v.GetUpper().AsUInt16();
-            lv = Sse41.MinHorizontal(lv);                                                               // Compute the min of the 8 ushort
-            hv = Sse41.MinHorizontal(hv);
-            var m = (byte)(64 - Math.Min(lv.GetElement(0), hv.GetElement(0)));              // Get the max value from the min of the two lanes that we invert back
+                var lv = v.GetLower().AsUInt16();                                          // Need to get a v128 packed as ushort
+                var hv = v.GetUpper().AsUInt16();
+                lv = Sse41.MinHorizontal(lv);                                                               // Compute the min of the 8 ushort
+                hv = Sse41.MinHorizontal(hv);
+                m = (byte)(64 - Math.Min(lv.GetElement(0), hv.GetElement(0)));
+            }
+            
+            // ARM implementation
+            else if (AdvSimd.Arm64.IsSupported)
+            {
+                var curLevelBank = curLevelIndex & ~0x3F;
+                var v1 = AdvSimd.LoadVector128(prevLevel.Address + curLevelBank);        // Load 16 bytes
+                var v2 = AdvSimd.LoadVector128(prevLevel.Address + curLevelBank + 16);   // Load 16 bytes
+                var v3 = AdvSimd.LoadVector128(prevLevel.Address + curLevelBank + 32);   // Load 16 bytes
+                var v4 = AdvSimd.LoadVector128(prevLevel.Address + curLevelBank + 48);   // Load 16 bytes
 
+                v1 = AdvSimd.Max(AdvSimd.Max(v1, v2), AdvSimd.Max(v3, v4));
+                m = AdvSimd.Arm64.MaxAcross(v1)[0];
+            }
+            
             prevLevelMax = curMax;
 
             // If the value didn't change, we have nothing more to do as the upper level won't need to be recomputed
