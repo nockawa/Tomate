@@ -26,6 +26,9 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 
     public static readonly MemorySegment Empty = new(null, 0);
 
+    private const uint SegmentIsInMMF = 0x80000000;
+    private const uint LengthMask = 0x7FFFFFFF;
+
     #endregion
 
     #region Public APIs
@@ -99,17 +102,49 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 
     #region Fields
 
-    public readonly byte* Address;
-    public readonly int Length;
+    public readonly ulong _addr;
+    public readonly uint _data;
 
+    public byte* Address
+    {
+        get
+        {
+            if (IsInMMF)
+            {
+                throw new NotImplementedException();
+            }
+            else
+            {
+                return (byte*)_addr;
+            }
+        }
+    }
+    public int Length => (int)(_data & LengthMask);
+    public bool IsInMMF => (_data & ~LengthMask) != 0;
+    
     #endregion
 
     #region Constructors
 
-    public MemorySegment(byte* address, int length)
+    public MemorySegment(byte* address, int length) : this(address, length, -1)
     {
-        Address = address;
-        Length = length;
+    }
+    
+    internal MemorySegment(byte* address, int length, int mmfId)
+    {
+        Debug.Assert(length >= 0, $"Length must be null or positive");
+
+        if (mmfId == -1)
+        {
+            _addr = (ulong)address;
+            _data = (uint)length;
+        }
+        else
+        {
+            _data = (uint)length | SegmentIsInMMF;
+            var baseAddr = (byte*)MMFRegistry.MMFAddressTable[mmfId];
+            var offset = address - baseAddr;
+        }
     }
 
     #endregion
@@ -279,7 +314,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
     [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
     public Span<T> ToSpan() => new(Address, Length);
 
-    public Span<U> ToSpan<U>() where U : unmanaged => new(Address, Length * sizeof(T) / sizeof(U));
+    public Span<TU> ToSpan<TU>() where TU : unmanaged => new(Address, Length * sizeof(T) / sizeof(TU));
 
     #endregion
 

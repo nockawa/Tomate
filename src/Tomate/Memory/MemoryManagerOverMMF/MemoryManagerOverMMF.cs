@@ -1,5 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
@@ -11,6 +13,7 @@ internal struct RootHeader
 {
     public int PageSize;
     public int PageCapacity;
+    public int MMFId;
     public int MaxConcurrencyCount;
     public int OffsetSessionInfo;
     public int MaxSessionCount;
@@ -25,6 +28,9 @@ internal struct RootHeader
     public int OffsetUserData;
     public int UserDataSize;
     public int AllocatorRobinCounter;
+    public int DataStorePageIndex;                      // Id of the page storing the data store
+    public int ResourceLocatorDictionaryIndex;          // Id of the page storing the dictionary
+    public int ResourceCapacity;                        // Max number of resources stored in the ResourceLocator
 };
 
 [PublicAPI]
@@ -82,7 +88,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
     {
         try
         {
-            return new MemoryManagerOverMMF(new CreateSettings(mmfFilePathName, mmfName), default);
+            return new MemoryManagerOverMMF(new CreateSettings(mmfFilePathName, mmfName), FileMode.Open);
         }
         catch (MemoryManagerOverMMFCreateException)
         {
@@ -94,7 +100,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
     {
         try
         {
-            return new(new CreateSettings(null, mmfName), default);
+            return new(new CreateSettings(null, mmfName), FileMode.Open);
         }
         catch (MemoryManagerOverMMFCreateException)
         {
@@ -138,7 +144,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
         Trace.Assert(UnregisterSession(IProcessProvider.Singleton.CurrentProcessId));
 
         long maxSize = 0;
-        if (_compactOnFinalClose)
+        if (_shrinkOnFinalClose)
         {
             var bitIndex = _pageBitfield.ToSpan().FindMaxBitSet();
             maxSize = (long)PageSize * (bitIndex + 1);
@@ -152,13 +158,16 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
         this.DisposeAndNull(ref _view);
         this.DisposeAndNull(ref _mmf);
 
-        if (_compactOnFinalClose)
+        if (_shrinkOnFinalClose)
         {
             using var fs = File.Open(MMFFilePathName, FileMode.Open, FileAccess.ReadWrite);
             fs.SetLength(maxSize);
         }
 
-        MMFRangeByMMF.Remove(this);
+        _registry.Dispose();
+        _registry = null;
+        
+        MMFRangeByMMF.TryRemove(this, out _);
     }
 
     public bool FreePages(MemorySegment segment)
@@ -204,33 +213,43 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
 
     public int ToBlockId(MemorySegment segment) => segment.IsDefault ? -1 : (int)((segment.Address - _rootAddr) / PageSize);
 
-    #endregion
+    public bool TryAddResource<T>(String64 key, T instance) where T : unmanaged, IUnmanagedFacade
+    {
+        Debug.Assert(instance.MemoryManager == this, "Instance was constructed with a different Memory Manager than the MMF it was attempted to be added to");
+        
+        var h = _resourceStore.Store(instance);
+        if (_resourceLocator.TryAdd(key, h) == false)
+        {
+            _resourceStore.Release(h);
+            throw new Exception($"There is already an entry with the given key {key}");
+        }
+
+        return true;
+    }
+
+    public ref T TryGetResource<T>(String64 key, out bool result) where T : unmanaged, IUnmanagedFacade
+    {
+        result = false;
+        if (_resourceLocator.TryGet(key, out var resourceHandle) == false)
+        {
+            return ref Unsafe.NullRef<T>();
+        }
+
+        result = true;
+        return ref _resourceStore.Get<T>(resourceHandle);
+    }
+    
+    public bool RemoveResource(String64 key)
+    {
+        if (_resourceLocator.TryRemove(key, out var resourceHandle) == false)
+        {
+            return false;
+        }
+
+        return _resourceStore.Release(resourceHandle);
+    }
 
     #endregion
-
-    #region Fields
-
-    internal static Dictionary<MemoryManagerOverMMF, ValueTuple<long, long>> MMFRangeByMMF = new();
-
-    // Each thread of each process will be assigned one of the allocator referenced in this array, in order to reduce contention
-    //  (each allocator has its own locking mechanism)
-    private readonly MemorySegment<int> _allocators;
-    private readonly ThreadLocal<int> _assignedAllocator;
-    private readonly bool _compactOnFinalClose;
-    private readonly MemorySegment<RootHeader> _header;
-    private readonly MemorySegment<ulong> _pageBitfield;
-    private readonly MemorySegment<uint> _pageDirectory;
-    private readonly MemorySegment<int> _sessions;
-    private int _allocatedPageCount;
-
-    private MemoryMappedFile _mmf;
-
-    private byte* _rootAddr;
-    private MemoryMappedViewAccessor _view;
-
-    internal DebugData DebugInfo;
-
-    public bool RandomizeContentOnFree;
 
     #endregion
 
@@ -256,7 +275,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
             {
                 // TO CHECK : Giving a name doesn't work on Unix based, but we need to make sure IPC is working as expected on Windows
                 _mmf = MemoryMappedFile.CreateFromFile(MMFFilePathName, fileMode, null /*MMFName*/, fileSize);
-                _compactOnFinalClose = settings.CompactOnFinalClose;
+                _shrinkOnFinalClose = settings.ShrinkOnFinalClose;
             }
 
             // Memory-only
@@ -281,7 +300,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
         var viewHandle = _view.SafeMemoryMappedViewHandle;
         viewHandle.AcquirePointer(ref _rootAddr);
         _header = new MemorySegment<RootHeader>(_rootAddr, 1);
-
+        
         // If the MMF is new PageCapacity is uninitialized, otherwise the MMF was already created by another process
         ref var h = ref _header.AsRef();
         Debug.Assert(settings.IsCreate == (h.PageCapacity==0), 
@@ -313,6 +332,11 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
             h.OffsetUserData = h.OffsetBlockAllocators + h.BlockAllocatorsSize;
             Debug.Assert(h.OffsetUserData < PageSize, $"With this configuration PageSize must be at least {h.OffsetUserData} bytes");
             h.UserDataSize = PageSize - h.OffsetUserData;
+            
+            // Register the MMF in the registry
+            _registry = MMFRegistry.GetMMFRegistry();
+            _mmfId = _registry.RegisterMMF(MMFFilePathName, _rootAddr);
+            h.MMFId = _mmfId;
         }
 
         // Existing MMF
@@ -321,7 +345,20 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
             PageSize = h.PageSize;
             pageCapacity = (int)(MMFSize / PageSize);
             pageBitfieldSize = ((pageCapacity + 63) / 64);
+            
+            _mmfId = h.MMFId;
         }
+
+        MemoryManagerId = IMemoryManager.RegisterMemoryManager(this);
+        PageAllocatorId = IPageAllocator.RegisterPageAllocator(this);
+        BaseAddress = _rootAddr;
+        EndAddress = _rootAddr + MMFSize;
+        MMFRangeByMMF.TryAdd(this, ((long)BaseAddress, (long)EndAddress));
+
+        _sessions = new MemorySegment<int>(_rootAddr + h.OffsetSessionInfo, sizeof(int) * h.MaxSessionCount);
+        _pageBitfield  = new MemorySegment<ulong>(_rootAddr + h.OffsetPageBitfield, pageBitfieldSize);
+        _pageDirectory = new MemorySegment<uint>(_rootAddr + h.OffsetPageDirectory, pageCapacity);
+        _allocators = new MemorySegment<int>(_rootAddr + h.OffsetBlockAllocators, h.MaxConcurrencyCount);
 
         _assignedAllocator = new ThreadLocal<int>(() =>
         {
@@ -329,29 +366,45 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
             var v = Interlocked.Increment(ref header.AllocatorRobinCounter);
             return _allocators[v % header.MaxConcurrencyCount];
         });
-        
-        MemoryManagerId = IMemoryManager.RegisterMemoryManager(this);
-        PageAllocatorId = IPageAllocator.RegisterPageAllocator(this);
-        BaseAddress = _rootAddr;
-        EndAddress = _rootAddr + MMFSize;
-        MMFRangeByMMF.Add(this, ((long)BaseAddress, (long)EndAddress));
-
-        _sessions = new MemorySegment<int>(_rootAddr + h.OffsetSessionInfo, sizeof(int) * h.MaxSessionCount);
-        _pageBitfield  = new MemorySegment<ulong>(_rootAddr + h.OffsetPageBitfield, pageBitfieldSize);
-        _pageDirectory = new MemorySegment<uint>(_rootAddr + h.OffsetPageDirectory, pageCapacity);
-        _allocators = new MemorySegment<int>(_rootAddr + h.OffsetBlockAllocators, h.MaxConcurrencyCount);
 
         ReservePage(0, 1, -1);                                   // the first page is storing the header and all root level information, so we mark it as reserved
         ReservePage(pageCapacity, (short)(64 - (pageCapacity % 64)), -1); // Make sure we can't allocate pages that are not there but the mask would allow us to take
 
         Trace.Assert(RegisterSession(IProcessProvider.Singleton.CurrentProcessId));
+
+        // Higher level initialization
+        if (settings.IsCreate)
+        {
+            // We want to expose a resource locator API, for that we need a dictionary and a data store
+            //  - The dictionary will be used to identify the resource by its key (a string), its value the ID of the resource stored in the data store 
+            //  - The data store will store/take care of the lifetime of each resource stored in the MMF  
+            
+            // Allocate the page that will store the Data Store
+            var dataStoreSeg = AllocatePages(1);
+            h.DataStorePageIndex = ToBlockId(dataStoreSeg);
+
+            _resourceStore = UnmanagedDataStore.Create(this, dataStoreSeg);
+
+            var dicSeg = AllocatePages(1);
+            h.ResourceLocatorDictionaryIndex = ToBlockId(dicSeg);
+            h.ResourceCapacity = MappedBlockingSimpleDictionary<String64, int>.ComputeItemCapacity(settings.PageSize);
+            _resourceLocator = MappedBlockingSimpleDictionary<String64, UnmanagedDataStore.Handle>.Create(dicSeg);
+        }
+
+        // Open
+        else
+        {
+            var dataStoreSeg = FromBlockId(h.DataStorePageIndex);
+            _resourceStore = UnmanagedDataStore.Map(this, dataStoreSeg);
+
+            var dicSeg = FromBlockId(h.ResourceLocatorDictionaryIndex);
+            _resourceLocator = MappedBlockingSimpleDictionary<String64, UnmanagedDataStore.Handle>.Map(dicSeg);
+        }
     }
 
     #endregion
 
     #region Internals
-
-    #region Internals methods
 
     internal static MemoryManagerOverMMF GetMMFFromRange(long address)
     {
@@ -367,6 +420,36 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
     }
 
     #endregion
+
+    #region Fields
+
+    internal static ConcurrentDictionary<MemoryManagerOverMMF, ValueTuple<long, long>> MMFRangeByMMF = new();
+
+    // Each thread of each process will be assigned one of the allocator referenced in this array, in order to reduce contention
+    //  (each allocator has its own locking mechanism)
+    private readonly MemorySegment<int> _allocators;
+    private readonly ThreadLocal<int> _assignedAllocator;
+    private readonly bool _shrinkOnFinalClose;
+    private readonly MemorySegment<RootHeader> _header;
+    private readonly MemorySegment<ulong> _pageBitfield;
+    private readonly MemorySegment<uint> _pageDirectory;
+    private readonly MemorySegment<int> _sessions;
+    private int _allocatedPageCount;
+
+    private MemoryMappedFile _mmf;
+
+    private byte* _rootAddr;
+    private MemoryMappedViewAccessor _view;
+
+    private int _mmfId;
+
+    private UnmanagedDataStore _resourceStore;
+    private MappedBlockingSimpleDictionary<String64, UnmanagedDataStore.Handle> _resourceLocator;
+
+    internal DebugData DebugInfo;
+
+    public bool RandomizeContentOnFree;
+    private MMFRegistry _registry;
 
     #endregion
 

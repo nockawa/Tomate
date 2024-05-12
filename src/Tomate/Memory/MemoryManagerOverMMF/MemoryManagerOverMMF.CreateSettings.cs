@@ -11,20 +11,20 @@ public partial class MemoryManagerOverMMF
         public string Name { get; }
         public long FileSize { get; }
         public int PageSize { get; }
-        public bool CompactOnFinalClose { get; set; }
+        public bool ShrinkOnFinalClose { get; set; }
         public int MaxSessionCount { get; set; }
         public int MaxConcurrencyCount { get; set; }
 
         internal bool IsCreate { get; }
         
         public CreateSettings(string filePathName, string name, long fileSize, int pageSize, 
-            bool compactOnFinalClose=true, int maxSessionCount=8, int maxConcurrencyCount=8)
+            bool shrinkOnFinalClose=true, int maxSessionCount=8, int maxConcurrencyCount=8)
         {
             FilePathName = filePathName;
             Name = name;
             FileSize = fileSize;
             PageSize = pageSize;
-            CompactOnFinalClose = compactOnFinalClose;
+            ShrinkOnFinalClose = shrinkOnFinalClose;
             MaxSessionCount = maxSessionCount;
             MaxConcurrencyCount = maxConcurrencyCount;
             IsCreate = true;

@@ -162,7 +162,7 @@ public unsafe struct String64 : IComparable<String64>, IEquatable<String64>
             if (sizeRequired > 63) ThrowHelper.StringTooBigForString64(nameof(source), source);
 
             var l = Encoding.UTF8.GetBytes(s, inLength, a, 63);
-            new Span<byte>(s, 64).Slice(l).Clear();     //Null terminator until the end
+            new Span<byte>(a, 64).Slice(l).Clear();     //Null terminator until the end
         }
     }
 

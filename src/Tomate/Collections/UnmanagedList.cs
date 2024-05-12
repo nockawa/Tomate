@@ -5,23 +5,10 @@ using JetBrains.Annotations;
 
 namespace Tomate;
 
-public interface IFacade
-{
-    #region Public APIs
-
-    #region Properties
-
-    MemoryBlock MemoryBlock { get; }
-
-    #endregion
-
-    #endregion
-}
-
 [DebuggerTypeProxy(typeof(UnmanagedList<>.DebugView))]
 [DebuggerDisplay("Count = {Count}")]
 [PublicAPI]
-public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
+public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : unmanaged
 {
     #region Constants
 
@@ -32,18 +19,6 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
     #region Public APIs
 
     #region Properties
-
-    private ref uint _capacity => ref _header->Capacity;
-    private ref int _count => ref _header->Count;
-    private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
-    private T* _items => (T*)(_header + 1);
-
-    public MemorySegment<T> Content => new (_items, _count); //_memoryBlock.MemorySegment.Slice(0, _size);
-
-    public int Count => _count;
-
-    public bool IsDefault => _memoryBlock.IsDefault;
-    public bool IsDisposed => _count < 0;
 
     public ref T this[int index]
     {
@@ -57,7 +32,16 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
         }
     }
 
+    public MemorySegment<T> Content => new (_items, _count); //_memoryBlock.MemorySegment.Slice(0, _size);
+
+    public int Count => _count;
+
+    public bool IsDefault => _memoryBlock.IsDefault;
+    public bool IsDisposed => _count < 0;
+
     public MemoryBlock MemoryBlock => _memoryBlock;
+
+    public IMemoryManager MemoryManager => _memoryBlock.IsDefault ? null : _memoryBlock.MemoryManager;
 
     public int RefCounter => _memoryBlock.RefCounter;
 
@@ -292,12 +276,6 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
 
     #endregion
 
-    #region Fields
-
-    private MemoryBlock _memoryBlock;
-
-    #endregion
-
     #region Constructors
 
     /// <summary>
@@ -332,7 +310,14 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
 
     #endregion
 
-    #region Private methods
+    #region Privates
+
+    private ref uint _capacity => ref _header->Capacity;
+    private ref int _count => ref _header->Count;
+    private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
+    private T* _items => (T*)(_header + 1);
+
+    private MemoryBlock _memoryBlock;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void AddWithResize(T item)
@@ -390,18 +375,18 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
 
         #endregion
 
-        #region Fields
-
-        private readonly MemorySegment<T> _data;
-
-        #endregion
-
         #region Constructors
 
         public DebugView(UnmanagedList<T> list)
         {
             _data = list.Content;
         }
+
+        #endregion
+
+        #region Privates
+
+        private readonly MemorySegment<T> _data;
 
         #endregion
     }
@@ -439,13 +424,6 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
 
         #endregion
 
-        #region Fields
-
-        private readonly Span<T> _span;
-        private int _index;
-
-        #endregion
-
         #region Constructors
 
         public Enumerator(UnmanagedList<T> owner)
@@ -454,6 +432,13 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
             //_span = owner._memoryBlock.MemorySegment.Slice(0, owner.Count).ToSpan();
             _index = -1;
         }
+
+        #endregion
+
+        #region Fields
+
+        private readonly Span<T> _span;
+        private int _index;
 
         #endregion
     }

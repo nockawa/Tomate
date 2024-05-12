@@ -19,7 +19,7 @@ namespace Tomate;
 /// </para>
 /// <para>
 /// Implementation:
-///  The collection stores a Page Directory inside the first page, this directory contains for each page  its offset from the base address of the allocator.
+///  The collection stores a Page Directory inside the first page, this directory contains for each page its offset from the base address of the allocator.
 ///  The ID returned by <seealso cref="Reserve"/> is a linear offset into the collection and we use the Page Directory to determine in which page is stored
 ///   the given set of items.
 ///  You can't allocate a set of item that exceed the number of items a given page can hold because each set is a contiguous space of data. If when calling

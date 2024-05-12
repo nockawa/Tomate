@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
 namespace Tomate;
@@ -19,10 +20,6 @@ public unsafe struct UnmanagedDataStore
 
     #region Properties
 
-    private IPageAllocator _allocator => IPageAllocator.GetPageAllocator(_header->PageAllocatorId);
-
-    internal int EntryCountPerPage => _header->EntryCountPerPageInfo;
-
     public bool IsDefault => _allocator == null;
 
     #endregion
@@ -31,21 +28,17 @@ public unsafe struct UnmanagedDataStore
 
     public static int ComputeStorageSize(int itemCount) => sizeof(Header) + sizeof(PageInfo) * itemCount;
 
-    public static UnmanagedDataStore Create(IPageAllocator pageAllocator, MemorySegment memorySegment)
+    public static UnmanagedDataStore Create(IPageAllocator pageAllocator, MemorySegment dataStoreRoot)
     {
-        return new UnmanagedDataStore(pageAllocator, memorySegment, true);
+        return new UnmanagedDataStore(pageAllocator, dataStoreRoot, true);
     }
 
-    public ref T Get<T>(Handle<T> handle) where T : unmanaged, IFacade
+    public static UnmanagedDataStore Map(IPageAllocator pageAllocator, MemorySegment dataStoreRoot)
     {
-        ref var entry = ref GetEntry(handle.Index);
-        Debug.Assert(entry.TypeId == InternalTypeManager.RegisterType<T>());
-        Debug.Assert(entry.Generation == handle.Generation);
-
-        return ref Unsafe.As<MemoryBlock, T>(ref entry.MemoryBlock);
+        return new UnmanagedDataStore(pageAllocator, dataStoreRoot, false);
     }
 
-    public ref T Get<T>(Handle handle) where T : unmanaged, IFacade
+    public ref T Get<T>(Handle<T> handle) where T : unmanaged, IUnmanagedFacade
     {
         ref var entry = ref GetEntry(handle.Index);
         Debug.Assert(entry.TypeId == InternalTypeManager.RegisterType<T>());
@@ -54,7 +47,16 @@ public unsafe struct UnmanagedDataStore
         return ref Unsafe.As<MemoryBlock, T>(ref entry.MemoryBlock);
     }
 
-    public void Release(Handle handle)
+    public ref T Get<T>(Handle handle) where T : unmanaged, IUnmanagedFacade
+    {
+        ref var entry = ref GetEntry(handle.Index);
+        Debug.Assert(entry.TypeId == InternalTypeManager.RegisterType<T>());
+        Debug.Assert(entry.Generation == handle.Generation);
+
+        return ref Unsafe.As<MemoryBlock, T>(ref entry.MemoryBlock);
+    }
+
+    public bool Release(Handle handle)
     {
         ref var entry = ref GetEntry(handle.Index, out var pageIndex, out var indexInPage);
         Debug.Assert(entry.Generation == handle.Generation);
@@ -62,9 +64,11 @@ public unsafe struct UnmanagedDataStore
         _pageInfos[pageIndex].Bitmap.FreeBits(indexInPage, 1);
         entry.MemoryBlock.Dispose();
         entry.Generation++;
+
+        return true;
     }
 
-    public Handle<T> Store<T>(T instance) where T : unmanaged, IFacade
+    public Handle<T> Store<T>(T instance) where T : unmanaged, IUnmanagedFacade
     { 
     Retry:
         var pageInfos = _pageInfos;
@@ -94,7 +98,7 @@ public unsafe struct UnmanagedDataStore
             }
         }
 
-        // Check if there no longer free space
+        // Check if there is no longer free space
         if (_header->PageInfoCount == _header->PageInfoLength)
         {
             ThrowHelper.ItemMaxCapacityReachedException(_header->PageInfoLength * _header->EntryCountPerPageInfo);
@@ -146,19 +150,13 @@ public unsafe struct UnmanagedDataStore
         ref var entry = ref GetEntry(fullIndex);
         entry.MemoryBlock = instance.MemoryBlock;
         entry.MemoryBlock.AddRef();
+        entry.Generation++;
         entry.TypeId = InternalTypeManager.RegisterType<T>();
         
         return new Handle<T>(fullIndex, entry.Generation);
     }
 
     #endregion
-
-    #endregion
-
-    #region Fields
-
-    private Header* _header;
-    private PageInfo* _pageInfos;
 
     #endregion
 
@@ -169,45 +167,68 @@ public unsafe struct UnmanagedDataStore
         var pageSize = pageAllocator.PageSize;
         var entryCountPerPage = pageSize / EntrySize;
 
-        // Compute how many items can fit in one page size
-        // Algo is incredibly stupid, but fast enough...
-        // ReSharper disable once NotAccessedVariable
-        var iteration = 0;
-        var bitmapSize = ConcurrentBitmapL4.ComputeRequiredSize(entryCountPerPage);
-        while (HeaderSize + bitmapSize.Pad<Entry>() + (entryCountPerPage * EntrySize) > pageSize)
+        if (create)
         {
-            --entryCountPerPage;
-            bitmapSize = ConcurrentBitmapL4.ComputeRequiredSize(entryCountPerPage);
-            iteration++;
-        }
+            // Compute how many items can fit in one page size
+            // Algo is incredibly stupid, but fast enough...
+            // ReSharper disable once NotAccessedVariable
+            var iteration = 0;
+            var bitmapSize = ConcurrentBitmapL4.ComputeRequiredSize(entryCountPerPage);
+            while (HeaderSize + bitmapSize.Pad<Entry>() + (entryCountPerPage * EntrySize) > pageSize)
+            {
+                --entryCountPerPage;
+                bitmapSize = ConcurrentBitmapL4.ComputeRequiredSize(entryCountPerPage);
+                iteration++;
+            }
 
-        // The given segment is split into two parts: the header and storing all the PageInfo we can on the remaining part
-        var (headerSegment, pageInfosSegment) = memorySegment.Split<Header, PageInfo>(sizeof(Header));
-        _header = headerSegment.Address;
-        _pageInfos = pageInfosSegment.Address;
+            // The given segment is split into two parts: the header and storing all the PageInfo we can on the remaining part
+            var (headerSegment, pageInfosSegment) = memorySegment.Split<Header, PageInfo>(sizeof(Header));
+            _header = headerSegment.Address;
+            _pageInfos = pageInfosSegment.Address;
 
-        // Setup header
-        _header->PageAllocatorId = IPageAllocator.RegisterPageAllocator(pageAllocator);
-        _header->CurLookupPageIndex = 0;
-        _header->LastPageInfoIndex = 0;
-        _header->PageInfoCount = 1;
-        _header->PageInfoLength = pageInfosSegment.Length;
-        _header->PageInfoBitmapSize = bitmapSize;
-        _header->EntryCountPerPageInfo = entryCountPerPage;
-        _header->AccessControl = new MappedExclusiveAccessControl();
+            // Setup header
+            _pageAllocatorId = pageAllocator.PageAllocatorId;
+            _header->CurLookupPageIndex = 0;
+            _header->LastPageInfoIndex = 0;
+            _header->PageInfoCount = 1;
+            _header->PageInfoLength = pageInfosSegment.Length;
+            _header->PageInfoBitmapSize = bitmapSize;
+            _header->EntryCountPerPageInfo = entryCountPerPage;
+            _header->AccessControl = new MappedExclusiveAccessControl();
         
-        // Allocate a page that will store the content of the first PageInfo
-        var firstPage = _allocator.AllocatePages(1);
-        firstPage.Cast<byte>().ToSpan().Clear();
+            // Allocate a page that will store the content of the first PageInfo
+            var firstPage = _allocator.AllocatePages(1);
+            firstPage.Cast<byte>().ToSpan().Clear();
 
-        // Initialize the first PageInfo
-        InitPage(firstPage, 0);
-        MapPage(ref _pageInfos[0], firstPage, 0);
+            // Initialize the first PageInfo
+            InitPage(firstPage, 0);
+            MapPage(ref _pageInfos[0], firstPage, 0);
+        }
+        else
+        {
+            // The given segment is split into two parts: the header and storing all the PageInfo we can on the remaining part
+            var (headerSegment, pageInfosSegment) = memorySegment.Split<Header, PageInfo>(sizeof(Header));
+            _header = headerSegment.Address;
+            _pageInfos = pageInfosSegment.Address;
+            _pageAllocatorId = pageAllocator.PageAllocatorId;
+        }
     }
 
     #endregion
 
-    #region Private methods
+    #region Internals
+
+    internal int EntryCountPerPage => _header->EntryCountPerPageInfo;
+
+    #endregion
+
+    #region Privates
+
+    private IPageAllocator _allocator => IPageAllocator.GetPageAllocator(_pageAllocatorId);
+
+    private Header* _header;
+    private PageInfo* _pageInfos;
+    private readonly int _pageAllocatorId;
 
     private ref Entry GetEntry(int index) => ref GetEntry(index, out _, out _);
 
@@ -250,42 +271,48 @@ public unsafe struct UnmanagedDataStore
 
     #region Inner types
 
+    [StructLayout(LayoutKind.Sequential)]
     private struct Entry
     {
         #region Fields
 
-        public ushort Generation;
-
         public MemoryBlock MemoryBlock;
+        public ushort Generation;           // Even == entry empty, Odd == entry taken
         public ushort TypeId;
 
         #endregion
     }
 
+    [PublicAPI]
     public struct Handle(int index, int generation)
     {
         #region Public APIs
 
         #region Properties
 
+        public bool IsDefault => Generation == 0 && Index == 0;
+
+        #endregion
+
+        #endregion
+
+        #region Internals
+
         internal int Generation { get; } = generation;
 
         internal int Index { get; } = index;
 
         #endregion
-
-        #endregion
     }
 
-    public struct Handle<T>(int index, int generation) where T : unmanaged, IFacade
+    [PublicAPI]
+    public struct Handle<T>(int index, int generation) where T : unmanaged, IUnmanagedFacade
     {
         #region Public APIs
 
         #region Properties
 
-        internal int Generation { get; } = generation;
-
-        internal int Index { get; } = index;
+        public bool IsDefault => Generation == 0 && Index == 0;
 
         #endregion
 
@@ -304,6 +331,14 @@ public unsafe struct UnmanagedDataStore
         #endregion
 
         #endregion
+
+        #region Internals
+
+        internal int Generation { get; } = generation;
+
+        internal int Index { get; } = index;
+
+        #endregion
     }
 
     private struct Header
@@ -314,7 +349,6 @@ public unsafe struct UnmanagedDataStore
         public int CurLookupPageIndex;
         public int EntryCountPerPageInfo;
         public int LastPageInfoIndex;
-        public int PageAllocatorId;
         public int PageInfoBitmapSize;
         public int PageInfoCount;
         public int PageInfoLength;
@@ -365,15 +399,7 @@ internal static class InternalTypeManager
 
     #endregion
 
-    #region Fields
-
-    private static int _curIndex = -1;
-
-    #endregion
-
     #region Internals
-
-    #region Internals methods
 
     [CanBeNull]
     internal static Type GetType(ushort typeId)
@@ -394,6 +420,10 @@ internal static class InternalTypeManager
     }
 
     #endregion
+
+    #region Privates
+
+    private static int _curIndex = -1;
 
     #endregion
 }

@@ -100,7 +100,7 @@ public partial class DefaultMemoryManager
                             // Another thread may have beaten us, so check if it's the case or not
                             if (curBlock == null)
                             {
-                                var newBlock = Owner.AllocateLargeBlockAlloctor(this, size);
+                                var newBlock = Owner.AllocateLargeBlockAllocator(this, size);
                                 var next = _firstLargeBlockAllocator;
                                 _firstLargeBlockAllocator = newBlock;
                                 newBlock.NextBlockAllocator = next;

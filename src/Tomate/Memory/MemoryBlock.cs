@@ -140,9 +140,9 @@ public struct MemoryBlock : IRefCounted
         MemorySegment = memorySegment;
     }
 
-    internal unsafe MemoryBlock(byte* address, int length)
+    internal unsafe MemoryBlock(byte* address, int length, int mmfId)
     {
-        MemorySegment = new MemorySegment(address, length);
+        MemorySegment = new MemorySegment(address, length, mmfId);
     }
 
     #endregion

@@ -365,7 +365,7 @@ public class DefaultMemoryManagerTests
         sw.Restart();
         for (int i = 0; i < count; i++)
         {
-            mm.Free(new MemoryBlock((byte*)list[i].ToPointer(), 1));
+            mm.Free(new MemoryBlock((byte*)list[i].ToPointer(), 1, -1));
         }
         sw.Stop();
 
@@ -548,6 +548,22 @@ public class DefaultMemoryManagerTests
         Console.WriteLine($"Allocated {curAllocSegCount} segments, total size {curTotalAllocated.FriendlySize()}, Native Blocks Count: {mm.NativeBlockCount} Total Size: {mm.NativeBlockTotalSize.FriendlySize()}");
     }
 
+    unsafe struct TestS
+    {
+        fixed byte _process[16];
+    }
+    
+    [Test]
+    public void BigAllocTest()
+    {
+        using var mm = new DefaultMemoryManager();
+        var size = DefaultMemoryManager.LargeBlockAllocator.SegmentHeader.MaxSegmentSize;
+
+        var a = GC.AllocateUninitializedArray<TestS>(Array.MaxLength);
+        
+        var b = mm.Allocate(DefaultMemoryManager.MaxMemorySegmentSize);
+    }
+    
     [Test]
     public void BlockRecycleTest()
     {
@@ -651,24 +667,24 @@ public class DefaultMemoryManagerTests
 #endif
 }
 
-[SetUpFixture]
-public class OneTimeSetup
-{
-    [OneTimeSetUp]
-    public void Setup()
-    {
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Verbose()
-            .Enrich.FromLogContext()
-            .Enrich.WithThreadId()
-            .WriteTo.Seq("http://localhost:5341")
-            .WriteTo.Console()
-            .CreateLogger();
-    }
-
-    [OneTimeTearDown]
-    public void TearDown()
-    {
-        Log.CloseAndFlush();
-    }
-}
+// [SetUpFixture]
+// public class OneTimeSetup
+// {
+//     [OneTimeSetUp]
+//     public void Setup()
+//     {
+//         Log.Logger = new LoggerConfiguration()
+//             .MinimumLevel.Verbose()
+//             .Enrich.FromLogContext()
+//             .Enrich.WithThreadId()
+//             .WriteTo.Seq("http://localhost:5341")
+//             .WriteTo.Console()
+//             .CreateLogger();
+//     }
+//
+//     [OneTimeTearDown]
+//     public void TearDown()
+//     {
+//         Log.CloseAndFlush();
+//     }
+// }
