@@ -166,8 +166,6 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
 
         _registry.Dispose();
         _registry = null;
-        
-        MMFRangeByMMF.TryRemove(this, out _);
     }
 
     public bool FreePages(MemorySegment segment)
@@ -335,7 +333,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
             
             // Register the MMF in the registry
             _registry = MMFRegistry.GetMMFRegistry();
-            _mmfId = _registry.RegisterMMF(MMFFilePathName, _rootAddr);
+            _mmfId = _registry.RegisterMMF(this);
             h.MMFId = _mmfId;
         }
 
@@ -353,7 +351,6 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
         PageAllocatorId = IPageAllocator.RegisterPageAllocator(this);
         BaseAddress = _rootAddr;
         EndAddress = _rootAddr + MMFSize;
-        MMFRangeByMMF.TryAdd(this, ((long)BaseAddress, (long)EndAddress));
 
         _sessions = new MemorySegment<int>(_rootAddr + h.OffsetSessionInfo, sizeof(int) * h.MaxSessionCount);
         _pageBitfield  = new MemorySegment<ulong>(_rootAddr + h.OffsetPageBitfield, pageBitfieldSize);
@@ -404,26 +401,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
 
     #endregion
 
-    #region Internals
-
-    internal static MemoryManagerOverMMF GetMMFFromRange(long address)
-    {
-        foreach (var kvp in MMFRangeByMMF)
-        {
-            if ((address >= kvp.Value.Item1) && (address < kvp.Value.Item2))
-            {
-                return kvp.Key;
-            }
-        }
-
-        return null;
-    }
-
-    #endregion
-
     #region Fields
-
-    internal static ConcurrentDictionary<MemoryManagerOverMMF, ValueTuple<long, long>> MMFRangeByMMF = new();
 
     // Each thread of each process will be assigned one of the allocator referenced in this array, in order to reduce contention
     //  (each allocator has its own locking mechanism)
@@ -555,4 +533,14 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
     }
 
     #endregion
+
+    public static bool Delete(string filePathName)
+    {
+        if (File.Exists(filePathName) == false)
+        {
+            return false;
+        }
+
+        return MMFRegistry.Delete(filePathName);
+    }
 }

@@ -168,6 +168,10 @@ public struct MemoryBlock<T> : IRefCounted where T : unmanaged
     {
         get
         {
+            if (IsDefault)
+            {
+                return 0;
+            }
             var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
             return header->RefCounter;
         }

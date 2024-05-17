@@ -32,21 +32,77 @@ internal unsafe class MMFRegistry : IDisposable
 
     private const uint FileMagic = 0x524D4D54;
     private static readonly object Lock = new ();
+    private static readonly int StringTableSize = MMFEntryCapacity * sizeof(String256);
+    internal static void** MMFAddressTable;
+    internal static readonly MemoryManagerOverMMF[] MMFById = new MemoryManagerOverMMF[MMFEntryCapacity];
 
     private const int MMFEntryCapacity = 1024;
     private const string MMFName = "Tomate.MMF.Registry";
-    private static readonly int StringTableSize = MMFEntryCapacity * sizeof(String256);
 
     #endregion
 
     #region Public APIs
 
+    #region Properties
+
+    public bool IsDisposed => _mmf == null;
+
+    #endregion
+
     #region Methods
+
+    public static bool Delete(string filePathName)
+    {
+        var res = true;
+        
+        // Delete the file 
+        try
+        {
+            if (File.Exists(filePathName))
+            {
+                File.Delete(filePathName);
+            }
+        }
+        catch (Exception)
+        {
+            // ignored
+            res = false;
+        }
+
+        // Update the registry
+        {
+            using var registry = GetMMFRegistry();
+            registry.SweepAndClean();
+        }
+
+        return res;
+    }
+
+    public static MMFRegistry GetMMFRegistry()
+    {
+        lock (Lock)
+        {
+            if (_singleton != null)
+            {
+                _singleton.AddRef();
+                return _singleton;
+            }
+
+            _singleton = new MMFRegistry();
+            return _singleton;
+        }
+    }
 
     public void Dispose()
     {
         lock (Lock)
         {
+            // Already disposed?
+            if (IsDisposed)
+            {
+                return;
+            }
+            
             if (--_refCounter > 0)
             {
                 return;
@@ -73,21 +129,6 @@ internal unsafe class MMFRegistry : IDisposable
                 _logger?.Fatal(e, "Unexpected exception occured");
                 throw;
             }
-        }
-    }
-
-    public static MMFRegistry GetMMFRegistry()
-    {
-        lock (Lock)
-        {
-            if (_singleton != null)
-            {
-                _singleton.AddRef();
-                return _singleton;
-            }
-
-            _singleton = new MMFRegistry();
-            return _singleton;
         }
     }
 
@@ -151,30 +192,44 @@ internal unsafe class MMFRegistry : IDisposable
 
     #region Internals
 
-    internal static void** MMFAddressTable;
-
-    internal int RegisterMMF(string filePathName, void* mmfBaseAddress)
+    internal int RegisterMMF(MemoryManagerOverMMF mmf)
     {
         lock (Lock)
         {
             // Disposed?
-            if (_rootAddr == null)
+            if (IsDisposed)
             {
                 return -1;
             }
 
-            var bitmap = new Span<ulong>(_bitmapAddress, BitmapSizeInLong);
-            var id = bitmap.FindFreeBitConcurrent();
-            if (id == -1)
+            if (_header->AccessControl.TakeControl(TimeSpan.FromSeconds(60)))
             {
-                _logger?.Error("No more free ID available in the MMF registry");
+                try
+                {
+                    var bitmap = new Span<ulong>(_bitmapAddress, BitmapSizeInLong);
+                    var id = bitmap.FindFreeBitConcurrent();
+                    if (id == -1)
+                    {
+                        _logger?.Error("No more free ID available in the MMF registry");
+                        return -1;
+                    }
+
+                    var filePathName = Path.GetFullPath(mmf.MMFFilePathName);
+                    _logger?.Verbose("Registering MMF file {FilePath} with ID {ID}", filePathName, id);
+                    String256.Map(filePathName, &_stringTable[id]);
+                    MMFAddressTable[id] = mmf.BaseAddress;
+                    MMFById[id] = mmf;
+                    return id;
+                }
+                finally
+                {
+                    _header->AccessControl.ReleaseControl();
+                }
+            }
+            else
+            {
                 return -1;
             }
-
-            _logger?.Verbose("Registering MMF file {FilePath} with ID {ID}", filePathName, id);
-            String256.Map(filePathName, &_stringTable[id]);
-            MMFAddressTable[id] = mmfBaseAddress;
-            return id;
         }
     }
 
@@ -203,6 +258,48 @@ internal unsafe class MMFRegistry : IDisposable
     private void AddRef()
     {
         _refCounter++;
+    }
+
+    private void SweepAndClean()
+    {
+        lock (Lock)
+        {
+            // Disposed?
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            if (_header->AccessControl.TakeControl(TimeSpan.FromSeconds(60)))
+            {
+                try
+                {
+                    var bitmap = new Span<ulong>(_bitmapAddress, BitmapSizeInLong);
+                    
+                    // The goal here is to find all the entries that are occupied, and check if their corresponding MMF file is still stored
+                    // If the file doesn't exist anymore, free the corresponding entry
+
+                    var index = -1;
+                    while (true)
+                    {
+                        if (bitmap.FindSetBitConcurrent(ref index) == false)
+                        {
+                            break;
+                        }
+
+                        var filePathname = _stringTable[index].AsString;
+                        if (File.Exists(filePathname) == false)
+                        {
+                            bitmap.ClearBitConcurrent(index);
+                        }
+                    }
+                }
+                finally
+                {
+                    _header->AccessControl.ReleaseControl();
+                }
+            }
+        }        
     }
 
     #endregion

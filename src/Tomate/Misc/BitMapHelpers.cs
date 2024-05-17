@@ -15,20 +15,62 @@ public static class BitMapHelpers
     {
         var offset = index >> 6;
         Debug.Assert(offset < map.Length, "Index out of range");
-        var bitMask = 1ul << (index & 0x3F);
+        var bitMask = ~(1UL << (index & 0x3F));
 
-        return (Interlocked.And(ref map[offset], bitMask) & bitMask) == 0;
+        return (Interlocked.And(ref map[offset], bitMask) & bitMask) != 0;
     }
 
     public static bool ClearBitsConcurrent(this Span<ulong> map, int index, int bitLength)
     {
         var offset = index >> 6;
         Debug.Assert(offset < map.Length, "Index out of range");
-        var bitMask = ((1UL << bitLength) - 1UL) << (index & 0x3F);
+        var bitMask = ~((1UL << bitLength) - 1UL) << (index & 0x3F);
 
-        return (Interlocked.And(ref map[offset], bitMask) & bitMask) == 0;
+        return (Interlocked.And(ref map[offset], bitMask) & bitMask) != 0;
     }
 
+    public static bool IsBitSet(this Span<ulong> map, int index)
+    {
+        var offset = index >> 6;
+        Debug.Assert(offset < map.Length, "Index out of range");
+        var bitMask = 1UL << (index & 0x3F);
+
+        return (map[offset] & bitMask) != 0;
+    }
+
+    /// <summary>
+    /// Find the first bit set starting after the given index
+    /// </summary>
+    /// <param name="map">The bitfield map</param>
+    /// <param name="index">
+    /// The previous index of a bit found, must be -1 for the first call.
+    /// Upon return, will contain the index of the found set bit or -1 if there was none (and the method will return <c>false</c>).
+    /// </param>
+    /// <returns>Returns <c>true</c> if the search was successful and a set bit was found, or <c>false</c>.</returns>
+    public static bool FindSetBitConcurrent(this Span<ulong> map, ref int index)
+    {
+        var offset = ++index >> 6;
+        var mask = ~((1UL << (index & 0x3F)) - 1);
+
+        while (offset < map.Length)
+        {
+            var v = map[offset] & mask;
+            if (v == 0)
+            {
+                ++offset;
+                mask = ulong.MaxValue;
+                continue;
+            }
+
+            var bit = BitOperations.TrailingZeroCount(v);
+            index = offset * 64 + bit;
+            return true;
+        }
+
+        index = -1;
+        return false;
+    }
+    
     public static int FindFreeBitConcurrent(this Span<ulong> map)
     {
         var l = map.Length;
@@ -91,7 +133,7 @@ public static class BitMapHelpers
             var val = map[i];
             if (val != 0)
             {
-                var r = BitOperations.TrailingZeroCount(~val);
+                var r = 64 - BitOperations.LeadingZeroCount(val) - 1;
                 return i * 64 + r;
             }
         }

@@ -52,7 +52,7 @@ public class MemoryManagerOverMMFTests
                     mmf.Defragment();
                     var size = 250_000;
                     using var mb1 = mmf.Allocate<TestA>(size);
-                    var seg = mb1.MemorySegment.Cast<TestA>();
+                    var seg = mb1.MemorySegment;
 
                     for (int i = 0; i < size; i++)
                     {
@@ -69,19 +69,10 @@ public class MemoryManagerOverMMFTests
         }
         finally
         {
-            if (File.Exists(filePathName))
-            {
-                File.Delete(filePathName);
-            }
+            MemoryManagerOverMMF.Delete(filePathName);
         }
     }
 
-    [Test]
-    public void Test3()
-    {
-        var tl = new ThreadLocal<int>();
-    }
-    
     [Test]
     public void ResourceLocatorTest()
     {
@@ -144,16 +135,7 @@ public class MemoryManagerOverMMFTests
         }
         finally
         {
-            if (File.Exists(filePathName))
-            {
-                File.Delete(filePathName);
-            }
+            MemoryManagerOverMMF.Delete(fileName);
         }
-    }
-
-    [Test]
-    public void MMFRegistryTest()
-    {
-        
     }
 }

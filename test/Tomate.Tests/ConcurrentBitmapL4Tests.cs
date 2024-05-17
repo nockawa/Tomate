@@ -13,7 +13,7 @@ public class ConcurrentBitmapL4Tests
     }
 
     [Test]
-    public void TestDefautKeyNotAllowed()
+    public void TestDefaultKeyNotAllowed()
     {
         const int bitLength = 1024 * 1024;
         var requireSize = ConcurrentBitmapL4.ComputeRequiredSize(bitLength);
@@ -62,7 +62,7 @@ public class ConcurrentBitmapL4Tests
     [TestCase(6, 1)]
     [TestCase(6, 2)]
     [TestCase(6, 4)]
-    public void MultithreadTest(int itemPack, int threadCount)
+    public void MultithreadingTest(int itemPack, int threadCount)
     {
         Thread.CurrentThread.Name = $"*** Unit Test Exec Thread ***";
         
