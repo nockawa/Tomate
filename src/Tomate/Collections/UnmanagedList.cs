@@ -5,23 +5,10 @@ using JetBrains.Annotations;
 
 namespace Tomate;
 
-public interface IFacade
-{
-    #region Public APIs
-
-    #region Properties
-
-    MemoryBlock MemoryBlock { get; }
-
-    #endregion
-
-    #endregion
-}
-
 [DebuggerTypeProxy(typeof(UnmanagedList<>.DebugView))]
 [DebuggerDisplay("Count = {Count}")]
 [PublicAPI]
-public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
+public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : unmanaged
 {
     #region Constants
 
@@ -33,48 +20,75 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
 
     #region Properties
 
-    private ref uint _capacity => ref _header->Capacity;
-    private ref int _count => ref _header->Count;
-    private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
-    private T* _items => (T*)(_header + 1);
-
-    public MemorySegment<T> Content => new (_items, _count); //_memoryBlock.MemorySegment.Slice(0, _size);
-
-    public int Count => _count;
-
-    public bool IsDefault => _memoryBlock.IsDefault;
-    public bool IsDisposed => _count < 0;
-
     public ref T this[int index]
     {
         get
         {
-            if ((uint)index >= (uint)_count)
+            var header = _header;
+            if ((uint)index >= (uint)header->Count)
             {
-                ThrowHelper.OutOfRange($"Index {index} must be less than {_count} and greater or equal to 0");
+                ThrowHelper.OutOfRange($"Index {index} must be less than {header->Count} and greater or equal to 0");
             }
-            return ref _items[index];
+            var items = (T*)(header + 1);
+            return ref items[index];
+        }
+    }
+
+    public MemorySegment<T> Content
+    {
+        get
+        {
+            var header = _header;
+            var items = (T*)(header + 1);
+            return new(items, header->Count);
+        }
+    }
+
+    public int Count
+    {
+        get
+        {
+            var header = _header;
+            return header->Count;
+        }
+    }
+
+    public bool IsDefault => _memoryBlock.IsDefault;
+    public bool IsDisposed
+    {
+        get
+        {
+            var header = _header;
+            return header->Count < 0;
         }
     }
 
     public MemoryBlock MemoryBlock => _memoryBlock;
 
+    public IMemoryManager MemoryManager => _memoryBlock.IsDefault ? null : _memoryBlock.MemoryManager;
+
     public int RefCounter => _memoryBlock.RefCounter;
 
     public int Capacity
     {
-        get => (int)_capacity;
+        get
+        {
+            var header = _header;
+            return (int)header->Capacity;
+        }
         set 
         {
-            if (value < _count)
+            // Cache the value, because unfortunately accessing the address of the memory block is not that fast compare to what we need
+            var header = _header;
+            if (value < header->Count)
             {
-                ThrowHelper.OutOfRange($"New Capacity {value} can't be less than actual Count {_count}");
+                ThrowHelper.OutOfRange($"New Capacity {value} can't be less than actual Count {header->Count}");
             }
-            if (value != _capacity)
+            if (value != header->Capacity)
             {
                 _memoryBlock.Resize(sizeof(Header) + (sizeof(T) * value));
-                //_buffer = _memoryBlock.MemorySegment.Address;
-                _capacity = (uint)value;
+                header = _header;
+                header->Capacity = (uint)value;
             }
         }
     }
@@ -86,10 +100,12 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public int Add(T item)
     {
-        var res = _count;
-        if ((uint)_count < _capacity)
+        var header = _header;
+        var items = (T*)(header + 1);
+        var res = header->Count;
+        if ((uint)res < header->Capacity)
         {
-            _items[_count++] = item;
+            items[header->Count++] = item;
         }
         else
         {
@@ -115,27 +131,31 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
     /// </remarks>
     public ref T AddInPlace()
     {
-        if (_count == _capacity)
+        var header = _header;
+        if (header->Count == header->Capacity)
         {
-            Grow(_count + 1);
+            Grow(header->Count + 1);
+            header = _header;
         }
 
-        return ref _items[_count++];
+        var items = (T*)(header + 1);
+        return ref items[header->Count++];
     }
 
     public int AddRef() => _memoryBlock.AddRef();
 
     public void Clear()
     {
-        _count = 0;
+        var header = _header;
+        header->Count = 0;
     }
 
     // Non-inline from List.Add to improve its code quality as uncommon path
     public void CopyTo(T[] items, int i)
     {
         var span = new Span<T>(items, i, items.Length - i);
-        //_memoryBlock.MemorySegment.ToSpan().CopyTo(span);
-        new Span<T>(_items, span.Length).CopyTo(span); 
+        var srcItems = (T*)(_header + 1);
+        new Span<T>(srcItems, span.Length).CopyTo(span); 
     }
 
     public void Dispose()
@@ -146,19 +166,20 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
         }
         _memoryBlock.Dispose();
         _memoryBlock = default;
-        //_size = -1;
     }
 
     public Enumerator GetEnumerator() => new(this);
 
     public int IndexOf(T item)
     {
+        var header = _header;
+        var items = (T*)(header + 1);
         if (typeof(T) == typeof(int))
         {
             var src = Unsafe.As<T, int>(ref item);
-            var buffer = (int*)_items; //_memoryBlock.MemorySegment.Address;
+            var buffer = (int*)items;
 
-            var l = _count;
+            var l = header->Count;
             for (int i = 0; i < l; i++)
             {
                 if (buffer[i] == src)
@@ -173,9 +194,9 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
         if (typeof(T) == typeof(long))
         {
             var src = Unsafe.As<T, long>(ref item);
-            var buffer = (long*)_items; //_memoryBlock.MemorySegment.Address;
+            var buffer = (long*)items;
 
-            var l = _count;
+            var l = header->Count;
             for (int i = 0; i < l; i++)
             {
                 if (buffer[i] == src)
@@ -190,9 +211,9 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
         if (typeof(T) == typeof(short))
         {
             var src = Unsafe.As<T, short>(ref item);
-            var buffer = (short*)_items; //_memoryBlock.MemorySegment.Address;
+            var buffer = (short*)items;
 
-            var l = _count;
+            var l = header->Count;
             for (int i = 0; i < l; i++)
             {
                 if (buffer[i] == src)
@@ -207,9 +228,9 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
         if (typeof(T) == typeof(byte))
         {
             var src = Unsafe.As<T, byte>(ref item);
-            var buffer = (byte*)_items; //_memoryBlock.MemorySegment.Address;
+            var buffer = (byte*)items;
 
-            var l = _count;
+            var l = header->Count;
             for (int i = 0; i < l; i++)
             {
                 if (buffer[i] == src)
@@ -223,8 +244,8 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
 
         {
             var src = MemoryMarshal.CreateReadOnlySpan(ref item, 1);
-            var span = new Span<T>(_items, _count); //_memoryBlock.MemorySegment.ToSpan();
-            var l = _count;
+            var span = new Span<T>(items, header->Count);
+            var l = header->Count;
 
             for (var i = 0; i < l; i++)
             {
@@ -244,22 +265,26 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
     public void Insert(int index, T item)
     {
         // Note that insertions at the end are legal.
-        if ((uint)index > (uint)_count)
+        var header = _header;
+        if ((uint)index > (uint)header->Count)
         {
-            ThrowHelper.OutOfRange($"Can't insert, given index {index} is greater than Count {_count}.");
+            ThrowHelper.OutOfRange($"Can't insert, given index {index} is greater than Count {header->Count}.");
         }
 
-        if (_count == _capacity)
+        if (header->Count == header->Capacity)
         {
-            Grow(_count + 1);
+            Grow(header->Count + 1);
+            header = _header;
         }
-        if (index < _count)
+
+        var items = (T*)(header + 1);
+        if (index < header->Count)
         {
-            var span = new Span<T>(_items, _count); // _memoryBlock.MemorySegment.ToSpan();
-            span.Slice(index, _count - index).CopyTo(span.Slice(index + 1));
+            var span = new Span<T>(items, header->Count);
+            span.Slice(index, header->Count - index).CopyTo(span.Slice(index + 1));
         }
-        _items[index] = item;
-        ++_count;
+        items[index] = item;
+        ++header->Count;
     }
 
     public bool Remove(T item)
@@ -276,25 +301,21 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
 
     public void RemoveAt(int index)
     {
-        if ((uint)index >= (uint)_count)
+        var header = _header;
+        if ((uint)index >= (uint)header->Count)
         {
-            ThrowHelper.OutOfRange($"Can't remove, given index {index} is greater than Count {_count}.");
+            ThrowHelper.OutOfRange($"Can't remove, given index {index} is greater than Count {header->Count}.");
         }
-        if (index < _count)
+        if (index < header->Count)
         {
-            var span = new Span<T>(_items, _count); // _memoryBlock.MemorySegment.ToSpan();
+            var items = (T*)(header + 1);
+            var span = new Span<T>(items, header->Count);
             span.Slice(index + 1).CopyTo(span.Slice(index));
-            _count--;
+            header->Count--;
         }
     }
 
     #endregion
-
-    #endregion
-
-    #region Fields
-
-    private MemoryBlock _memoryBlock;
 
     #endregion
 
@@ -321,32 +342,36 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
         }
         memoryManager ??= DefaultMemoryManager.GlobalInstance;
         _memoryBlock = default;
-        if (initialCapacity > 0)
-        {
-            _memoryBlock = memoryManager.Allocate(sizeof(Header) + (sizeof(T) * initialCapacity));
-        }
-        _count = 0;
-        //_buffer = (T*)(_memoryBlock.MemorySegment.Address + sizeof(Header));
-        _capacity = (uint)initialCapacity;
+        _memoryBlock = memoryManager.Allocate(sizeof(Header) + (sizeof(T) * initialCapacity));
+        var header = _header;
+        header->Count = 0;
+        header->Capacity = (uint)initialCapacity;
     }
 
     #endregion
 
-    #region Private methods
+    #region Privates
+
+    private Header* _header => (Header*)_memoryBlock.MemorySegment.Address;
+    private MemoryBlock _memoryBlock;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void AddWithResize(T item)
     {
-        Debug.Assert(_count == _capacity);
-        Grow(_count + 1);
-        _items[_count++] = item;
+        var header = _header;
+        Debug.Assert(header->Count == header->Capacity);
+        Grow(header->Count + 1);
+        header = _header;
+        var items = (T*)(header + 1);
+        items[header->Count++] = item;
     }
 
     private void Grow(int capacity)
     {
-        Debug.Assert(_capacity < capacity);
+        var header = _header;
+        Debug.Assert(header->Capacity < capacity);
 
-        var newCapacity = _capacity == 0 ? DefaultCapacity : (int)(2 * _capacity);
+        var newCapacity = header->Capacity == 0 ? DefaultCapacity : (int)(2 * header->Capacity);
 
         // Check if the new capacity exceed the size of the block we can allocate
         var maxAllocationLength = _memoryBlock.MemoryManager.MaxAllocationLength;
@@ -390,18 +415,18 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
 
         #endregion
 
-        #region Fields
-
-        private readonly MemorySegment<T> _data;
-
-        #endregion
-
         #region Constructors
 
         public DebugView(UnmanagedList<T> list)
         {
             _data = list.Content;
         }
+
+        #endregion
+
+        #region Privates
+
+        private readonly MemorySegment<T> _data;
 
         #endregion
     }
@@ -439,21 +464,21 @@ public unsafe struct UnmanagedList<T> : IFacade, IRefCounted where T : unmanaged
 
         #endregion
 
-        #region Fields
-
-        private readonly Span<T> _span;
-        private int _index;
-
-        #endregion
-
         #region Constructors
 
         public Enumerator(UnmanagedList<T> owner)
         {
-            _span = new(owner._items, owner.Count);
-            //_span = owner._memoryBlock.MemorySegment.Slice(0, owner.Count).ToSpan();
+            var items = (T*)(owner._header + 1);
+            _span = new(items, owner.Count);
             _index = -1;
         }
+
+        #endregion
+
+        #region Fields
+
+        private readonly Span<T> _span;
+        private int _index;
 
         #endregion
     }

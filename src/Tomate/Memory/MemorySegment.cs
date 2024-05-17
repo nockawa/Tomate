@@ -26,6 +26,9 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 
     public static readonly MemorySegment Empty = new(null, 0);
 
+    private const uint SegmentIsInMMF = 0x80000000;
+    private const uint LengthMask = 0x7FFFFFFF;
+
     #endregion
 
     #region Public APIs
@@ -34,7 +37,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 
     public byte* End => Address + Length;
 
-    public bool IsDefault => Address == null;
+    public bool IsDefault => _addr==0 && _data==0;
 
     #endregion
 
@@ -54,7 +57,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
     public static implicit operator void*(MemorySegment segment) => segment.Address;
     public static implicit operator byte*(MemorySegment segment) => segment.Address;
 
-    public MemorySegment<T> Cast<T>() where T : unmanaged => new(Address, Length / sizeof(T));
+    public MemorySegment<T> Cast<T>() where T : unmanaged => new(Address, Length / sizeof(T), MMFId);
 
     public MemorySegment Slice(int start) => Slice(start, Length - start);
 
@@ -70,7 +73,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
             ThrowHelper.OutOfRange($"The given index ({start}) and length ({length}) are out of range. Segment length limit is {Length}, slice's end is {start + length}.");
         }
 
-        return new MemorySegment(Address + start, length);
+        return new MemorySegment(Address + start, length, MMFId);
     }
 
     public (MemorySegment, MemorySegment) Split(int splitOffset)
@@ -78,7 +81,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
         if ((splitOffset < 0) || splitOffset > Length)
             ThrowHelper.OutOfRange($"The given split offset ({splitOffset}) is out of range, segment length limit is {Length}.");
 
-        return (new MemorySegment(Address, splitOffset), new MemorySegment(Address+splitOffset, Length-splitOffset));
+        return (new MemorySegment(Address, splitOffset), new MemorySegment(Address+splitOffset, Length-splitOffset, MMFId));
     }
 
     public (MemorySegment<TA>, MemorySegment<TB>) Split<TA, TB>(int splitOffset) where TA : unmanaged where TB : unmanaged
@@ -86,7 +89,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
         if ((splitOffset < 0) || splitOffset > Length)
             ThrowHelper.OutOfRange($"The given split offset ({splitOffset}) is out of range, segment length limit is {Length}.");
 
-        return (new MemorySegment(Address, splitOffset).Cast<TA>(), new MemorySegment(Address+splitOffset, Length-splitOffset).Cast<TB>());
+        return (new MemorySegment(Address, splitOffset, MMFId).Cast<TA>(), new MemorySegment(Address+splitOffset, Length-splitOffset, MMFId).Cast<TB>());
     }
 
     public Span<T> ToSpan<T>() where T : unmanaged => new(Address, Length / sizeof(T));
@@ -99,17 +102,61 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 
     #region Fields
 
-    public readonly byte* Address;
-    public readonly int Length;
+    public readonly ulong _addr;
+    public readonly uint _data;
+
+    public byte* Address
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        get
+        {
+            if (IsInMMF)
+            {
+                var mmfId = (int)(_addr >> 48);
+                var baseAddr = (byte*)MMFRegistry.MMFAddressTable[mmfId];
+                var offset = _addr & 0xFFFFFFFFFFFF;
+                return baseAddr + offset;
+            }
+            else
+            {
+                return (byte*)_addr;
+            }
+        }
+    }
+    public int Length => (int)(_data & LengthMask);
+    
+    public bool IsInMMF
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        get => (_data & ~LengthMask) != 0;
+    }
+
+    internal int MMFId => IsInMMF ? (int)(_addr >> 48) : -1;
 
     #endregion
 
     #region Constructors
 
-    public MemorySegment(byte* address, int length)
+    public MemorySegment(byte* address, int length) : this(address, length, -1)
     {
-        Address = address;
-        Length = length;
+    }
+    
+    internal MemorySegment(byte* address, int length, int mmfId)
+    {
+        Debug.Assert(length >= 0, $"Length must be null or positive");
+
+        if (mmfId == -1)
+        {
+            _addr = (ulong)address;
+            _data = (uint)length;
+        }
+        else
+        {
+            _data = (uint)length | SegmentIsInMMF;
+            var baseAddr = (byte*)MMFRegistry.MMFAddressTable[mmfId];
+            var offset = address - baseAddr;
+            _addr = (ulong)mmfId << 48 | (ulong)offset;
+        }
     }
 
     #endregion
@@ -163,6 +210,9 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
     #region Constants
 
     public static readonly MemorySegment<T> Empty = new(null, 0);
+
+    private const uint SegmentIsInMMF = 0x80000000;
+    private const uint LengthMask = 0x7FFFFFFF;
 
     #endregion
 
@@ -251,7 +301,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
         return ~lo;
     }
 
-    public MemorySegment Cast() => new MemorySegment((byte*)Address, Length * sizeof(T));
+    public MemorySegment Cast() => new((byte*)Address, Length * sizeof(T), MMFId);
     public MemorySegment<TTo> Cast<TTo>() where TTo : unmanaged => new(Address, Length * sizeof(T) / sizeof(TTo));
 
     /// <summary>Gets an enumerator for this segment.</summary>
@@ -279,7 +329,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
     [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
     public Span<T> ToSpan() => new(Address, Length);
 
-    public Span<U> ToSpan<U>() where U : unmanaged => new(Address, Length * sizeof(T) / sizeof(U));
+    public Span<TU> ToSpan<TU>() where TU : unmanaged => new(Address, Length * sizeof(T) / sizeof(TU));
 
     #endregion
 
@@ -287,8 +337,30 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
 
     #region Fields
 
-    public readonly T* Address;
-    public readonly int Length;
+    public readonly ulong _addr;
+    public readonly uint _data;
+
+    public T* Address
+    {
+        get
+        {
+            if (IsInMMF)
+            {
+                var mmfId = (int)(_addr >> 48);
+                var baseAddr = (byte*)MMFRegistry.MMFAddressTable[mmfId];
+                var offset = _addr & 0xFFFFFFFFFFFF;
+                return (T*)(baseAddr + offset);
+            }
+            else
+            {
+                return (T*)_addr;
+            }
+        }
+    }
+    public int Length => (int)(_data & LengthMask);
+    public bool IsInMMF => (_data & ~LengthMask) != 0;
+    
+    internal int MMFId => IsInMMF ? (int)(_addr >> 48) : -1;
 
     #endregion
 
@@ -299,12 +371,29 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
     /// </summary>
     /// <param name="address">Starting address of the segment</param>
     /// <param name="length">Length of the segment in {T} (NOT in bytes)</param>
-    public MemorySegment(void* address, int length)
+    public MemorySegment(void* address, int length) : this(address, length, -1)
     {
-        Address = (T*)address;
-        Length = length;
     }
+    
+    internal MemorySegment(void* address, int length, int mmfId)
+    {
+        Debug.Assert(length >= 0, $"Length must be null or positive");
 
+        if (mmfId == -1)
+        {
+            _addr = (ulong)address;
+            _data = (uint)length;
+        }
+        else
+        {
+            _data = (uint)length | SegmentIsInMMF;
+            var baseAddr = (byte*)MMFRegistry.MMFAddressTable[mmfId];
+            var offset = (byte*)address - baseAddr;
+            _addr = (ulong)mmfId << 48 | (ulong)offset;
+        }
+    }
+    
+    
     #endregion
 
     #region Private methods

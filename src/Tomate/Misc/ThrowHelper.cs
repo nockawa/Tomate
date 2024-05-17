@@ -155,6 +155,12 @@ internal static class ThrowHelper
     }
 
     [DoesNotReturn]
+    internal static void StringTooBigForString256(string paramName, string source)
+    {
+        throw new ArgumentOutOfRangeException(paramName, $"The given string '{source}' is bigger than the maximum allowed size (255 bytes).");
+    }
+
+    [DoesNotReturn]
     internal static void TimeSegmentConstructError(long start, long end)
     {
         throw new SegmentConstructException($"Cannot construct TimeSegment instance because start ({start}) is greater than end ({end})");

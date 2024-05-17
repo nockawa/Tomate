@@ -288,6 +288,7 @@ public unsafe partial class MemoryManagerOverMMF
             {
                 // Another process/thread beat us by setting its PageId, so we free ours and use this one instead
                 FreePages(blockData);
+                Thread.Sleep(0);    // Force thread switch to ensure the other thread is initializing the block completely
             }
             else
             {
@@ -509,7 +510,7 @@ public unsafe partial class MemoryManagerOverMMF
                 }
 
                 Debug.Assert(DebugInfo.IsCoherent);
-                memoryBlock = new MemoryBlock(segAddress, size);
+                memoryBlock = new MemoryBlock(segAddress, size, _mmfId);
                 return true;
             }
         }

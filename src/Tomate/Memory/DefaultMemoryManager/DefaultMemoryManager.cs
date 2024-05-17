@@ -63,13 +63,14 @@ public class BlockOverrunException : Exception
 [PublicAPI]
 public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 {
-    public static readonly int BlockInitialCount = Environment.ProcessorCount * 4;
-    public static readonly int BlockGrowCount = 64;
-    public static readonly int SmallBlockSize = 1024 * 1024;
-    public static readonly int LargeBlockMinSize = 4 * 1024 * 1024;
-    public static readonly int LargeBlockMaxSize = 256 * 1024 * 1024;
-    public static readonly int MemorySegmentMaxSizeForSmallBlock = SmallBlockAllocator.SegmentHeader.MaxSegmentSize;
+    internal static readonly int BlockInitialCount = Environment.ProcessorCount * 4;
+    internal static readonly int BlockGrowCount = 64;
+    internal static readonly int SmallBlockSize = 1024 * 1024;
+    internal static readonly int LargeBlockMinSize = 4 * 1024 * 1024;
+    internal static readonly int LargeBlockMaxSize = 256 * 1024 * 1024;
+    internal static readonly int MemorySegmentMaxSizeForSmallBlock = SmallBlockAllocator.SegmentHeader.MaxSegmentSize;
     public static readonly int MinSegmentSize = 16;
+    public static readonly unsafe int MaxMemorySegmentSize = Array.MaxLength - 63 - sizeof(LargeBlockAllocator.SegmentHeader).Pad16();
 
     /// <summary>
     /// Access to the global instance of the Memory Manager
@@ -233,7 +234,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         {
             _zeroHeader.BlockIndex = _blockAllocatorSequences[0].FirstBlockId;
             _zeroHeader.RefCounter = 1;
-            _zeroMemoryBlock = new MemoryBlock((byte*)Unsafe.AsPointer(ref _zeroHeader) + sizeof(BlockReferential.GenBlockHeader), 0);
+            _zeroMemoryBlock = new MemoryBlock((byte*)Unsafe.AsPointer(ref _zeroHeader) + sizeof(BlockReferential.GenBlockHeader), 0, -1);
         }
     }
 
@@ -526,12 +527,12 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
             _nativeBlockListAccess.TakeControl(null);
 
             // Only allocate power of 2 size
-            var size = minimumSize.NextPowerOf2();
+            var size = (uint)minimumSize.NextPowerOf2();
 
             // If the current Large Block size is bigger than the requested min size, use it
             if (_largeBlockMinSize > size)
             {
-                size = _largeBlockMinSize;
+                size = (uint)_largeBlockMinSize;
 
                 // mul by 2 each time the current large block min size until we reach the max size
                 if (_largeBlockMinSize < LargeBlockMaxSize)
@@ -543,7 +544,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
             // Cap the size (+63 is because of the padding 64 we do on the block's address)
             if ((size + 63) > Array.MaxLength)
             {
-                size = Array.MaxLength - 63;
+                size = (uint)(Array.MaxLength - 63);
             }
 
             if (minimumSize > size)
@@ -551,7 +552,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
                 throw new OutOfMemoryException($"Requested Size {minimumSize} is too big for the max allowed size of {Array.MaxLength}");
             }
 
-            var nbi = new NativeBlockInfo(size, 1);
+            var nbi = new NativeBlockInfo((int)size, 1);
 
             _nativeBlockList.Add(nbi);
 
@@ -586,7 +587,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
             _smallBlockListAccess.ReleaseControl();
         }
     }
-    private LargeBlockAllocator AllocateLargeBlockAlloctor(BlockAllocatorSequence owner, int minimumSize)
+    private LargeBlockAllocator AllocateLargeBlockAllocator(BlockAllocatorSequence owner, int minimumSize)
     {
         try
         {

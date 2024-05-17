@@ -433,7 +433,7 @@ public partial class DefaultMemoryManager
                     }
 
                     Debug.Assert(debugInfo.IsCoherent);
-                    block = new MemoryBlock(segAddress, size);
+                    block = new MemoryBlock(segAddress, size, -1);
                     Debug.Assert(segAddress >= _data.Address && segAddress + size <= _data.End);
                     return true;
                 }

@@ -191,7 +191,7 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
                     out var res))
             {
                 ++AllocationPinnedMemoryBlockEpoch;
-                return new MemoryBlock(res, length);
+                return new MemoryBlock(res, length, -1);
             }
         }
 

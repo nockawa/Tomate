@@ -225,6 +225,9 @@ public static class PackExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static void Pack(this ref ulong n, int high, int low) => n = (ulong)high << 32 | (uint)low;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Pack(this ref ulong n, ushort highUHigh, ushort highULow, uint low) => n = (ulong)((uint)highUHigh<<16 | highULow) << 32 | low;
+
     public static void ReadByteLevel(this ref uint n, ref MemoryView<byte> src, int byteSize)
     {
         switch (byteSize)

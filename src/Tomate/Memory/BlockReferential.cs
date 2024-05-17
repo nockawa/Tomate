@@ -38,8 +38,8 @@ public static class BlockReferential
         // Most significant bit to one mean the MemoryBlock is from a MMF, the encoded value is different as MMF are interprocess, thus address independent
         if (header.IsFromMMF)
         {
+            var mmf = block.MemoryManager as MemoryManagerOverMMF;
             // We need to identify which MMF this MemoryBlock is from, for that we use the address range the MMF is using
-            var mmf = MemoryManagerOverMMF.GetMMFFromRange((long)block.MemorySegment.Address);
             Debug.Assert(mmf != null, "Trying to free a MemoryBlock from a MemoryMappedFile that has already been disposed");
             // ReSharper disable once ConstantConditionalAccessQualifier
             // ReSharper disable once ConstantNullCoalescingCondition
@@ -69,8 +69,7 @@ public static class BlockReferential
         // Most significant bit to one mean the MemoryBlock is from a MMF, the encoded value is different as MMF are interprocess, thus address independent
         if (header.IsFromMMF)
         {
-            // We need to identify which MMF this MemoryBlock is from, for that we use the address range the MMF is using
-            return MemoryManagerOverMMF.GetMMFFromRange((long)block.MemorySegment.Address);
+            return MMFRegistry.MMFById[block.MemorySegment.MMFId];
         }
         else
         {

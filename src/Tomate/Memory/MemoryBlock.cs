@@ -140,9 +140,9 @@ public struct MemoryBlock : IRefCounted
         MemorySegment = memorySegment;
     }
 
-    internal unsafe MemoryBlock(byte* address, int length)
+    internal unsafe MemoryBlock(byte* address, int length, int mmfId)
     {
-        MemorySegment = new MemorySegment(address, length);
+        MemorySegment = new MemorySegment(address, length, mmfId);
     }
 
     #endregion
@@ -168,6 +168,10 @@ public struct MemoryBlock<T> : IRefCounted where T : unmanaged
     {
         get
         {
+            if (IsDefault)
+            {
+                return 0;
+            }
             var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
             return header->RefCounter;
         }
