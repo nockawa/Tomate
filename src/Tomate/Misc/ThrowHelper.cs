@@ -51,6 +51,18 @@ public class ItemMaxCapacityReachedException : Exception
     #endregion
 }
 
+public class InvalidObjectException : Exception
+{
+    public InvalidObjectException()
+    {
+        
+    }
+    public InvalidObjectException(string message) : base(message)
+    {
+        
+    }
+}
+
 [StackTraceHidden]
 internal static class ThrowHelper
 {
@@ -59,11 +71,29 @@ internal static class ThrowHelper
     #region Internals methods
 
     [DoesNotReturn]
+    internal static void InvalidAllocationSize(string message)
+    {
+        throw new InvalidAllocationSizeException(message);
+    }
+
+    [DoesNotReturn]
     internal static void AppendCollectionCapacityTooBig(int requestedCapacity, int maxAllowed)
     {
         throw new CapacityTooBigException($"Can't create a MappedAppendCollection withe the given capacity ({requestedCapacity}), the maximum allowed is {maxAllowed}");
     }
 
+    [DoesNotReturn]
+    internal static void AddingDuplicateKeyException<TKey>(TKey key, string keyArgName)
+    {
+        throw new ArgumentException($"The key {key} already exists, can't add a new entry", keyArgName);
+    }
+
+    [DoesNotReturn]
+    internal static void ThrowInvalidOperationException_ConcurrentOperationsNotSupported()
+    {
+        throw new InvalidOperationException("Concurrent operation detected, this is not supported");
+    }
+    
     [DoesNotReturn]
     internal static void AppendCollectionItemSetTooBig(int requestedSize, int maxAllowed)
     {
@@ -110,6 +140,12 @@ internal static class ThrowHelper
     internal static void ObjectDisposed(string objectName, string message)
     {
         throw new ObjectDisposedException(objectName, message);
+    }
+
+    [DoesNotReturn]
+    internal static void InvalidObject(string message)
+    {
+        throw new ObjectDisposedException(message);
     }
 
     [DoesNotReturn]

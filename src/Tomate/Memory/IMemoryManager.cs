@@ -6,6 +6,14 @@ using System.Runtime.CompilerServices;
 
 namespace Tomate;
 
+public class InvalidAllocationSizeException : Exception
+{
+    public InvalidAllocationSizeException(string message) : base(message)
+    {
+        
+    }
+}
+
 [PublicAPI]
 public interface IMemoryManager
 {

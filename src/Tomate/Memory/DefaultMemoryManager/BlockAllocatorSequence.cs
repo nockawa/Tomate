@@ -98,6 +98,7 @@ public partial class DefaultMemoryManager
                             _control.TakeControl(null);
 
                             // Another thread may have beaten us, so check if it's the case or not
+                            curBlock = _firstLargeBlockAllocator;
                             if (curBlock == null)
                             {
                                 var newBlock = Owner.AllocateLargeBlockAllocator(this, size);

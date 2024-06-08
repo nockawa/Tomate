@@ -13,7 +13,7 @@ public partial class DefaultMemoryManager
         [StructLayout(LayoutKind.Sequential, Pack = 2)]
         public struct SegmentHeader
         {
-            public static readonly int MaxSegmentSize = 0x7FFFFFFF;
+            public static readonly int MaxSegmentSize = 0x7FFFFFFF - 64;
 
             // 0-8
             public TwoWaysLinkedList.Link Link;
@@ -274,7 +274,8 @@ public partial class DefaultMemoryManager
 
         public unsafe LargeBlockAllocator(BlockAllocatorSequence owner, int minimumSize)
         {
-            var data = owner.Owner.AllocateNativeBlock(minimumSize);
+            var segmentHeaderSize = sizeof(SegmentHeader).Pad16();
+            var data = owner.Owner.AllocateNativeBlock(minimumSize + segmentHeaderSize);
             _owner = owner;
             _blockId = BlockReferential.RegisterAllocator(this);
             _data = data;
@@ -288,7 +289,7 @@ public partial class DefaultMemoryManager
             // Setup the free list with one big empty segment that span the whole region.
             
             // Compute offset, size and id of the free segment
-            var curOffset = sizeof(SegmentHeader).Pad16();
+            var curOffset = segmentHeaderSize;
             debugInfo.TotalPaddingSize += curOffset - sizeof(SegmentHeader);
             var size = _data.Length - curOffset;
             var segId = (uint)(curOffset >> 4);

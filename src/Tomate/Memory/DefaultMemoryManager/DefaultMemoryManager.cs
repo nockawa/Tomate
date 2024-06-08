@@ -360,6 +360,11 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         {
             return _zeroMemoryBlock;
         }
+
+        if ((uint)length > MaxAllocationLength)
+        {
+            ThrowHelper.InvalidAllocationSize($"The given size {length} is too big or not allowed (negative), the maximum allowed size is {MaxAllocationLength} bytes.");
+        }
         
 #if DEBUGALLOC
         if (_blockOverrunDetection)
@@ -549,7 +554,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 
             if (minimumSize > size)
             {
-                throw new OutOfMemoryException($"Requested Size {minimumSize} is too big for the max allowed size of {Array.MaxLength}");
+                ThrowHelper.InvalidAllocationSize($"Requested Size {minimumSize} is too big for the max allowed size of {Array.MaxLength}");
             }
 
             var nbi = new NativeBlockInfo((int)size, 1);

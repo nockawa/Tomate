@@ -57,6 +57,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
     public static implicit operator void*(MemorySegment segment) => segment.Address;
     public static implicit operator byte*(MemorySegment segment) => segment.Address;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public MemorySegment<T> Cast<T>() where T : unmanaged => new(Address, Length / sizeof(T), MMFId);
 
     public MemorySegment Slice(int start) => Slice(start, Length - start);
@@ -76,6 +77,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
         return new MemorySegment(Address + start, length, MMFId);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public (MemorySegment, MemorySegment) Split(int splitOffset)
     {
         if ((splitOffset < 0) || splitOffset > Length)
@@ -137,10 +139,12 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 
     #region Constructors
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public MemorySegment(byte* address, int length) : this(address, length, -1)
     {
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal MemorySegment(byte* address, int length, int mmfId)
     {
         Debug.Assert(length >= 0, $"Length must be null or positive");
@@ -326,6 +330,14 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
         return new(Address + start, length);
     }
 
+    public (MemorySegment<TA>, MemorySegment<TB>) Split<TA, TB>(int splitOffset) where TA : unmanaged where TB : unmanaged
+    {
+        if ((splitOffset < 0) || splitOffset > Length)
+            ThrowHelper.OutOfRange($"The given split offset ({splitOffset}) is out of range, segment length limit is {Length}.");
+
+        return (new MemorySegment<T>(Address, splitOffset, MMFId).Cast<TA>(), new MemorySegment<T>(Address+splitOffset, Length-splitOffset, MMFId).Cast<TB>());
+    }
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
     public Span<T> ToSpan() => new(Address, Length);
 
@@ -375,6 +387,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
     {
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal MemorySegment(void* address, int length, int mmfId)
     {
         Debug.Assert(length >= 0, $"Length must be null or positive");

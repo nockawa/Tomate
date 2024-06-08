@@ -284,7 +284,7 @@ public unsafe struct UnmanagedDataStore
     }
 
     [PublicAPI]
-    public struct Handle(int index, int generation)
+    public readonly struct Handle(int index, int generation)
     {
         #region Public APIs
 
@@ -306,7 +306,7 @@ public unsafe struct UnmanagedDataStore
     }
 
     [PublicAPI]
-    public struct Handle<T>(int index, int generation) where T : unmanaged, IUnmanagedFacade
+    public readonly struct Handle<T>(int index, int generation) where T : unmanaged, IUnmanagedFacade
     {
         #region Public APIs
 
