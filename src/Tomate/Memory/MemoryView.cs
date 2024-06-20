@@ -103,13 +103,13 @@ public unsafe struct MemoryView<T> where T : unmanaged
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public TR Fetch<TR>() where TR : unmanaged
+    public ref TR Fetch<TR>() where TR : unmanaged
     {
         Debug.Assert((byte*)_cur + sizeof(TR) <= _end);
 
-        var res = *(TR*)_cur;
+        var pos = _cur;
         _cur = (T*)((byte*)_cur + sizeof(TR));
-        return res;
+        return ref Unsafe.AsRef<TR>(pos);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]

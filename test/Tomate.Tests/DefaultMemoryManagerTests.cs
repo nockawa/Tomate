@@ -1,10 +1,6 @@
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using NUnit.Framework;
-using Serilog;
-using Tomate;
 
 namespace Tomate.Tests;
 
@@ -345,6 +341,12 @@ public class DefaultMemoryManagerTests
         var rand = new Random(123);
 
         var count = 10_000_000;
+        if (OneTimeSetup.IsRunningUnderDotCover())
+        {
+            Console.WriteLine("DotCover detected, reducing op count to 1/10th of the original value.");
+            count /= 10;
+        }
+        
         var list = new List<IntPtr>(count);
 
         var sw = new Stopwatch();
@@ -360,7 +362,7 @@ public class DefaultMemoryManagerTests
         sw.Stop();
 
         var di = mm.GetThreadBlockAllocatorSequence().DebugInfo;
-        Console.WriteLine($"Allocated {di.TotalAllocatedMemory.FriendlySize()} in 10M segments, in {sw.Elapsed.TotalSeconds.FriendlyTime(false)}");
+        Console.WriteLine($"Allocated {di.TotalAllocatedMemory.FriendlySize()} in {count.FriendlyAmount()} segments, in {sw.Elapsed.TotalSeconds.FriendlyTime(false)}");
 
         sw.Restart();
         for (int i = 0; i < count; i++)
@@ -370,9 +372,8 @@ public class DefaultMemoryManagerTests
         sw.Stop();
 
         di = mm.GetThreadBlockAllocatorSequence().DebugInfo;
-        Console.WriteLine($"Fee the 10M segments, in {sw.Elapsed.TotalSeconds.FriendlyTime(false)}");
+        Console.WriteLine($"Fee the {count.FriendlyAmount()} segments, in {sw.Elapsed.TotalSeconds.FriendlyTime(false)}");
     }
-
     [Test]
     [TestCase(0.5f, 32, null)]
     [TestCase(1.0f, 32, null)]
@@ -385,6 +386,13 @@ public class DefaultMemoryManagerTests
     {
         var cpuCount = (Environment.ProcessorCount * amp);
         opPerThread ??= 1024 * 1024 * 8;
+
+        if (OneTimeSetup.IsRunningUnderDotCover())
+        {
+            Console.WriteLine("DotCover detected, reducing op count to 1/64th of the original value.");
+            opPerThread >>= 6;
+        }
+        
         var allocTableSize = 1024 * 2;
         var bulkFreeCount = allocTableSize / 16;
 
@@ -665,30 +673,4 @@ public class DefaultMemoryManagerTests
 
     }
 #endif
-}
-
-[SetUpFixture]
-public class OneTimeSetup
-{
-    [OneTimeSetUp]
-    public void Setup()
-    {
-        Log.Logger = new LoggerConfiguration()
-#if DEBUG
-            .MinimumLevel.Verbose()
-#else
-            .MinimumLevel.Information()
-#endif
-            .Enrich.FromLogContext()
-            .Enrich.WithThreadId()
-            .WriteTo.Seq("http://localhost:5341")
-            .WriteTo.Console()
-            .CreateLogger();
-    }
-
-    [OneTimeTearDown]
-    public void TearDown()
-    {
-        Log.CloseAndFlush();
-    }
 }

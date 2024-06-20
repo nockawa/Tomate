@@ -410,7 +410,7 @@ public unsafe partial class MemoryManagerOverMMF
     {
         try
         {
-            blockAllocator.AccessControl.TakeControl(null);
+            blockAllocator.AccessControl.TakeControl();
 
             ++blockAllocator.CountBetweenDefrag;
             var fragRatio = blockAllocator.TotalAllocatedSegments / blockAllocator.TotalFreeSegments;
@@ -540,7 +540,7 @@ public unsafe partial class MemoryManagerOverMMF
         var allocatorMemorySegment = FromBlockId(header.GenHeader.BlockIndex);
         var allocatorDataAddress = allocatorMemorySegment.Address + sizeof(BlockAllocator).Pad16();
         ref var allocator = ref allocatorMemorySegment.Cast<BlockAllocator>().AsRef();
-        allocator.AccessControl.TakeControl(null);
+        allocator.AccessControl.TakeControl();
         try
         {
 

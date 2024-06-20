@@ -13,12 +13,6 @@ public class UnmanagedQueueTests
         using var mm = new DefaultMemoryManager();
         using var uq = new UnmanagedQueue<int>(mm, initialCapacity);
 
-        var q = new Queue<int>();
-        for (int i = 0; i < 10; i++)
-        {
-            q.Enqueue(i);
-        }
-        
         // Enqueue items
         for (int i = 0; i < totalItemCount; i++)
         {

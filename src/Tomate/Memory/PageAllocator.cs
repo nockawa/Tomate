@@ -10,7 +10,7 @@ public unsafe class PageAllocator : IDisposable, IPageAllocator
 {
     #region Constants
 
-    private static readonly ConcurrentDictionary<IntPtr, byte[]> _allocatedArrays  = new();
+    private static readonly ConcurrentDictionary<IntPtr, byte[]> AllocatedArrays  = new();
 
     #endregion
 
@@ -37,7 +37,7 @@ public unsafe class PageAllocator : IDisposable, IPageAllocator
 
     #region Methods
 
-    public static bool FreeHeapPinnedArray(MemorySegment<byte> segment) => _allocatedArrays.TryRemove(new IntPtr(segment.Address), out _);
+    public static bool FreeHeapPinnedArray(MemorySegment<byte> segment) => AllocatedArrays.TryRemove(new IntPtr(segment.Address), out _);
 
     public MemorySegment AllocatePages(int pageCount)
     {
@@ -135,7 +135,7 @@ public unsafe class PageAllocator : IDisposable, IPageAllocator
         var addr = Marshal.UnsafeAddrOfPinnedArrayElement(a, 0).ToPointer();
 
         // We need to keep a reference on the array, otherwise it will be GCed and the address we have will corrupt things
-        _allocatedArrays.TryAdd(new IntPtr(addr), a);
+        AllocatedArrays.TryAdd(new IntPtr(addr), a);
 
         return new(addr, length);
     }

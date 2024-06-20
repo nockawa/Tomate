@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using NUnit.Framework;
 
 namespace Tomate.Tests;
@@ -58,6 +59,36 @@ public class UnmanagedDictionaryTests
         }
         Assert.That(enumCount, Is.EqualTo(750));
     }
+
+    // Highly inefficient comparer, just for testing
+    public class String64IgnoreCaseComparer : IEqualityComparer<String64>
+    {
+        public bool Equals(String64 x, String64 y)
+        {
+            return StringComparer.OrdinalIgnoreCase.Equals(x.AsString, y.AsString);
+        }
+
+        public int GetHashCode(String64 obj) => obj.AsString.ToUpper().GetHashCode();
+        
+        public static readonly String64IgnoreCaseComparer Default = new();
+    }
+
+    [Test]
+    public void CustomComparerTest()
+    {
+        var s = Unsafe.SizeOf<UnmanagedDictionary<String64, int>>();
+        
+        using var mm = new DefaultMemoryManager();
+        using var dic = UnmanagedDictionary<String64, int>.Create(mm);
+
+        dic.Add($"Key1", 1, String64IgnoreCaseComparer.Default);
+        dic.Add($"Key2", 2, String64IgnoreCaseComparer.Default);
+        dic.Add($"Key10", 10, String64IgnoreCaseComparer.Default);
+        
+        Assert.That(dic.Count, Is.EqualTo(3));
+
+        Assert.That(dic.TryGetValue("KEY1", out var v, String64IgnoreCaseComparer.Default), Is.True);
+    }
         
     [Test]
     public void PerfTest()
@@ -79,12 +110,6 @@ public class UnmanagedDictionaryTests
         {
             var v = GenUnmanagedDictionary(mm, count, out var ts);
             Console.WriteLine($"Create, fill, release UnmanagedDictionary<int> with {v} items, took {TimeSpan.FromTicks(ts).TotalSeconds.FriendlyTime()}");
-        }
-
-        for (int i = 0; i < 10; i++)
-        {
-            var v = GenUnmanagedDictionaryFast(mm, count, out var ts);
-            Console.WriteLine($"Create, fill, release UnmanagedDictionary<int> with {v} items, FAST, took {TimeSpan.FromTicks(ts).TotalSeconds.FriendlyTime()}");
         }
     }
 
@@ -133,31 +158,6 @@ public class UnmanagedDictionaryTests
         var v = ud.Count;
 
         ud.Dispose();
-        ts = Stopwatch.GetTimestamp() - ts;
-        return v;
-    }
-
-    private static int GenUnmanagedDictionaryFast(DefaultMemoryManager mm, int count, out long ts)
-    {
-        ts = Stopwatch.GetTimestamp();
-        var dir = UnmanagedDictionary<int, int>.Create(mm);
-        var accessor = dir.FastAccessor();
-
-        for (int i = 0; i < count; i+=8)
-        {
-            accessor.Add(i+0, i);
-            accessor.Add(i+1, i);
-            accessor.Add(i+2, i);
-            accessor.Add(i+3, i);
-            accessor.Add(i+4, i);
-            accessor.Add(i+5, i);
-            accessor.Add(i+6, i);
-            accessor.Add(i+7, i);
-        }
-
-        var v = dir.Count;
-
-        dir.Dispose();
         ts = Stopwatch.GetTimestamp() - ts;
         return v;
     }

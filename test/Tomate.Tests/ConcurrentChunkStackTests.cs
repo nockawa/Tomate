@@ -1,7 +1,4 @@
-using System.Runtime.CompilerServices;
 using NUnit.Framework;
-using NUnit.Framework.Interfaces;
-using Serilog;
 
 namespace Tomate.Tests;
 
@@ -113,7 +110,7 @@ public class ConcurrentChunkStackTests
             _mm.Free(seg);
         }
     }
-
+    
     [Test]
     [TestCase(512, 1, 1, 50_000, 50_000, 0)]
     [TestCase(10 * 1024, 2, 1, 1_000, 2_000, 0)]
@@ -132,6 +129,13 @@ public class ConcurrentChunkStackTests
         var taskList = new List<Task>(prodThreadCount + consThreadCount);
         //var logger = Log.ForContext<MappedConcurrentChunkBasedQueue>(); 
 
+        if (OneTimeSetup.IsRunningUnderDotCover())
+        {
+            Console.WriteLine("DotCover detected, reducing op count to 1/10th of the original value.");
+            prodOpCount /= 10;
+            consOpCount /= 10;
+        }
+        
         var seg = _mm.Allocate(bufferSize);
         var queue = MappedConcurrentChunkBasedQueue.Create(seg);
         var rand = new Random(DateTime.UtcNow.Millisecond);

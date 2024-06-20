@@ -430,13 +430,13 @@ public struct ConcurrentBitmapL4
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private unsafe bool ClearL0(int bitIndex, int requestedLength)
     {
-        var requestedmask = (requestedLength == 64) ? ulong.MaxValue : ((1UL << requestedLength) - 1) << (bitIndex & 0x3F);
+        var requestedMask = (requestedLength == 64) ? ulong.MaxValue : ((1UL << requestedLength) - 1) << (bitIndex & 0x3F);
         var l0 = _l0.ToSpan();
         var l0Index = bitIndex >> 6;
         
         _header->AccessControl.EnterExclusiveAccess();
 
-        l0[l0Index] &= ~requestedmask;
+        l0[l0Index] &= ~requestedMask;
         _header->Count -= requestedLength;
         UpdateAggregatedLevels(l0Index);
 
@@ -453,18 +453,18 @@ public struct ConcurrentBitmapL4
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private unsafe bool SetL0(int bitIndex, int requestedLength)
     {
-        var requestedmask = ((requestedLength == 64) ? ulong.MaxValue : ((1UL << requestedLength) - 1) << (bitIndex & 0x3F));
+        var requestedMask = ((requestedLength == 64) ? ulong.MaxValue : ((1UL << requestedLength) - 1) << (bitIndex & 0x3F));
         var l0 = _l0.ToSpan();
         var l0Index = bitIndex >> 6;
 
         _header->AccessControl.EnterExclusiveAccess();
-        if ((l0[l0Index] & requestedmask) != 0)
+        if ((l0[l0Index] & requestedMask) != 0)
         {
             _header->AccessControl.ExitExclusiveAccess();
             return false;
         }
 
-        l0[l0Index] |= requestedmask;
+        l0[l0Index] |= requestedMask;
         _header->Count += requestedLength;
         
         UpdateAggregatedLevels(l0Index);

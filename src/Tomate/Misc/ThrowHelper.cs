@@ -1,8 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using JetBrains.Annotations;
 
 namespace Tomate;
 
+[PublicAPI]
 public class SegmentConstructException : Exception
 {
     #region Constructors
@@ -15,6 +17,7 @@ public class SegmentConstructException : Exception
     #endregion
 }
 
+[PublicAPI]
 public class ItemSetTooBigException : Exception
 {
     #region Constructors
@@ -27,6 +30,7 @@ public class ItemSetTooBigException : Exception
     #endregion
 }
 
+[PublicAPI]
 public class CapacityTooBigException : Exception
 {
     #region Constructors
@@ -39,6 +43,7 @@ public class CapacityTooBigException : Exception
     #endregion
 }
 
+[PublicAPI]
 public class ItemMaxCapacityReachedException : Exception
 {
     #region Constructors
@@ -51,6 +56,7 @@ public class ItemMaxCapacityReachedException : Exception
     #endregion
 }
 
+[PublicAPI]
 public class InvalidObjectException : Exception
 {
     public InvalidObjectException()
@@ -58,6 +64,19 @@ public class InvalidObjectException : Exception
         
     }
     public InvalidObjectException(string message) : base(message)
+    {
+        
+    }
+}
+
+[PublicAPI]
+public class InvalidHandleException : Exception
+{
+    public InvalidHandleException()
+    {
+        
+    }
+    public InvalidHandleException(string message) : base(message)
     {
         
     }
@@ -202,6 +221,12 @@ internal static class ThrowHelper
         throw new SegmentConstructException($"Cannot construct TimeSegment instance because start ({start}) is greater than end ({end})");
     }
 
+    [DoesNotReturn]
+    internal static void InvalidHandle()
+    {
+        throw new InvalidHandleException($"The given handle no longer represents a valid instance stored in the UnmanagedDataStore");
+    }
+    
     #endregion
 
     #endregion

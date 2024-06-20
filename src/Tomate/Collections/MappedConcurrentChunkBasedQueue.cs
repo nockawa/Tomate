@@ -9,12 +9,12 @@ public unsafe struct MappedConcurrentChunkBasedQueue
 {
     #region Constants
 
-    private const ushort ChunkAcquiredForDequeue   = 0x8000;
     private const ushort ChunkDequeuedAndProcessed = 0x2000;
-    private const ushort ChunkIdMask               = 0x1FFF;
     private const ushort ChunkReadyForDequeue      = 0x4000;
-    public const ushort MaxChunkId                 = 0x1FFE;
+    private const ushort ChunkAcquiredForDequeue   = 0x8000;
+    private const ushort ChunkIdMask               = 0x1FFF;
     private const ushort PaddingChunkId            = 0x1FFF;
+    public const ushort MaxChunkId                 = 0x1FFE;
 
     #endregion
 
@@ -23,11 +23,10 @@ public unsafe struct MappedConcurrentChunkBasedQueue
     #region Properties
 
     public int BufferSize => _bufferSize;
-
     public long ReadOffset => _header[0].StartReadOffset;
+    public long WriteOffset => _header[0].CurrentWriteOffset;
     public int RelativeReadOffset => (int)(_header[0].StartReadOffset % _bufferSize);
     public int RelativeWriteOffset => (int)(_header[0].CurrentWriteOffset % _bufferSize);
-    public long WriteOffset => _header[0].CurrentWriteOffset;
 
     #endregion
 
@@ -206,11 +205,9 @@ public unsafe struct MappedConcurrentChunkBasedQueue
 
     #region Privates
 
-    private readonly int _bufferSize;
-
-    private MemorySegment<byte> _buffer;
-
     private MemorySegment<Header> _header;
+    private MemorySegment<byte> _buffer;
+    private readonly int _bufferSize;
 
     #endregion
 
@@ -347,11 +344,11 @@ public unsafe struct MappedConcurrentChunkBasedQueue
 
         #region Fields
 
+        private readonly MemorySegment<Header> _header;
+        private readonly MemorySegment<byte> _buffer;
         private readonly MemorySegment _chunkData;
         private readonly long _prevRead;
         private readonly long _newRead;
-        private readonly MemorySegment<Header> _header;
-        private readonly MemorySegment<byte> _buffer;
         private readonly int _bufferSize;
 
         #endregion

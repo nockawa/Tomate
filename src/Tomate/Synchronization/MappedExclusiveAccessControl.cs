@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
 namespace Tomate;
@@ -73,7 +72,7 @@ public struct MappedExclusiveAccessControl
     /// }
     /// </code>
     /// </example>
-    public bool TakeControl(TimeSpan? wait)
+    public bool TakeControl(TimeSpan? wait=null)
     {
         var tid = CallingLock;
         if (Interlocked.CompareExchange(ref _data, tid, 0) == 0)

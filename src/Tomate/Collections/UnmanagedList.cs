@@ -19,13 +19,12 @@ namespace Tomate;
 /// <remarks>
 /// Be sure to read the overview documentation to learn how to use this type.
 /// This type is MemoryMappedFile friendly, meaning you can allocate instances of this type with an <see cref="MemoryManagerOverMMF"/> as memory manager.
-/// This comes with a limitation where this type can't store addresses, because a MMF is a cross process object and each process has its own address space.
-/// The result is a degraded performance, you can alleviate this by relying on the <see cref="Accessor"/> type when you have multiple operations to perform.
 /// </remarks>
+[PublicAPI]
 [DebuggerTypeProxy(typeof(UnmanagedList<>.DebugView))]
 [DebuggerDisplay("Count = {Count}")]
-[PublicAPI]
-public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : unmanaged
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
+public unsafe struct UnmanagedList<T> : IUnmanagedCollection where T : unmanaged
 {
     #region Constants
 
@@ -44,23 +43,24 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// <remarks>
     /// This API checks for the bounds and throws the index is incorrect.
     /// Will throw <see cref="InvalidObjectException"/> if the instance is default or disposed.
-    /// If you have multiple operations to perform on the list, consider using the <see cref="FastAccessor"/> property which is faster.
     /// </remarks>
     public ref T this[int index]
     {
         get
         {
+            EnsureInternalState();
             var header = _header;
             if (header == null)
             {
                 ThrowHelper.InvalidObject(null);
             }
-            if ((uint)index >= (uint)header->Count)
+
+            var curCount = (uint)header->Count;
+            if ((uint)index >= curCount)
             {
-                ThrowHelper.OutOfRange($"Index {index} must be less than {header->Count} and greater or equal to 0");
+                ThrowHelper.OutOfRange($"Index {index} must be less than {curCount} and greater or equal to 0");
             }
-            var items = (T*)(header + 1);
-            return ref items[index];
+            return ref _items[index];
         }
     }
 
@@ -75,13 +75,12 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     {
         get
         {
-            var header = _header;
-            if (header == null)
+            EnsureInternalState();
+            if (_header == null)
             {
                 ThrowHelper.InvalidObject(null);
             }
-            var items = (T*)(header + 1);
-            return new(items, header->Count);
+            return new MemorySegment<T>(_items, _header->Count);
         }
     }
 
@@ -91,19 +90,17 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// <returns>
     /// The number of items in the list or -1 if the instance is invalid.
     /// </returns>
-    public int Count => IsDefault ? -1 : _header->Count;
-
-    /// <summary>
-    /// Access to a fast accessor, which is the preferred way if there are multiple operations on the list to be done.
-    /// </summary>
-    /// <remarks>
-    /// The accessor will fetch the addresses to work with, which gives an additional performance boost when multiple operations are to perform.
-    /// As it is a ref struct, it can't be stored in a field, so you must use it in the same method where you get it.
-    /// </remarks>
-    public Accessor FastAccessor
+    public int Count
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        get => new(ref this);
+        get
+        {
+            if (IsDefault)
+            {
+                return -1;
+            }
+            EnsureInternalState();
+            return _header->Count;
+        }
     }
 
     /// <summary>
@@ -145,8 +142,6 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// <remarks>
     /// Get accessor will return -1 if the list is disposed/default.
     /// Set accessor will throw an exception if the new capacity is less than the actual count.
-    /// Beware: setting the capacity will trigger a resize of the list, be sure not to mix this operation with others that deals with a cached address of the
-    ///  list (like <see cref="MemoryBlock"/>, or <see cref="Accessor"/>) because the address will be invalid after the resize.
     /// </remarks>
     public int Capacity
     {
@@ -156,11 +151,13 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
             {
                 return -1;
             }
+            EnsureInternalState();
             var header = _header;
             return (int)header->Capacity;
         }
         set 
         {
+            EnsureInternalState();
             // Cache the value, because unfortunately accessing the address of the memory block is not that fast compare to what we need
             var header = _header;
             if (value < header->Count)
@@ -170,6 +167,7 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
             if (value != header->Capacity)
             {
                 _memoryBlock.Resize(sizeof(Header) + (sizeof(T) * value));
+                EnsureInternalState(true);
                 header = _header;
                 header->Capacity = (uint)value;
             }
@@ -179,7 +177,38 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     #endregion
 
     #region Methods
+    public static ref UnmanagedList<T> CreateInStore(IMemoryManager memoryManager, int initialCapacity, out UnmanagedDataStore.Handle<UnmanagedList<T>> handle)
+    {
+        memoryManager ??= DefaultMemoryManager.GlobalInstance;
+        var list = new UnmanagedList<T>(memoryManager, initialCapacity);
+        handle = memoryManager.Store.Store(ref list);
+        list.Dispose();
+        return ref memoryManager.Store.Get(handle);
+    }
 
+    public static ref UnmanagedList<T> CreateInStore(IMemoryManager memoryManager, UnmanagedDataStore store, int initialCapacity, out UnmanagedDataStore.Handle<UnmanagedList<T>> handle)
+    {
+        memoryManager ??= DefaultMemoryManager.GlobalInstance;
+        var list = new UnmanagedList<T>(memoryManager, initialCapacity);
+        handle = store.Store(ref list);
+        list.Dispose();
+        return ref store.Get(handle);
+    }
+
+    public ref UnmanagedList<T> MoveToStore(IMemoryManager memoryManager, out UnmanagedDataStore.Handle<UnmanagedList<T>> handle)
+    {
+        memoryManager ??= DefaultMemoryManager.GlobalInstance;
+        handle = memoryManager.Store.Store(ref this);
+        Dispose();
+        return ref memoryManager.Store.Get(handle);
+    }
+    
+    public static ref UnmanagedList<T> GetFromStore(IMemoryManager memoryManager, UnmanagedDataStore.Handle<UnmanagedList<T>> handle)
+    {
+        memoryManager ??= DefaultMemoryManager.GlobalInstance;
+        return ref memoryManager.Store.Get(handle);
+    }
+    
     /// <summary>
     /// Add an item to the list
     /// </summary>
@@ -189,25 +218,25 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// </returns>
     /// <remarks>
     /// Will throw <see cref="InvalidObjectException"/> if the instance is default or disposed.
-    /// If you have multiple operations to perform on the list, consider using the <see cref="FastAccessor"/> property which is faster.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public int Add(T item)
     {
+        EnsureInternalState();
         var header = _header;
         if (header == null)
         {
             ThrowHelper.InvalidObject(null);
         }
-        var items = (T*)(header + 1);
         var res = header->Count;
         if ((uint)res < header->Capacity)
         {
-            items[header->Count++] = item;
+            _items[header->Count++] = item;
         }
         else
         {
             AddWithResize(item);
+            EnsureInternalState(true);
         }
         
         return res;
@@ -223,10 +252,10 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// You must be sure any other operation on this list won't trigger a resize of its content for the time you use the ref. Otherwise the ref
     ///  will point to a incorrect address and corruption will most likely to occur. Use this API with great caution.
     /// Will throw <see cref="InvalidObjectException"/> if the instance is default or disposed.
-    /// If you have multiple operations to perform on the list, consider using the <see cref="FastAccessor"/> property which is faster.
     /// </remarks>
     public ref T AddInPlace()
     {
+        EnsureInternalState();
         var header = _header;
         if (header == null)
         {
@@ -235,11 +264,11 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
         if (header->Count == header->Capacity)
         {
             Grow(header->Count + 1);
+            EnsureInternalState(true);
             header = _header;
         }
 
-        var items = (T*)(header + 1);
-        return ref items[header->Count++];
+        return ref _items[header->Count++];
     }
 
     /// <summary>
@@ -256,8 +285,8 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// </summary>
     public void Clear()
     {
-        var header = _header;
-        header->Count = 0;
+        EnsureInternalState();
+        _header->Count = 0;
     }
 
     /// <summary>
@@ -270,8 +299,9 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// </remarks>
     public void CopyTo(T[] items, int i)
     {
+        EnsureInternalState();
         var span = new Span<T>(items, i, items.Length - i);
-        var srcItems = (T*)(_header + 1);
+        var srcItems = _items;
         new Span<T>(srcItems, span.Length).CopyTo(span); 
     }
 
@@ -283,16 +313,17 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// </remarks>
     public void Dispose()
     {
+        EnsureInternalState();
         if (IsDefault || IsDisposed)
         {
             return;
         }
         
         _memoryBlock.Dispose();
-
         if (_memoryBlock.IsDisposed)
         {
             _memoryBlock = default;
+            EnsureInternalState(true);
         }
     }
 
@@ -309,16 +340,16 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// <returns>The index or <c>-1</c> if there's no such item</returns>
     /// <remarks>
     /// Will throw <see cref="InvalidObjectException"/> if the instance is default or disposed.
-    /// If you have multiple operations to perform on the list, consider using the <see cref="FastAccessor"/> property which is faster.
     /// </remarks>
     public int IndexOf(T item)
     {
+        EnsureInternalState();
         var header = _header;
         if (header == null)
         {
             ThrowHelper.InvalidObject(null);
         }
-        var items = (T*)(header + 1);
+        var items = _items;
         if (typeof(T) == typeof(int))
         {
             var src = Unsafe.As<T, int>(ref item);
@@ -412,10 +443,11 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// <param name="item">The item to insert</param>
     /// <remarks>
     /// Will throw <see cref="InvalidObjectException"/> if the instance is default or disposed.
-    /// If you have multiple operations to perform on the list, consider using the <see cref="FastAccessor"/> property which is faster.
     /// </remarks>
     public void Insert(int index, T item)
     {
+        EnsureInternalState();
+        
         // Note that insertions at the end are legal.
         var header = _header;
         if (header == null)
@@ -433,7 +465,7 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
             header = _header;
         }
 
-        var items = (T*)(header + 1);
+        var items = _items;
         if (index < header->Count)
         {
             var span = new Span<T>(items, header->Count + 1);
@@ -451,7 +483,6 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// <remarks>
     /// Remove will only remove the first occurrence of the item in the list, the whole content succeeding the item will be shifted to fill the gap.
     /// Will throw <see cref="InvalidObjectException"/> if the instance is default or disposed.
-    /// If you have multiple operations to perform on the list, consider using the <see cref="FastAccessor"/> property which is faster.
     /// </remarks>
     public bool Remove(T item)
     {
@@ -471,10 +502,10 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     /// <param name="index">The index to remove the item at, must be a valid range or <see cref="IndexOutOfRangeException"/> will be thrown</param>
     /// <remarks>
     /// Will throw <see cref="InvalidObjectException"/> if the instance is default or disposed.
-    /// If you have multiple operations to perform on the list, consider using the <see cref="FastAccessor"/> property which is faster.
     /// </remarks>
     public void RemoveAt(int index)
     {
+        EnsureInternalState();
         var header = _header;
         if (header == null)
         {
@@ -486,7 +517,7 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
         }
         if (index < header->Count)
         {
-            var items = (T*)(header + 1);
+            var items = _items;
             var span = new Span<T>(items, header->Count);
             span.Slice(index + 1).CopyTo(span.Slice(index));
             header->Count--;
@@ -521,24 +552,53 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
         memoryManager ??= DefaultMemoryManager.GlobalInstance;
         _memoryBlock = default;
         _memoryBlock = memoryManager.Allocate(sizeof(Header) + (sizeof(T) * initialCapacity));
+        EnsureInternalState(true);
         var header = _header;
         header->Count = 0;
         header->Capacity = (uint)initialCapacity;
+    }
+
+    internal UnmanagedList(MemoryBlock memoryBlock)
+    {
+        _memoryBlock = memoryBlock;
     }
 
     #endregion
 
     #region Privates
 
-    // Unfortunately this access is not as fast as we'd like to. We can't store the address of the memory block because it must remain process independent.
-    // This is why we have a FastAccessor property that will give you a ref struct to work with and a faster access.
-    private Header* _header
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        get => (Header*)_memoryBlock.MemorySegment.Address;
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // 28 bytes data
+    // DON'T REORDER THIS FIELDS DECLARATION
+    
+    // The memory block must ALWAYS be the first field of every UnmanagedCollection types
+    private MemoryBlock _memoryBlock;       // Offset  0, length 12
+    private Header* _header;                // Offset 12, length 8
+    private T* _items;                      // Offset 20, length 8
+    
+    // 28 bytes data
+    ///////////////////////////////////////////////////////////////////////////////////////////////
 
-    private MemoryBlock _memoryBlock;
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private void EnsureInternalState(bool force = false)
+    {
+        // Non MMF means the cached addresses are always valid
+        // Note: maybe we could ignore this check in order to allow multiple instances of the same list to be used at the same time
+        if (force==false && _memoryBlock.MemorySegment.IsInMMF == false)
+        {
+            return;
+        }
+
+        // Check if the data we've precomputed is still valid
+        var header = (Header*)_memoryBlock.MemorySegment.Address;
+        if (force==false && _header == header)
+        {
+            return;
+        }
+        
+        _header = header;
+        _items = (T*)(header + 1);
+    }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void AddWithResize(T item)
@@ -577,258 +637,6 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
     #endregion
 
     #region Inner types
-
-    /// <summary>
-    /// Process-dependent accessor to the list, for faster operations
-    /// </summary>
-    /// <remarks>
-    /// The <see cref="UnmanagedList{T}"/> type is a process independent type, meaning its instances can lie inside a MemoryMappedFile and be shared across
-    ///  processes. This possibility comes with a constraint to deal with indices rather than addresses, which has a performance cost.
-    /// Creating an instance of <see cref="Accessor"/> will give you a faster way to access the list because its implementation deals with addresses rather
-    ///  than indices, but it only brings a performance gain if you have multiple operations to perform on the list.
-    /// Also note that APIs don't check for the validity of the instance, it's only done during the construction of the accessor.
-    /// WARNING: when using APIs of this type, you must NOT perform any operation on the list instance itself (or other instances of this accessor),
-    ///  simply because <see cref="Accessor"/> caches the addresses of the list's content and if a resize occurs outside of this instance, the consequences
-    ///  will be catastrophic.
-    /// </remarks>
-    [PublicAPI]
-    [DebuggerTypeProxy(typeof(UnmanagedList<>.Accessor.AccessorDebugView))]
-    [DebuggerDisplay("Count = {Count}")]
-    public ref struct Accessor
-    {
-        #region Public APIs
-
-        #region Properties
-
-        /// <summary>
-        /// Subscript operator for random access to an item in the list
-        /// </summary>
-        /// <param name="index">The index of the item to retrieve, must be within the range of [0..Length-1]</param>
-        /// <remarks>
-        /// This API checks for the bounds and will throw if the index is incorrect.
-        /// </remarks>
-        public ref T this[int index]
-        {
-            get
-            {
-                var header = _header;
-                Debug.Assert(header != null, "Can't access the header, the instance doesn't point to a valid list");
-                if ((uint)index >= (uint)header->Count)
-                {
-                    ThrowHelper.OutOfRange($"Index {index} must be less than {header->Count} and greater or equal to 0");
-                }
-                return ref _items[index];
-            }
-        }
-
-        /// <summary>
-        /// Get a MemorySegment of the content of the list
-        /// </summary>
-        /// <remarks>
-        /// BEWARE: the segment may no longer be valid if you perform an operation that will resize the list.
-        /// </remarks>
-        public MemorySegment<T> Content => new(_items, _header->Count);
-
-        /// <summary>
-        /// Get the item count
-        /// </summary>
-        /// <returns>
-        /// The number of items in the list or -1 if the instance is invalid.
-        /// </returns>
-        public int Count => _header->Count;
-
-        /// <summary>
-        /// Get/set the capacity of the list
-        /// </summary>
-        /// <remarks>
-        /// Get accessor will return -1 if the list is disposed/default.
-        /// Set accessor will throw an exception if the new capacity is less than the actual count.
-        /// Beware: setting the capacity will trigger a resize of the list, be sure not to mix this operation with others that deals with a cached address of the
-        ///  list (like <see cref="MemoryBlock"/>, or <see cref="Accessor"/>) because the address will be invalid after the resize.
-        /// </remarks>
-        public int Capacity
-        {
-            get => _owner.Capacity;
-            set
-            {
-                _owner.Capacity = value;
-                _header = _owner._header;
-                _items = (T*)(_header + 1);
-            }
-        }
-
-        #endregion
-
-        #region Methods
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public int Add(T item)
-        {
-            var header = _header;
-            Debug.Assert(header != null, "Can't access the header, the instance doesn't point to a valid list");
-            var res = header->Count;
-            if ((uint)res < header->Capacity)
-            {
-                _items[header->Count++] = item;
-            }
-            else
-            {
-                _owner.AddWithResize(item);
-                _header = _owner._header;
-                _items = (T*)(_header + 1);
-            }
-            
-            return res;
-        }
-
-        /// <summary>
-        /// Return the ref of the added element, beware, read remarks
-        /// </summary>
-        /// <returns>
-        /// The reference to the added element.
-        /// </returns>
-        /// <remarks>
-        /// You must be sure any other operation on this list won't trigger a resize of its content for the time you use the ref. Otherwise the ref
-        ///  will point to a incorrect address and corruption will most likely to occur. Use this API with great caution.
-        /// </remarks>
-        public ref T AddInPlace()
-        {
-            var header = _header;
-            if (header->Count == header->Capacity)
-            {
-                _owner.Grow(header->Count + 1);
-                _header = _owner._header;
-                _items = (T*)(_header + 1);
-                header = _header;
-            }
-
-            return ref _items[header->Count++];
-        }
-
-        /// <summary>
-        /// Clear the content of the list
-        /// </summary>
-        public void Clear() => _owner.Clear();
-
-        /// <summary>
-        /// Copy the content of the list to an array, starting at the given index
-        /// </summary>
-        /// <param name="items">The array that will receive the list's items</param>
-        /// <param name="i">The index in the array to copy the first element</param>
-        /// <remarks>
-        /// Will throw is the array's portion (delimited by <param name="i" /> and its length) is too small to contain all the items.
-        /// </remarks>
-        public void CopyTo(T[] items, int i)
-        {
-            _owner.CopyTo(items, i);
-        }
-
-        /// <summary>
-        /// Enumerator access for <c>foreach</c>
-        /// </summary>
-        /// <returns>The enumerator, an instance of the <see cref="Enumerator"/> type</returns>
-        public Enumerator GetEnumerator() => new(_owner);
-
-        public int IndexOf(T item) => _owner.IndexOf(item);
-        public void Insert(int index, T item)
-        {
-            // Note that insertions at the end are legal.
-            var header = _owner._header;
-            if ((uint)index > (uint)header->Count)
-            {
-                ThrowHelper.OutOfRange($"Can't insert, given index {index} is greater than Count {header->Count}.");
-            }
-
-            if (header->Count == header->Capacity)
-            {
-                _owner.Grow(header->Count + 1);
-                header = _owner._header;
-                _header = header;
-                _items = (T*)(header + 1);
-            }
-
-            var items = _items;
-            if (index < header->Count)
-            {
-                var span = new Span<T>(items, header->Count + 1);
-                span.Slice(index, header->Count - index).CopyTo(span.Slice(index + 1));
-            }
-            items[index] = item;
-            ++header->Count;
-        }
-
-        public bool Remove(T item) => _owner.Remove(item);
-        public void RemoveAt(int index) => _owner.RemoveAt(index);
-
-        #endregion
-
-        #endregion
-
-        #region Constructors
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public Accessor(ref UnmanagedList<T> owner)
-        {
-            if (owner.IsDefault)
-            {
-                ThrowHelper.InvalidObject(null);
-            }
-            _owner = ref owner;
-            _header = (Header*)owner._memoryBlock.MemorySegment.Address;
-            _items = (T*)(_header + 1);
-        }
-
-        #endregion
-
-        #region Privates
-
-        private Header* _header;
-        private T* _items;
-
-        private ref UnmanagedList<T> _owner;
-
-        #endregion
-
-        [ExcludeFromCodeCoverage]
-        internal sealed class AccessorDebugView
-        {
-            #region Public APIs
-
-            #region Properties
-
-            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-            public T[] Items
-            {
-                get
-                {
-                    var items = new T[_data.Length];
-                    var dest = new Span<T>(items);
-                    _data.ToSpan().CopyTo(dest);
-                    return items;
-                }
-            }
-
-            #endregion
-
-            #endregion
-
-            #region Constructors
-
-            public AccessorDebugView(UnmanagedList<T>.Accessor accessor)
-            {
-                _data = accessor.Content;
-            }
-
-            #endregion
-
-            #region Privates
-
-            private readonly MemorySegment<T> _data;
-
-            #endregion
-        }
-        
-    }
 
     [ExcludeFromCodeCoverage]
     internal sealed class DebugView
@@ -906,6 +714,7 @@ public unsafe struct UnmanagedList<T> : IUnmanagedFacade, IRefCounted where T : 
 
         public Enumerator(UnmanagedList<T> owner)
         {
+            owner.EnsureInternalState();
             var items = (T*)(owner._header + 1);
             _span = new(items, owner.Count);
             _index = -1;

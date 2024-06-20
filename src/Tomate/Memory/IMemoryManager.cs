@@ -29,6 +29,8 @@ public interface IMemoryManager
     int MaxAllocationLength { get; }
     int MemoryManagerId { get; }
 
+    ref UnmanagedDataStore Store { get; }
+    
     /// <summary>
     /// This property only works in DEBUGALLOC mode, it is primarily used to change the content of a memory block being freed,
     ///  for debugging/troubleshooting purposes.

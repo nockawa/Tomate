@@ -112,7 +112,7 @@ public static class BlockReferential
     {
         try
         {
-            _control.TakeControl(null);
+            _control.TakeControl();
             var allocator = Allocators[index];
             allocator.Dispose();
             AvailableSlots.Push(index);
@@ -156,7 +156,7 @@ public static class BlockReferential
     {
         try
         {
-            _control.TakeControl(null);
+            _control.TakeControl();
 
             int res;
             if (AvailableSlots.Count > 0)

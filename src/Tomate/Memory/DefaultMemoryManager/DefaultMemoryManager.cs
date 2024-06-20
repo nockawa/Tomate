@@ -13,12 +13,24 @@ namespace Tomate;
 [PublicAPI]
 public class BlockOverrunException : Exception
 {
+    #region Public APIs
+
+    #region Properties
+
     public MemoryBlock Block { get; }
+
+    #endregion
+
+    #endregion
+
+    #region Constructors
 
     public BlockOverrunException(MemoryBlock block, string msg) : base(msg)
     {
         Block = block;
     }
+
+    #endregion
 }
 
 /// <summary>
@@ -61,7 +73,7 @@ public class BlockOverrunException : Exception
 /// </para>
 /// </remarks>
 [PublicAPI]
-public partial class DefaultMemoryManager : IDisposable, IMemoryManager
+public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAllocator
 {
     internal static readonly int BlockInitialCount = Environment.ProcessorCount * 4;
     internal static readonly int BlockGrowCount = 64;
@@ -71,6 +83,9 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     internal static readonly int MemorySegmentMaxSizeForSmallBlock = SmallBlockAllocator.SegmentHeader.MaxSegmentSize;
     public static readonly int MinSegmentSize = 16;
     public static readonly unsafe int MaxMemorySegmentSize = Array.MaxLength - 63 - sizeof(LargeBlockAllocator.SegmentHeader).Pad16();
+    public static readonly int PageAllocatorPageSize = 1024 * 1024;
+    public static readonly int PageAllocatorMaxPageCount = 1024;
+    public static readonly int StoreMaxEntryCount = 1024 * 1024;
 
     /// <summary>
     /// Access to the global instance of the Memory Manager
@@ -80,7 +95,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     /// The memory will be freed when the process will exit.
     /// If you need control over the lifetime, create and use your own instance.
     /// </remarks>
-    public static readonly DefaultMemoryManager GlobalInstance = new(false, true);
+    public static readonly DefaultMemoryManager GlobalInstance = new(PageAllocatorPageSize, PageAllocatorMaxPageCount, false, true);
 
     private readonly List<NativeBlockInfo> _nativeBlockList;
     private ExclusiveAccessControl _nativeBlockListAccess;
@@ -99,6 +114,11 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     private readonly bool _isGlobal;
     private readonly BlockReferential.GenBlockHeader _zeroHeader;
     private readonly MemoryBlock _zeroMemoryBlock;
+
+    private int _maxPageCount;
+    private PageAllocator _pageAllocator;
+    private UnmanagedDataStore _dataStore;
+    private ExclusiveAccessControl _dataStoreAccess;
 
 #if DEBUGALLOC
     private static readonly int BlockMargingSize = 1024;                    // MUST BE A MULTIPLE OF 32 BYTES !!!
@@ -188,13 +208,13 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
 #if DEBUGALLOC
     public DefaultMemoryManager(bool enableBlockOverrunDetection = false) : this(enableBlockOverrunDetection, false)
 #else
-    public DefaultMemoryManager() : this(false, false)
+    public DefaultMemoryManager(int pageSize=1024*1024, int maxPageCount=1024) : this(pageSize, maxPageCount, false, false)
 #endif
     {
     }
 
     // ReSharper disable once UnusedParameter.Local
-    private unsafe DefaultMemoryManager(bool enableBlockOverrunDetection, bool isGlobal
+    private unsafe DefaultMemoryManager(int pageSize, int maxPageCount, bool enableBlockOverrunDetection, bool isGlobal
 #if DEBUGALLOC
         , [CallerFilePath] string sourceFile = "", [CallerLineNumber] int lineNb = 0
 #endif
@@ -236,6 +256,10 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
             _zeroHeader.RefCounter = 1;
             _zeroMemoryBlock = new MemoryBlock((byte*)Unsafe.AsPointer(ref _zeroHeader) + sizeof(BlockReferential.GenBlockHeader), 0, -1);
         }
+        
+        // Page Allocator part
+        PageSize = pageSize;
+        _maxPageCount = maxPageCount;
     }
 
     public void Dispose()
@@ -271,6 +295,11 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         foreach (var ba in _pooledLargeBlockList)
         {
             BlockReferential.UnregisterAllocator(ba.BlockIndex);
+        }
+        
+        if (_dataStore.IsDefault == false)
+        {
+            _dataStore.Dispose();
         }
 
         _nativeBlockList.Clear();
@@ -477,7 +506,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     {
         try
         {
-            _smallBlockListAccess.TakeControl(null);
+            _smallBlockListAccess.TakeControl();
             _pooledSmallBlockList.Push(blockAllocator);
         }
         finally
@@ -490,7 +519,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     {
         try
         {
-            _largeBlockAccess.TakeControl(null);
+            _largeBlockAccess.TakeControl();
             _pooledLargeBlockList.Add(blockAllocator);
         }
         finally
@@ -503,7 +532,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     {
         try
         {
-            _nativeBlockListAccess.TakeControl(null);
+            _nativeBlockListAccess.TakeControl();
 
             if (_curNativeBlockInfo.GetBlockSegment(out var res))
             {
@@ -529,7 +558,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     {
         try
         {
-            _nativeBlockListAccess.TakeControl(null);
+            _nativeBlockListAccess.TakeControl();
 
             // Only allocate power of 2 size
             var size = (uint)minimumSize.NextPowerOf2();
@@ -574,7 +603,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     {
         try
         {
-            _smallBlockListAccess.TakeControl(null);
+            _smallBlockListAccess.TakeControl();
             SmallBlockAllocator smallBlockAllocator;
             if (_pooledSmallBlockList.Count > 0)
             {
@@ -596,7 +625,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     {
         try
         {
-            _largeBlockAccess.TakeControl(null);
+            _largeBlockAccess.TakeControl();
             LargeBlockAllocator largeBlockAllocator = null;
             for (var i = 0; i < _pooledLargeBlockList.Count; i++)
             {
@@ -635,7 +664,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
         {
             try
             {
-                _nativeBlockListAccess.TakeControl(null);
+                _nativeBlockListAccess.TakeControl();
                 var total = 0L;
                 foreach (var nbi in _nativeBlockList)
                 {
@@ -652,4 +681,101 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager
     }
 
 #endregion
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EnsurePageAllocatorInitialized()
+    {
+        if (_pageAllocator != null)
+        {
+            return;
+        }
+        
+        var pa = new PageAllocator(PageSize, _maxPageCount);
+        
+        if (Interlocked.CompareExchange(ref _pageAllocator, pa, null) != null)
+        {
+            pa.Dispose();
+        }
+    }
+
+    public unsafe byte* BaseAddress
+    {
+        get
+        {
+            EnsurePageAllocatorInitialized();
+            return _pageAllocator.BaseAddress;
+        }
+    }
+
+    public int PageAllocatorId
+    {
+        get
+        {
+            EnsurePageAllocatorInitialized();
+            return _pageAllocator.PageAllocatorId;
+        }
+    }
+
+    public int PageSize { get; }
+
+    public MemorySegment AllocatePages(int length)
+    {
+        EnsurePageAllocatorInitialized();
+        return _pageAllocator.AllocatePages(length);
+    }
+
+    public bool FreePages(MemorySegment pages)
+    {
+        EnsurePageAllocatorInitialized();
+        return _pageAllocator.FreePages(pages);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MemorySegment FromBlockId(int blockId)
+    {
+        EnsurePageAllocatorInitialized();
+        return _pageAllocator.FromBlockId(blockId);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int ToBlockId(MemorySegment segment)
+    {
+        EnsurePageAllocatorInitialized();
+        return _pageAllocator.ToBlockId(segment);
+    }
+
+    public ref UnmanagedDataStore Store
+    {
+        get
+        {
+            EnsureDataStoreInitialized();
+            return ref _dataStore;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EnsureDataStoreInitialized()
+    {
+        if (_dataStore.IsDefault == false)
+        {
+            return;
+        }
+
+        try
+        {
+            _dataStoreAccess.TakeControl();
+            if (_dataStore.IsDefault == false)
+            {
+                return;
+            }
+            var rootPage = AllocatePages(1);
+            var (size, levelsInfo) = UnmanagedDataStore.ComputeStorageSize(this, StoreMaxEntryCount);
+            Debug.Assert(size <= rootPage.Length);
+            _dataStore = UnmanagedDataStore.Create(this, rootPage.Slice(size), levelsInfo);
+        }
+        finally
+        {
+            _dataStoreAccess.ReleaseControl();
+        }
+    }
 }

@@ -341,7 +341,7 @@ public partial class DefaultMemoryManager
             try
             {
                 var size = info.Size;
-                _control.TakeControl(null);
+                _control.TakeControl();
 
                 ++_countBetweenDefrag;
                 var fragRatio = _totalAllocatedSegments / (float)_totalFreeSegments;
@@ -455,7 +455,7 @@ public partial class DefaultMemoryManager
 
             try
             {
-                _control.TakeControl(null);
+                _control.TakeControl();
 
                 Debug.Assert(header.GenHeader.IsFree == false, "This block was already freed");
 

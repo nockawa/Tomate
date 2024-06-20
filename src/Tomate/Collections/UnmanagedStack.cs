@@ -23,7 +23,8 @@ namespace Tomate;
 [PublicAPI]
 [DebuggerTypeProxy(typeof(UnmanagedStack<>.DebugView))]
 [DebuggerDisplay("Count = {Count}")]
-public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
+public unsafe struct UnmanagedStack<T> : IUnmanagedCollection where T : unmanaged
 {
     #region Constants
 
@@ -42,12 +43,12 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// <remarks>
     /// This API checks for the bounds and throws the index is incorrect.
     /// Will throw <see cref="InvalidObjectException"/> if the instance is default or disposed.
-    /// If you have multiple operations to perform on the list, consider using the <see cref="FastAccessor"/> property which is faster.
     /// </remarks>
     public ref T this[int index]
     {
         get
         {
+            EnsureInternalState();
             var header = _header;
             if (header == null)
             {
@@ -57,8 +58,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             {
                 ThrowHelper.OutOfRange($"Index {index} must be less than {header->Count} and greater or equal to 0");
             }
-            var buffer = (T*)(header + 1);
-            return ref buffer[index];
+            return ref _buffer[index];
         }
     }
 
@@ -73,13 +73,13 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     {
         get
         {
+            EnsureInternalState();
             var header = _header;
             if (header == null)
             {
                 ThrowHelper.InvalidObject(null);
             }
-            var buffer = (T*)(header + 1);
-            return new MemorySegment<T>(buffer, header->Count);
+            return new MemorySegment<T>(_buffer, header->Count);
         }
     }
 
@@ -90,19 +90,6 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// The number of items in the stack or -1 if the instance is invalid.
     /// </returns>
     public int Count => IsDefault ? -1 : _header->Count;
-    
-    /// <summary>
-    /// Access to a fast accessor, which is the preferred way if there are multiple operations on the list to be done.
-    /// </summary>
-    /// <remarks>
-    /// The accessor will fetch the addresses to work with, which gives an additional performance boost when multiple operations are to perform.
-    /// As it is a ref struct, it can't be stored in a field, so you must use it in the same method where you get it.
-    /// </remarks>
-    public Accessor FastAccessor
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        get => new(ref this);
-    }
 
     /// <summary>
     /// Check if the instance is the default (not constructed) one
@@ -112,7 +99,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// There is no distinction between a default instance and a disposed one.
     /// </remarks>
     public bool IsDefault => _memoryBlock.IsDefault;
-    
+
     /// <summary>
     /// Check if the instance is disposed
     /// </summary>
@@ -143,13 +130,12 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// <remarks>
     /// Get accessor will return -1 if the stack is disposed/default.
     /// Set accessor will throw an exception if the new capacity is less than the actual count.
-    /// Beware: setting the capacity will trigger a resize of the stack, be sure not to mix this operation with others that deals with a cached address of the
-    ///  stack (like <see cref="MemoryBlock"/>, or <see cref="Accessor"/>) because the address will be invalid after the resize.
     /// </remarks>
     public int Capacity
     {
         get
         {
+            EnsureInternalState();
             if (IsDefault)
             {
                 return -1;
@@ -159,6 +145,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         }
         set 
         {
+            EnsureInternalState();
             // Cache the value, because unfortunately accessing the address of the memory block is not that fast compare to what we need
             var header = _header;
             if (value < header->Count)
@@ -168,21 +155,25 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             if (value != header->Capacity)
             {
                 _memoryBlock.Resize(sizeof(Header) + (sizeof(T) * value));
+                EnsureInternalState(true);
                 header = _header;
                 header->Capacity = value;
             }
         }
     }
-    
+
     #endregion
 
     #region Methods
+
+    public int AddRef() => _memoryBlock.AddRef();
 
     /// <summary>
     /// Clear the content of the list
     /// </summary>
     public void Clear()
     {
+        EnsureInternalState();
         var header = _header;
         header->Count = 0;
     }
@@ -201,7 +192,11 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         }
         
         _memoryBlock.Dispose();
-        _memoryBlock = default;
+        if (_memoryBlock.IsDisposed)
+        {
+            _memoryBlock = default;
+            EnsureInternalState(true);
+        }
     }
 
     /// <summary>
@@ -210,8 +205,8 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// <returns>A reference to the item, will throw if the stack is empty.</returns>
     public ref T Peek()
     {
+        EnsureInternalState();
         var header = _header;
-        var buffer = (T*)(header + 1);
         var size = header->Count - 1;
 
         if ((uint)size >= (uint)header->Capacity)
@@ -219,7 +214,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             ThrowForEmptyStack();
         }
 
-        return ref buffer[size];
+        return ref _buffer[size];
     }
 
     /// <summary>
@@ -228,8 +223,8 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// <returns></returns>
     public ref T Pop()
     {
+        EnsureInternalState();
         var header = _header;
-        var buffer = (T*)(header + 1);
         --header->Count;
 
         if ((uint)header->Count >= (uint)header->Capacity)
@@ -237,7 +232,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             ThrowForEmptyStack();
         }
 
-        return ref buffer[header->Count];
+        return ref _buffer[header->Count];
     }
 
     /// <summary>
@@ -249,15 +244,16 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// </returns>
     public ref T Push()
     {
+        EnsureInternalState();
         var header = _header;
         if (header->Count >= header->Capacity)
         {
             Grow(header->Count + 1);
+            EnsureInternalState(true);
             header = _header;
         }
 
-        var buffer = (T*)(header + 1);
-        return ref buffer[header->Count++];
+        return ref _buffer[header->Count++];
     }
 
     /// <summary>
@@ -266,11 +262,11 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// <param name="item">A reference to the item to push, which is preferred from the non-reference version if your struct is big.</param>
     public void Push(ref T item)
     {
+        EnsureInternalState();
         var header = _header;
-        var buffer = (T*)(header + 1);
         if ((uint)header->Count < (uint)header->Capacity)
         {
-            buffer[header->Count] = item;
+            _buffer[header->Count] = item;
             ++header->Count;
         }
         else
@@ -285,11 +281,11 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// <param name="item">The item to stack up</param>
     public void Push(T item)
     {
+        EnsureInternalState();
         var header = _header;
-        var buffer = (T*)(header + 1);
         if ((uint)header->Count < (uint)header->Capacity)
         {
-            buffer[header->Count] = item;
+            _buffer[header->Count] = item;
             ++header->Count;
         }
         else
@@ -301,8 +297,8 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     // Copies the Stack to an array, in the same order Pop would return the items.
     public T[] ToArray()
     {
+        EnsureInternalState();
         var header = _header;
-        var buffer = (T*)(header + 1);
         if (header->Count == 0)
         {
             return [];
@@ -310,6 +306,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
 
         var objArray = new T[header->Count];
         var i = 0;
+        var buffer = _buffer;
         while (i < header->Count)
         {
             objArray[i] = buffer[header->Count - i - 1];
@@ -326,8 +323,8 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     // ReSharper disable once RedundantAssignment
     public bool TryPeek(ref T result)
     {
+        EnsureInternalState();
         var header = _header;
-        var buffer = (T*)(header + 1);
         var size = header->Count - 1;
 
         if ((uint)size >= (uint)header->Capacity)
@@ -335,7 +332,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             result = default!;
             return false;
         }
-        result = ref buffer[size];
+        result = ref _buffer[size];
         return true;
     }
 
@@ -346,8 +343,8 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     /// <returns><c>true</c> if an item was popped, <c>false</c> if the stack was empty</returns>
     public bool TryPop(out T result)
     {
+        EnsureInternalState();
         var header = _header;
-        var buffer = (T*)(header + 1);
         --header->Count;
 
         if ((uint)header->Count >= (uint)header->Capacity)
@@ -356,7 +353,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             return false;
         }
 
-        result = buffer[header->Count];
+        result = _buffer[header->Count];
         return true;
     }
 
@@ -396,6 +393,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
             _memoryBlock = memoryManager.Allocate(sizeof(Header));
         }
 
+        EnsureInternalState(true);
         var header = _header;
         header->Count = 0;
         header->Capacity = capacity;
@@ -405,276 +403,19 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
 
     #region Privates
 
-    // Unfortunately this access is not as fast as we'd like to. We can't store the address of the memory block because it must remain process independent.
-    // This is why we have a FastAccessor property that will give you a ref struct to work with and a faster access.
-    private Header* _header
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        get => (Header*)_memoryBlock.MemorySegment.Address;
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // 28 bytes data
+    // DON'T REORDER THIS FIELDS DECLARATION
 
-    #region Fields
-
-    private MemoryBlock _memoryBlock;
-
-    #endregion
+    // The memory block must ALWAYS be the first field of every UnmanagedCollection types
+    private MemoryBlock _memoryBlock;           // Offset  0, length 12
+    private Header* _header;                    // Offset 12, length 8
+    private T* _buffer;                         // Offset 20, length 8
 
     #endregion
 
     #region Inner types
 
-    /// <summary>
-    /// Process-dependent accessor to the stack, for faster operations
-    /// </summary>
-    /// <remarks>
-    /// The <see cref="UnmanagedStack{T}"/> type is a process independent type, meaning its instances can lie inside a MemoryMappedFile and be shared across
-    ///  processes. This possibility comes with a constraint to deal with indices rather than addresses, which has a performance cost.
-    /// Creating an instance of <see cref="Accessor"/> will give you a faster way to access the stack because its implementation deals with addresses rather
-    ///  than indices, but it only brings a performance gain if you have multiple operations to perform on the stack.
-    /// Also note that APIs don't check for the validity of the instance, it's only done during the construction of the accessor.
-    /// WARNING: when using APIs of this type, you must NOT perform any operation on the stack instance itself (or other instances of this accessor),
-    ///  simply because <see cref="Accessor"/> caches the addresses of the stack's content and if a resize occurs outside of this instance, the consequences
-    ///  will be catastrophic.
-    /// </remarks>
-    [PublicAPI]
-    public ref struct Accessor
-    {
-        #region Public APIs
-
-        #region Properties
-
-        /// <summary>
-        /// Subscript operator for random access to an item in the stack
-        /// </summary>
-        /// <param name="index">The index of the item to retrieve, must be within the range of [0..Length-1]</param>
-        /// <remarks>
-        /// This API checks for the bounds and will throw if the index is incorrect.
-        /// </remarks>
-        public ref T this[int index]
-        {
-            get
-            {
-                var header = _header;
-                Debug.Assert(header != null, "Can't access the header, the instance doesn't point to a valid stack");
-                if ((uint)index >= (uint)header->Count)
-                {
-                    ThrowHelper.OutOfRange($"Index {index} must be less than {header->Count} and greater or equal to 0");
-                }
-                return ref _buffer[index];
-            }
-        }
-
-        /// <summary>
-        /// Get the item count
-        /// </summary>
-        /// <returns>
-        /// The number of items in the stack or -1 if the instance is invalid.
-        /// </returns>
-        public int Count => _header->Count;
-
-        /// <summary>
-        /// Get/set the capacity of the stack
-        /// </summary>
-        /// <remarks>
-        /// Get accessor will return -1 if the stack is disposed/default.
-        /// Set accessor will throw an exception if the new capacity is less than the actual count.
-        /// Beware: setting the capacity will trigger a resize of the stack, be sure not to mix this operation with others that deals with a cached address of the
-        ///  stack (like <see cref="MemoryBlock"/>, or <see cref="Accessor"/>) because the address will be invalid after the resize.
-        /// </remarks>
-        public int Capacity
-        {
-            get => _owner.Capacity;
-            set
-            {
-                _owner.Capacity = value;
-                _header = _owner._header;
-                _buffer = (T*)(_header + 1);
-            }
-        }
-
-        #endregion
-
-        #region Methods
-
-        /// <summary>
-        /// Clear the content of the stack
-        /// </summary>
-        public void Clear() => _owner.Clear();
-
-        /// <summary>
-        /// Peek the item at the top of the stack
-        /// </summary>
-        /// <returns>A reference to the item, will throw if the stack is empty.</returns>
-        public ref T Peek()
-        {
-            var header = _header;
-            var buffer = _buffer;
-            var size = header->Count - 1;
-
-            if ((uint)size >= (uint)header->Capacity)
-            {
-                _owner.ThrowForEmptyStack();
-            }
-
-            return ref buffer[size];
-        }
-
-        /// <summary>
-        /// Returns the top object on the stack without removing it.  If the stack is empty, Peek throws an InvalidOperationException.
-        /// </summary>
-        /// <returns></returns>
-        public ref T Pop()
-        {
-            var header = _header;
-            var buffer = _buffer;
-            --header->Count;
-
-            if ((uint)header->Count >= (uint)header->Capacity)
-            {
-                _owner.ThrowForEmptyStack();
-            }
-
-            return ref buffer[header->Count];
-        }
-
-        /// <summary>
-        /// Push and return a reference to the new item
-        /// </summary>
-        /// <returns>
-        /// This method allocates the item in the stack and return a reference to it, it's up to the caller to set the value of the item.
-        /// Don't keep the reference more than what is strictly necessary because it can be invalidated by operations that resize the content of the stack.
-        /// </returns>
-        public ref T Push()
-        {
-            var header = _header;
-            if (header->Count >= header->Capacity)
-            {
-                _owner.Grow(header->Count + 1);
-                header = _header;
-                _header = header;
-                _buffer = (T*)(header + 1);
-            }
-
-            var buffer = (T*)(header + 1);
-            return ref buffer[header->Count++];
-        }
-
-        /// <summary>
-        /// Push an item on the top of the stack
-        /// </summary>
-        /// <param name="item">A reference to the item to push, which is preferred from the non-reference version if your struct is big.</param>
-        public void Push(ref T item)
-        {
-            var header = _header;
-            var buffer = _buffer;
-            if ((uint)header->Count < (uint)header->Capacity)
-            {
-                buffer[header->Count] = item;
-                ++header->Count;
-            }
-            else
-            {
-                _owner.PushWithResize(ref item);
-                _header = header;
-                _buffer = (T*)(header + 1);
-            }
-        }
-
-        /// <summary>
-        /// Push an item in the stack
-        /// </summary>
-        /// <param name="item">The item to stack up</param>
-        public void Push(T item)
-        {
-            var header = _header;
-            var buffer = _buffer;
-            if ((uint)header->Count < (uint)header->Capacity)
-            {
-                buffer[header->Count] = item;
-                ++header->Count;
-            }
-            else
-            {
-                _owner.PushWithResize(ref item);
-                _header = header;
-                _buffer = (T*)(header + 1);
-            }
-        }
-
-        // Copies the Stack to an array, in the same order Pop would return the items.
-        public T[] ToArray() => _owner.ToArray();
-
-        /// <summary>
-        /// Attempt to peek an item from the stack
-        /// </summary>
-        /// <param name="result">A reference that will contain the item at the top of the stack.</param>
-        /// <returns><c>true</c> if there was an item, <c>false</c> if the stack was empty.</returns>
-        // ReSharper disable once RedundantAssignment
-        public bool TryPeek(ref T result)
-        {
-            var header = _header;
-            var buffer = _buffer;
-            var size = header->Count - 1;
-
-            if ((uint)size >= (uint)header->Capacity)
-            {
-                result = default!;
-                return false;
-            }
-            result = ref buffer[size];
-            return true;
-        }
-
-        /// <summary>
-        /// Try to pop an item from the stack
-        /// </summary>
-        /// <param name="result">If the stack was not empty, the item will be stored in the parameter upon return of the call</param>
-        /// <returns><c>true</c> if an item was popped, <c>false</c> if the stack was empty</returns>
-        public bool TryPop(out T result)
-        {
-            var header = _header;
-            var buffer = _buffer;
-            --header->Count;
-
-            if ((uint)header->Count >= (uint)header->Capacity)
-            {
-                result = default;
-                return false;
-            }
-
-            result = buffer[header->Count];
-            return true;
-        }
-        
-        #endregion
-
-        #endregion
-
-        #region Constructors
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public Accessor(ref UnmanagedStack<T> owner)
-        {
-            if (owner.IsDefault)
-            {
-                ThrowHelper.InvalidObject(null);
-            }
-            _owner = ref owner;
-            _header = (Header*)owner._memoryBlock.MemorySegment.Address;
-            _buffer = (T*)(_header + 1);
-        }
-
-        #endregion
-
-        #region Privates
-
-        private Header* _header;
-        private T* _buffer;
-
-        private ref UnmanagedStack<T> _owner;
-
-        #endregion
-    }
     internal sealed class DebugView
     {
         #region Public APIs
@@ -731,13 +472,38 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
 
     #endregion
 
+    // 28 bytes data
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
     #region Private methods
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private void EnsureInternalState(bool force = false)
+    {
+        // Non MMF means the cached addresses are always valid
+        // Note: maybe we could ignore this check in order to allow multiple instances of the same list to be used at the same time
+        if (force==false && _memoryBlock.MemorySegment.IsInMMF == false)
+        {
+            return;
+        }
+
+        // Check if the data we've precomputed is still valid
+        var header = (Header*)_memoryBlock.MemorySegment.Address;
+        if (force==false && _header == header)
+        {
+            return;
+        }
+        
+        _header = header;
+        _buffer = (T*)(header + 1);
+    }
 
     // Pops an item from the top of the stack.  If the stack is empty, Pop
     // throws an InvalidOperationException.
 
     private void Grow(int capacity)
     {
+        EnsureInternalState();
         var header = _header;
         var newCapacity = header->Capacity == 0 ? DefaultCapacity : 2 * header->Capacity;
 
@@ -757,6 +523,7 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
         }
         
         _memoryBlock.Resize(sizeof(Header) + (itemSize * newCapacity));
+        EnsureInternalState(true);
         header = _header;
         header->Capacity = newCapacity;
     }
@@ -765,12 +532,12 @@ public unsafe struct UnmanagedStack<T> : IDisposable where T : unmanaged
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void PushWithResize(ref T item)
     {
+        EnsureInternalState();
         var header = _header;
         Debug.Assert(header->Count == header->Capacity);
         Grow(header->Count + 1);
         header = _header;
-        var buffer = (T*)(header + 1);
-        buffer[header->Count] = item;
+        _buffer[header->Count] = item;
         header->Count++;
     }
 

@@ -86,7 +86,8 @@ public partial class DefaultMemoryManager
             var size = info.Size;
             if (size > MemorySegmentMaxSizeForSmallBlock)
             {
-                var curBlock = _firstLargeBlockAllocator;
+                var firstBlock = _firstLargeBlockAllocator;
+                var curBlock = firstBlock;
                 while (true)
                 {
                     // No block, create one...but under a lock
@@ -95,11 +96,15 @@ public partial class DefaultMemoryManager
                         try
                         {
                             // Lock
-                            _control.TakeControl(null);
+                            _control.TakeControl();
 
-                            // Another thread may have beaten us, so check if it's the case or not
-                            curBlock = _firstLargeBlockAllocator;
-                            if (curBlock == null)
+                            // Another thread may have beaten us, get the block it allocates and try with it again, worst gain the block won't be able
+                            //  to allocate the segment we need, and we'll create a new one
+                            if (firstBlock != _firstLargeBlockAllocator)
+                            {
+                                curBlock = _firstLargeBlockAllocator;
+                            } 
+                            else
                             {
                                 var newBlock = Owner.AllocateLargeBlockAllocator(this, size);
                                 var next = _firstLargeBlockAllocator;
@@ -144,7 +149,7 @@ public partial class DefaultMemoryManager
                         try
                         {
                             // Lock
-                            _control.TakeControl(null);
+                            _control.TakeControl();
 
                             // Another thread may have beaten us, so check if it's the case or not
                             if (curBlock.NextBlockAllocator == null)
@@ -181,7 +186,7 @@ public partial class DefaultMemoryManager
         {
             try
             {
-                _control.TakeControl(null);
+                _control.TakeControl();
 
                 // If we're removing the first block of the linked list
                 if (_firstSmallBlockAllocator == blockAllocator)
@@ -224,7 +229,7 @@ public partial class DefaultMemoryManager
         {
             try
             {
-                _control.TakeControl(null);
+                _control.TakeControl();
 
                 // If we're removing the first block of the linked list
                 if (_firstLargeBlockAllocator == blockAllocator)
@@ -267,7 +272,7 @@ public partial class DefaultMemoryManager
         {
             try
             {
-                _control.TakeControl(null);
+                _control.TakeControl();
 
                 var curBlock = _firstSmallBlockAllocator;
                 while (curBlock != null)

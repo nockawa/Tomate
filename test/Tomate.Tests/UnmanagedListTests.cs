@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using NUnit.Framework;
 
 namespace Tomate.Tests;
@@ -8,6 +9,8 @@ public class UnmanagedListTests
     [Test]
     public void AddTest()
     {
+        var s = Unsafe.SizeOf<UnmanagedDictionary<int, int>>();
+        
         using var ul = new UnmanagedList<int>();
         
         // Pre check
@@ -54,57 +57,6 @@ public class UnmanagedListTests
             Assert.That(ul[curIndex + i], Is.EqualTo(i));
         }
     }
-
-    [Test]
-    public void AccessorAddTest()
-    {
-        using var ul = new UnmanagedList<int>();
-        var acc = ul.FastAccessor;
-        
-        // Pre check
-        Assert.That(acc.Count, Is.EqualTo(0));
-        
-        // Add one item
-        acc.Add(10);
-        Assert.That(acc.Count, Is.EqualTo(1));
-        Assert.That(acc[0], Is.EqualTo(10));
-        
-        // Add a second
-        acc.Add(20);
-        Assert.That(acc.Count, Is.EqualTo(2));
-        Assert.That(acc[1], Is.EqualTo(20));
-        
-        // and a third
-        acc.Add(30);
-        Assert.That(acc.Count, Is.EqualTo(3));
-        Assert.That(acc[2], Is.EqualTo(30));
-        
-        // Add in place
-        ref var i4 = ref acc.AddInPlace();
-        i4 = 40;
-        Assert.That(acc.Count, Is.EqualTo(4));
-        Assert.That(acc[3], Is.EqualTo(40));
-
-        // Change item directly from the ref
-        i4 = 50;
-        Assert.That(acc[3], Is.EqualTo(50));
-
-        // Set with subscript
-        acc[3] = 60;
-        Assert.That(acc[3], Is.EqualTo(60));
-        
-        // Bunch of AddInPlace triggering resize
-        var curIndex = acc.Count;
-        for (int i = 0; i < 32; i++)
-        {
-            ref var aip = ref acc.AddInPlace();
-            aip = i;
-        }
-        for (int i = 0; i < 32; i++)
-        {
-            Assert.That(acc[curIndex + i], Is.EqualTo(i));
-        }
-    }
     
     [Test]
     public void OperationOnInvalidInstanceTest()
@@ -121,11 +73,6 @@ public class UnmanagedListTests
             {
                 var _ = def.Content;
             });
-            Assert.Throws<ObjectDisposedException>(() =>
-            {
-                var _ = def.FastAccessor.Content;
-            });
-            Assert.Throws<ObjectDisposedException>(() => def.FastAccessor.Add(10));
             Assert.Throws<ObjectDisposedException>(() =>
             {
                 var v = def[10];
@@ -153,19 +100,8 @@ public class UnmanagedListTests
             });
             Assert.Throws<IndexOutOfRangeException>(() =>
             {
-                var v = ul.FastAccessor[-1];
-            });
-            
-            Assert.Throws<IndexOutOfRangeException>(() =>
-            {
                 ul.Insert(-1, 0);
             });
-            
-            Assert.Throws<IndexOutOfRangeException>(() =>
-            {
-                ul.FastAccessor.Insert(-1, 0);
-            });
-            
         }
     }
 
@@ -195,10 +131,9 @@ public class UnmanagedListTests
             var ul = new UnmanagedList<Guid>(DefaultMemoryManager.GlobalInstance, initialCapacity);
 
             {
-                var acc = ul.FastAccessor;
                 for (int i = 0; i < initialCapacity; i++)
                 {
-                    acc.Add(Guid.Empty);
+                    ul.Add(Guid.Empty);
                 }
             }
 
@@ -216,7 +151,6 @@ public class UnmanagedListTests
         {
             using var ul = new UnmanagedList<int>(DefaultMemoryManager.GlobalInstance, 23);
             Assert.That(ul.Capacity, Is.EqualTo(23));
-            Assert.That(ul.FastAccessor.Capacity, Is.EqualTo(23));
         }
     }
 
@@ -245,17 +179,16 @@ public class UnmanagedListTests
             ul.Dispose();
         }
         {
-            using var ul = new UnmanagedList<int>(DefaultMemoryManager.GlobalInstance, 8);
-            var acc = ul.FastAccessor;
+            var ul = new UnmanagedList<int>(DefaultMemoryManager.GlobalInstance, 8);
             for (int i = 0; i < 6; i++)
             {
-                acc.Add(i);
+                ul.Add(i);
             }
 
             var success = false;
             try
             {
-                acc.Capacity = 5;
+                ul.Capacity = 5;
             }
             catch (IndexOutOfRangeException)
             {
@@ -263,13 +196,15 @@ public class UnmanagedListTests
             }
             Assert.That(success, Is.True);
 
-            acc.Capacity = 32;
-            Assert.That(acc.Capacity, Is.EqualTo(32));
-            Assert.That(acc.Count, Is.EqualTo(6));
+            ul.Capacity = 32;
+            Assert.That(ul.Capacity, Is.EqualTo(32));
+            Assert.That(ul.Count, Is.EqualTo(6));
             for (int i = 0; i < 6; i++)
             {
-                Assert.That(acc[i], Is.EqualTo(i));
+                Assert.That(ul[i], Is.EqualTo(i));
             }
+            
+            ul.Dispose();
         }
     }
     
@@ -323,20 +258,19 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<int>();
-            var acc = ul.FastAccessor;
             for (int i = 0; i < 8; i++)
             {
-                acc.Add(i);
+                ul.Add(i);
             }
 
             var arr = new int[16];
             {
-                acc.CopyTo(arr, 0);
+                ul.CopyTo(arr, 0);
                 for (int i = 0; i < 8; i++)
                 {
                     Assert.That(arr[i], Is.EqualTo(i));
                 }
-                acc.CopyTo(arr, 8);
+                ul.CopyTo(arr, 8);
                 for (int i = 0; i < 8; i++)
                 {
                     Assert.That(arr[8+i], Is.EqualTo(i));
@@ -366,20 +300,19 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<int>();
-            var acc = ul.FastAccessor;
             for (int i = 0; i < 8; i++)
             {
-                acc.Add(i * 2);
+                ul.Add(i * 2);
             }
             
-            acc.Insert(3, 30);
-            Assert.That(acc.Count, Is.EqualTo(9));
-            Assert.That(acc[3], Is.EqualTo(30));
-            Assert.That(acc[4], Is.EqualTo(6));
+            ul.Insert(3, 30);
+            Assert.That(ul.Count, Is.EqualTo(9));
+            Assert.That(ul[3], Is.EqualTo(30));
+            Assert.That(ul[4], Is.EqualTo(6));
             
-            acc.Insert(9, 90);
-            Assert.That(acc.Count, Is.EqualTo(10));
-            Assert.That(acc[9], Is.EqualTo(90));
+            ul.Insert(9, 90);
+            Assert.That(ul.Count, Is.EqualTo(10));
+            Assert.That(ul[9], Is.EqualTo(90));
         }
     }
     
@@ -425,37 +358,36 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<int>();
-            var acc = ul.FastAccessor;
-            acc.Add(10);
-            acc.Add(11);
-            acc.Add(12);
-            acc.Add(13);
-            acc.Add(14);
-            acc.Add(15);
+            ul.Add(10);
+            ul.Add(11);
+            ul.Add(12);
+            ul.Add(13);
+            ul.Add(14);
+            ul.Add(15);
 
-            acc.RemoveAt(2);
+            ul.RemoveAt(2);
 
-            Assert.That(acc.Count, Is.EqualTo(5));
-            Assert.That(acc[0], Is.EqualTo(10));
-            Assert.That(acc[1], Is.EqualTo(11));
-            Assert.That(acc[2], Is.EqualTo(13));
-            Assert.That(acc[3], Is.EqualTo(14));
-            Assert.That(acc[4], Is.EqualTo(15));
+            Assert.That(ul.Count, Is.EqualTo(5));
+            Assert.That(ul[0], Is.EqualTo(10));
+            Assert.That(ul[1], Is.EqualTo(11));
+            Assert.That(ul[2], Is.EqualTo(13));
+            Assert.That(ul[3], Is.EqualTo(14));
+            Assert.That(ul[4], Is.EqualTo(15));
 
-            Assert.Throws<IndexOutOfRangeException>(() => ul.FastAccessor.RemoveAt(-10));
+            Assert.Throws<IndexOutOfRangeException>(() => ul.RemoveAt(-10));
         
-            var i = acc.IndexOf(14);
+            var i = ul.IndexOf(14);
             Assert.That(i, Is.EqualTo(3));
 
             i = 0;
             var expectedNumbers = new[] { 10, 11, 13, 14, 15 }; 
-            foreach (var item in acc)
+            foreach (var item in ul)
             {
                 Assert.That(item, Is.EqualTo(expectedNumbers[i++]));
             }
         
-            acc.Clear();
-            foreach (var item in acc)
+            ul.Clear();
+            foreach (var item in ul)
             {
                 Assert.Fail("There should be no item to enumerate");
             }
@@ -478,15 +410,14 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<int>();
-            var acc = ul.FastAccessor;
             for (int i = 0; i < 8; i++)
             {
-                acc.Add(i);
+                ul.Add(i);
             }
 
-            acc.Remove(4);
-            Assert.That(acc.Count, Is.EqualTo(7));
-            Assert.That(acc[4], Is.EqualTo(5));
+            ul.Remove(4);
+            Assert.That(ul.Count, Is.EqualTo(7));
+            Assert.That(ul[4], Is.EqualTo(5));
         }
     }
 
@@ -508,13 +439,12 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<int>();
-            var acc = ul.FastAccessor;
             for (int i = 0; i < 16; i++)
             {
-                acc.Add(i * 2);
+                ul.Add(i * 2);
             }
 
-            var content = acc.Content;
+            var content = ul.Content;
             for (int i = 0; i < 16; i++)
             {
                 Assert.That(content[i], Is.EqualTo(i * 2));
@@ -555,14 +485,13 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<int>();
-            var acc = ul.FastAccessor;
             for (int i = 0; i < 8; i++)
             {
-                acc.Add(i);
+                ul.Add(i);
             }
             
-            Assert.That(acc.IndexOf(3), Is.EqualTo(3));
-            Assert.That(acc.IndexOf(7), Is.EqualTo(7));
+            Assert.That(ul.IndexOf(3), Is.EqualTo(3));
+            Assert.That(ul.IndexOf(7), Is.EqualTo(7));
         }
         {
             using var ul = new UnmanagedList<long>();
@@ -576,14 +505,13 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<long>();
-            var acc = ul.FastAccessor;
             for (int i = 0; i < 8; i++)
             {
-                acc.Add(i);
+                ul.Add(i);
             }
             
-            Assert.That(acc.IndexOf(3), Is.EqualTo(3));
-            Assert.That(acc.IndexOf(7), Is.EqualTo(7));
+            Assert.That(ul.IndexOf(3), Is.EqualTo(3));
+            Assert.That(ul.IndexOf(7), Is.EqualTo(7));
         }
         {
             using var ul = new UnmanagedList<short>();
@@ -597,14 +525,13 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<short>();
-            var acc = ul.FastAccessor;
             for (short i = 0; i < 8; i++)
             {
-                acc.Add(i);
+                ul.Add(i);
             }
             
-            Assert.That(acc.IndexOf(3), Is.EqualTo(3));
-            Assert.That(acc.IndexOf(7), Is.EqualTo(7));
+            Assert.That(ul.IndexOf(3), Is.EqualTo(3));
+            Assert.That(ul.IndexOf(7), Is.EqualTo(7));
         }
         {
             using var ul = new UnmanagedList<byte>();
@@ -618,14 +545,13 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<byte>();
-            var acc = ul.FastAccessor;
             for (byte i = 0; i < 8; i++)
             {
-                acc.Add(i);
+                ul.Add(i);
             }
             
-            Assert.That(acc.IndexOf(3), Is.EqualTo(3));
-            Assert.That(acc.IndexOf(7), Is.EqualTo(7));
+            Assert.That(ul.IndexOf(3), Is.EqualTo(3));
+            Assert.That(ul.IndexOf(7), Is.EqualTo(7));
         }
         {
             using var ul = new UnmanagedList<TestStruct>();
@@ -639,7 +565,6 @@ public class UnmanagedListTests
         }
         {
             using var ul = new UnmanagedList<TestStruct>();
-            var acc = ul.FastAccessor;
             for (int i = 0; i < 8; i++)
             {
                 ul.Add(new TestStruct(i, i * 2));
@@ -688,12 +613,6 @@ public class UnmanagedListTests
             var v = GenUnmanagedList(mm, count, out var ts);
             Console.WriteLine($"Create, fill, release UnmanagedList<int> with {v} items, took {TimeSpan.FromTicks(ts).TotalSeconds.FriendlyTime()}");
         }
-
-        for (int i = 0; i < 10; i++)
-        {
-            var v = GenUnmanagedListFast(mm, count, out var ts);
-            Console.WriteLine($"Create, fill, release UnmanagedList<int> with {v} items, FAST, took {TimeSpan.FromTicks(ts).TotalSeconds.FriendlyTime()}");
-        }
     }
 
     private static int GenList(int count, out long ts)
@@ -723,6 +642,18 @@ public class UnmanagedListTests
 
     private static int GenUnmanagedList(DefaultMemoryManager mm, int count, out long ts)
     {
+        UnmanagedList<UnmanagedDataStore.Handle<UnmanagedList<int>>> globalList = new();
+        {
+            ref var childList = ref UnmanagedList<int>.CreateInStore(null, 8, out var handle);
+            childList.Add(10);
+            globalList.Add(handle);
+        }
+
+        {
+            ref var childList = ref UnmanagedList<int>.GetFromStore(null, globalList[0]);
+            Assert.That(childList[0], Is.EqualTo(10));
+        }
+        
         //GC.Collect();
 
         ts = Stopwatch.GetTimestamp();
@@ -742,35 +673,6 @@ public class UnmanagedListTests
 
         var v = ul.Count;
 
-        ul.Dispose();
-        //GC.Collect();
-        ts = Stopwatch.GetTimestamp() - ts;
-        return v;
-    }
-
-    private static int GenUnmanagedListFast(DefaultMemoryManager mm, int count, out long ts)
-    {
-        //GC.Collect();
-
-        ts = Stopwatch.GetTimestamp();
-        using var ul = new UnmanagedList<int>(mm);
-        var accessor = ul.FastAccessor;
-
-        for (int i = 0; i < count; i+=8)
-        {
-            accessor.Add(i);
-            accessor.Add(i);
-            accessor.Add(i);
-            accessor.Add(i);
-            accessor.Add(i);
-            accessor.Add(i);
-            accessor.Add(i);
-            accessor.Add(i);
-        }
-
-        var v = ul.Count;
-
-        ul.Dispose();
         //GC.Collect();
         ts = Stopwatch.GetTimestamp() - ts;
         return v;

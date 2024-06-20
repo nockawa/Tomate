@@ -5,8 +5,8 @@ uid: lifetime-instances-overview
 # Lifetime of unmanaged struct-based instances
 .net features two kinds of types: classes and structs.
 
-- Instances of classes have their lifetime tracked by the references to each of them, the garbage collector takes care of releasing the memory of instances that are no longer reachable. It couldn't be easier for the user and it's as safe as it can be.
-- Instances of struct are...different. Initially in .net a struct was only passed through method calls and/or instances' field by __copy only__. Things got more complex when microsoft introduced the concept of [ref struct](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/ref-struct).
+- Instances of classes (aka reference types) have their lifetime tracked by the references to each of them, the garbage collector takes care of releasing the memory of instances that are no longer reachable. It couldn't be easier for the user and it's as safe as it can be.
+- Instances of struct (aka value types) are...different. Initially in .net a struct was only passed through method calls and/or instances' field by __copy only__. Things got more complex when microsoft introduced the concept of [ref struct](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/ref-struct).
 
 ## Unmanaged struct and GC-free "long-term" storage
 Struct based types can be split into two kinds:
@@ -61,7 +61,7 @@ It is crucial to understand that:
 ### struct
 A struct instance's lifetime is bound by the component that __stores it__. So in itself there is no point to make a struct type implementing `IRefCounted`.
 
-__Unless__ your struct is more a handle than storing data, which is the case for the `Unmanaged*` collections, the struct is simply a handle, concretely it stores only a [`MemoryBlock`](<xref:Tomate.MemoryBlock>).  
+__Unless__ your struct is more a handle than storing data, which is the case for the `Unmanaged*` collections, the struct is simply a handle, concretely it stores a [`MemoryBlock`](<xref:Tomate.MemoryBlock>) that contains the actual data, and other fields specific to the implementation of the type itself.  
 The `MemoryBlock` stores all the data for the collection (a header + the actual items).  
 The `IRefCounted` interface of `UnmanagedList<T>` defers to the underlying `MemoryBlock` which support reference counting.
 

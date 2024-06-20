@@ -68,7 +68,7 @@ public struct ExclusiveAccessControl
     /// }
     /// </code>
     /// </example>
-    public bool TakeControl(TimeSpan? wait)
+    public bool TakeControl(TimeSpan? wait=null)
     {
         var tid = Environment.CurrentManagedThreadId;
         if (Interlocked.CompareExchange(ref _data, tid, 0) == 0)

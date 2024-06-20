@@ -107,6 +107,12 @@ public class ConcurrentBitmapL4Tests
     [TestCase(16 * 1024 * 1024)]
     public void AllocUntilFull(int capacity)
     {
+        if (OneTimeSetup.IsRunningUnderDotCover())
+        {
+            Console.WriteLine("DotCover detected, reducing op count to 1/16th of the original value.");
+            capacity >>= 4;
+        }
+        
         var requireSize = ConcurrentBitmapL4.ComputeRequiredSize(capacity);
         using var seg = _mm.Allocate(requireSize);
         var bitmap = ConcurrentBitmapL4.Create(capacity, seg);

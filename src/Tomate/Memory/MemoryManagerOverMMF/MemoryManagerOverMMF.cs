@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -211,40 +210,43 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
 
     public int ToBlockId(MemorySegment segment) => segment.IsDefault ? -1 : (int)((segment.Address - _rootAddr) / PageSize);
 
-    public bool TryAddResource<T>(String64 key, T instance) where T : unmanaged, IUnmanagedFacade
+    public bool TryAddResource<T>(String64 key, T instance) where T : unmanaged, IUnmanagedCollection
     {
         Debug.Assert(instance.MemoryManager == this, "Instance was constructed with a different Memory Manager than the MMF it was attempted to be added to");
         
-        var h = _resourceStore.Store(instance);
+        var h = _resourceStore.Store(ref instance);
         if (_resourceLocator.TryAdd(key, h) == false)
         {
-            _resourceStore.Release(h);
+            //_resourceStore.Release(h);
             throw new Exception($"There is already an entry with the given key {key}");
         }
 
         return true;
     }
+    
+    public ref UnmanagedDataStore Store => ref Unsafe.NullRef<UnmanagedDataStore>();
 
-    public ref T TryGetResource<T>(String64 key, out bool result) where T : unmanaged, IUnmanagedFacade
+
+    public ref T TryGetResource<T>(String64 key, out bool result) where T : unmanaged, IUnmanagedCollection
     {
         result = false;
         if (_resourceLocator.TryGet(key, out var resourceHandle) == false)
         {
             return ref Unsafe.NullRef<T>();
         }
-
+    
         result = true;
         return ref _resourceStore.Get<T>(resourceHandle);
     }
     
-    public bool RemoveResource(String64 key)
+    public bool RemoveResource<T>(String64 key) where T : unmanaged, IUnmanagedCollection
     {
         if (_resourceLocator.TryRemove(key, out var resourceHandle) == false)
         {
             return false;
         }
-
-        return _resourceStore.Release(resourceHandle);
+    
+        return _resourceStore.Remove<T>(resourceHandle);
     }
 
     #endregion
@@ -344,6 +346,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
             pageCapacity = (int)(MMFSize / PageSize);
             pageBitfieldSize = ((pageCapacity + 63) / 64);
             
+            _registry = MMFRegistry.GetMMFRegistry();
             _mmfId = h.MMFId;
         }
 
@@ -380,7 +383,8 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
             var dataStoreSeg = AllocatePages(1);
             h.DataStorePageIndex = ToBlockId(dataStoreSeg);
 
-            _resourceStore = UnmanagedDataStore.Create(this, dataStoreSeg);
+            // FIXME Store not implemented yet...
+            _resourceStore = UnmanagedDataStore.Create(this, dataStoreSeg, null);
 
             var dicSeg = AllocatePages(1);
             h.ResourceLocatorDictionaryIndex = ToBlockId(dicSeg);

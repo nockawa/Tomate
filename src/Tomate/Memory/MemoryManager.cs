@@ -50,6 +50,9 @@ public unsafe class MemoryManager : IMemoryManager, IDisposable
     public int MemorySegmentAllocationEpoch { get; private set; }
     public int MaxAllocationLength { get; }
     public int MemoryManagerId { get; }
+
+    public ref UnmanagedDataStore Store => throw new NotImplementedException();
+
     public DefaultMemoryManager.DebugMemoryInit MemoryBlockContentInitialization { get; set; }
     public DefaultMemoryManager.DebugMemoryInit MemoryBlockContentCleanup { get; set; }
 

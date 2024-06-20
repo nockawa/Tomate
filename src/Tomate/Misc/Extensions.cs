@@ -47,6 +47,9 @@ public static class PaddingExtensions
     #region Methods
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static int Pad(this int v, int paddingSize) => (v + paddingSize - 1) & -paddingSize;
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static unsafe int Pad<T>(this int v) where T : unmanaged => (v + sizeof(T) - 1) & -sizeof(T);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -208,14 +211,14 @@ public static class PackExtensions
     public static void Pack(this ref uint n, ushort high, ushort low) => n = (uint)high << 16 | low;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref int n, ushort high, ushort low) => n = (int)high << 16 | low;
+    public static void Pack(this ref int n, ushort high, ushort low) => n = high << 16 | low;
 
     // 32-bits with signed
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static void Pack(this ref uint n, short high, short low) => n = (uint)high << 16 | (ushort)low;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Pack(this ref int n, short high, short low) => n = (int)high << 16 | (ushort)low;
+    public static void Pack(this ref int n, short high, short low) => n = high << 16 | (ushort)low;
 
     // 64-bits with unsigned
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -281,7 +284,7 @@ public static class PackExtensions
                 break;
             case 3:
                 var low = src.Fetch<ushort>();
-                n = ((int)src.Fetch<byte>() << 16);
+                n = (src.Fetch<byte>() << 16);
                 n |= low;
                 break;
             case 4:
@@ -424,6 +427,40 @@ public static class MathExtensions
             }
 
             f /= 1024;
+        }
+        return string.Create(DefaultCulture, $"{f:0.###}{scalesF[iF]}");
+    }
+
+    public static string FriendlyAmount(this int val)
+    {
+        var scalesF = new[] { "", "K", "M", "B" };
+        var f = (double)val;
+        var iF = 0;
+        for (; iF < 3; iF++)
+        {
+            if (f < 1000)
+            {
+                break;
+            }
+
+            f /= 1000;
+        }
+        return string.Create(DefaultCulture, $"{f:0.###}{scalesF[iF]}");
+    }
+
+    public static string FriendlyAmount(this double val)
+    {
+        var scalesF = new[] { "", "K", "M", "G" };
+        var f = val;
+        var iF = 0;
+        for (; iF < 3; iF++)
+        {
+            if (f < 1000)
+            {
+                break;
+            }
+
+            f /= 1000;
         }
         return string.Create(DefaultCulture, $"{f:0.###}{scalesF[iF]}");
     }

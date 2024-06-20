@@ -8,7 +8,7 @@
 /// The data layout must be one field of type MemoryBlock and that's it!
 /// Which means each instance of a given type must be allocated through a <see cref="IMemoryManager"/>.
 /// </remarks>
-public interface IUnmanagedFacade
+public interface IUnmanagedCollection : IRefCounted
 {
     #region Public APIs
 

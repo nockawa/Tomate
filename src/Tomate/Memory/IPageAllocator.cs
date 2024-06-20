@@ -18,7 +18,7 @@ public interface IPageAllocator
     int PageAllocatorId { get; }
 
     /// <summary>
-    /// Return the size one one given page
+    /// Return the size of one given page
     /// </summary>
     int PageSize { get; }
 
@@ -47,7 +47,7 @@ public interface IPageAllocator
     /// Convert a BlockId to its corresponding MemorySegment
     /// </summary>
     /// <param name="blockId">The BlockId previously retrieved with <see cref="ToBlockId"/>.</param>
-    /// <returns>The correponding memory segment or default if it failed.</returns>
+    /// <returns>The corresponding memory segment or default if it failed.</returns>
     MemorySegment FromBlockId(int blockId);
 
     /// <summary>

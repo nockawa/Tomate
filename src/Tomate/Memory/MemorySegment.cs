@@ -17,7 +17,7 @@ public delegate TResult BinarySearchComp<T1, T2, out TResult>(ref T1 arg1, ref T
 /// through direct memory access will be slightly faster.
 /// Only work with this type if you are dealing with pinned memory block, otherwise rely on <see cref="Span{T}"/>
 /// </remarks>
-[DebuggerDisplay("Address: {Address}, Length: {Length}")]
+[DebuggerDisplay("Address: {Address}, Length: {Length}({LengthFriendlySize})")]
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 [PublicAPI]
 public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
@@ -60,13 +60,20 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public MemorySegment<T> Cast<T>() where T : unmanaged => new(Address, Length / sizeof(T), MMFId);
 
-    public MemorySegment Slice(int start) => Slice(start, Length - start);
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public MemorySegment Slice(int start) => Slice(start, (start < 0) ? -start : (Length - start));
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public MemorySegment Slice(int start, int length)
     {
         if (start < 0)
         {
             start = Length + start;
+        }
+
+        if (length < 0)
+        {
+            length = Length + length;
         }
 
         if ((start + length) > Length)
@@ -126,6 +133,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
         }
     }
     public int Length => (int)(_data & LengthMask);
+    internal string LengthFriendlySize => Length.FriendlySize();
     
     public bool IsInMMF
     {
@@ -205,7 +213,7 @@ public readonly unsafe struct MemorySegment : IEquatable<MemorySegment>
 /// through direct memory access will be slightly faster.
 /// Only work with this type if you are dealing with pinned memory block, otherwise rely on <see cref="Span{T}"/>
 /// </remarks>
-[DebuggerDisplay("Type: {typeof(T).Name} Address: {Address}, Length: {Length}")]
+[DebuggerDisplay("Type: {typeof(T).Name} Address: {Address}, Length: {Length}({LengthFriendlySize})")]
 [DebuggerTypeProxy(typeof(MemorySegment<>.DebugView))]
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 [PublicAPI]
@@ -312,7 +320,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
     public Enumerator GetEnumerator() => new(this);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public MemorySegment<T> Slice(int start) => Slice(start, Length - start);
+    public MemorySegment<T> Slice(int start) => Slice(start, (start < 0) ? -start : (Length - start));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public MemorySegment<T> Slice(int start, int length)
@@ -370,6 +378,8 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
         }
     }
     public int Length => (int)(_data & LengthMask);
+    internal string LengthFriendlySize => Length.FriendlySize();
+    
     public bool IsInMMF => (_data & ~LengthMask) != 0;
     
     internal int MMFId => IsInMMF ? (int)(_addr >> 48) : -1;

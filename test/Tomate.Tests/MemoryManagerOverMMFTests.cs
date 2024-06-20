@@ -14,7 +14,7 @@ public class MemoryManagerOverMMFTests
         public int C;
         public float D;
     }
-    
+
     [Test]
     public void Test()
     {
@@ -115,18 +115,18 @@ public class MemoryManagerOverMMFTests
             {
                 using var mmf = MemoryManagerOverMMF.Open(filePathName, fileName);
                 Assert.That(mmf, Is.Not.Null);
-
+                
                 ref var ul1 = ref mmf.TryGetResource<UnmanagedList<int>>("ResourceA", out var res);
                 Assert.That(res, Is.True);
-
+                
                 for (var i = 0; i < listCapacity; i++)
                 {
                     Assert.That(ul1[i], Is.EqualTo(100 + i));
                 }
-
+                
                 ref var ul2 = ref mmf.TryGetResource<UnmanagedList<int>>("ResourceB", out res);
                 Assert.That(res, Is.True);
-
+                
                 for (var i = 0; i < listCapacity; i++)
                 {
                     Assert.That(ul2[i], Is.EqualTo(200 + i));
