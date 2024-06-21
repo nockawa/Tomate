@@ -75,14 +75,30 @@ public class BlockOverrunException : Exception
 [PublicAPI]
 public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAllocator
 {
+#if DEBUGALLOC
+    internal static readonly int BlockMarginSize = 1024;                    // MUST BE A MULTIPLE OF 32 BYTES !!!
+    private static readonly ulong MarginFillPattern = 0xfdfdfdfdfdfdfdfd;
+    private readonly string _sourceFile;
+    private readonly int _lineNb;
+    private readonly bool _blockOverrunDetection;
+    private readonly Vector256<byte> _blockCheckPattern;
+#else
+    internal static readonly int BlockMarginSize = 0;                       // MUST BE A MULTIPLE OF 32 BYTES !!!
+#endif
+
     internal static readonly int BlockInitialCount = Environment.ProcessorCount * 4;
     internal static readonly int BlockGrowCount = 64;
     internal static readonly int SmallBlockSize = 1024 * 1024;
     internal static readonly int LargeBlockMinSize = 4 * 1024 * 1024;
     internal static readonly int LargeBlockMaxSize = 256 * 1024 * 1024;
-    internal static readonly int MemorySegmentMaxSizeForSmallBlock = SmallBlockAllocator.SegmentHeader.MaxSegmentSize;
     public static readonly int MinSegmentSize = 16;
+#if DEBUGALLOC    
+    internal static readonly int MemorySegmentMaxSizeForSmallBlock = SmallBlockAllocator.SegmentHeader.MaxSegmentSize - (BlockMarginSize * 2);
+    public static readonly unsafe int MaxMemorySegmentSize = Array.MaxLength - 63 - sizeof(LargeBlockAllocator.SegmentHeader).Pad16() - (BlockMarginSize * 2);
+#else
+    internal static readonly int MemorySegmentMaxSizeForSmallBlock = SmallBlockAllocator.SegmentHeader.MaxSegmentSize;
     public static readonly unsafe int MaxMemorySegmentSize = Array.MaxLength - 63 - sizeof(LargeBlockAllocator.SegmentHeader).Pad16();
+#endif
     public static readonly int PageAllocatorPageSize = 1024 * 1024;
     public static readonly int PageAllocatorMaxPageCount = 1024;
     public static readonly int StoreMaxEntryCount = 1024 * 1024;
@@ -119,15 +135,6 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAl
     private PageAllocator _pageAllocator;
     private UnmanagedDataStore _dataStore;
     private ExclusiveAccessControl _dataStoreAccess;
-
-#if DEBUGALLOC
-    private static readonly int BlockMargingSize = 1024;                    // MUST BE A MULTIPLE OF 32 BYTES !!!
-    private static readonly ulong MargingFillPattern = 0xfdfdfdfdfdfdfdfd;
-    private readonly string _sourceFile;
-    private readonly int _lineNb;
-    private readonly bool _blockOverrunDetection;
-    private readonly Vector256<byte> _blockCheckPattern;
-#endif
 
 #if DEBUGALLOC
     [DebuggerDisplay("Size: {Size}, Source File: {SourceFile}, Line # {LineNb}")]
@@ -206,7 +213,8 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAl
     private ThreadLocal<BlockAllocatorSequence> _assignedBlockSequence;
 
 #if DEBUGALLOC
-    public DefaultMemoryManager(bool enableBlockOverrunDetection = false) : this(enableBlockOverrunDetection, false)
+    public DefaultMemoryManager(int pageSize=1024*1024, int maxPageCount=1024, bool enableBlockOverrunDetection = true) : 
+        this(pageSize, maxPageCount, enableBlockOverrunDetection, false)
 #else
     public DefaultMemoryManager(int pageSize=1024*1024, int maxPageCount=1024) : this(pageSize, maxPageCount, false, false)
 #endif
@@ -224,7 +232,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAl
         _sourceFile = sourceFile;
         _lineNb = lineNb;
         _blockOverrunDetection = enableBlockOverrunDetection;
-        _blockCheckPattern = Vector256.Create((byte)MargingFillPattern);
+        _blockCheckPattern = Vector256.Create((byte)MarginFillPattern);
 
         MemoryBlockContentInitialization = DebugMemoryInit.None;
 #endif
@@ -398,7 +406,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAl
 #if DEBUGALLOC
         if (_blockOverrunDetection)
         {
-            length += BlockMargingSize * 2;
+            length += BlockMarginSize * 2;
         }
         var sai = new MemoryBlockInfo(length, sourceFile, lineNb);
 #else
@@ -409,10 +417,10 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAl
 #if DEBUGALLOC
         if (_blockOverrunDetection)
         {
-            res.MemorySegment.Slice(0, BlockMargingSize).ToSpan<ulong>().Fill(MargingFillPattern);
-            res.MemorySegment.Slice(-BlockMargingSize, BlockMargingSize).ToSpan<ulong>().Fill(MargingFillPattern);
+            res.MemorySegment.Slice(0, BlockMarginSize).ToSpan<ulong>().Fill(MarginFillPattern);
+            res.MemorySegment.Slice(-BlockMarginSize, BlockMarginSize).ToSpan<ulong>().Fill(MarginFillPattern);
 
-            res = new MemoryBlock(res.MemorySegment.Address + BlockMargingSize, res.MemorySegment.Length - (BlockMargingSize * 2));
+            res = new MemoryBlock(res.MemorySegment.Address + BlockMarginSize, res.MemorySegment.Length - (BlockMarginSize * 2), -1);
         }
 
         switch (MemoryBlockContentInitialization)
@@ -484,11 +492,11 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAl
 #if DEBUGALLOC
         if (_blockOverrunDetection)
         {
-            var realBlock = new MemoryBlock(block.MemorySegment.Address - BlockMargingSize, block.MemorySegment.Length + (2 * BlockMargingSize));
+            var wholeSegment = new MemorySegment(block.MemorySegment.Address - BlockMarginSize, block.MemorySegment.Length + (2 * BlockMarginSize), -1);
 
-            var debugSeg = realBlock.MemorySegment.Cast<byte>();
-            if (OverrunCheck(debugSeg.Slice(0, BlockMargingSize)) == false ||
-                OverrunCheck(debugSeg.Slice(-BlockMargingSize, BlockMargingSize)) == false)
+            var debugSeg = wholeSegment.Cast<byte>();
+            if (OverrunCheck(debugSeg.Slice(0, BlockMarginSize)) == false ||
+                OverrunCheck(debugSeg.Slice(-BlockMarginSize, BlockMarginSize)) == false)
             {
                 throw new BlockOverrunException(block, "Block was corrupted by write overrun");
             }
@@ -653,7 +661,11 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAl
 
     internal unsafe ref SmallBlockAllocator.SegmentHeader GetSegmentHeader(void* segmentAddress)
     {
+#if DEBUGALLOC
+        return ref Unsafe.AsRef<SmallBlockAllocator.SegmentHeader>((byte*)segmentAddress - BlockMarginSize - sizeof(SmallBlockAllocator.SegmentHeader));
+#else
         return ref Unsafe.AsRef<SmallBlockAllocator.SegmentHeader>((byte*)segmentAddress - sizeof(SmallBlockAllocator.SegmentHeader));
+#endif
     }
 
     internal int NativeBlockCount => _nativeBlockList.Count;

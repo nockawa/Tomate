@@ -23,7 +23,7 @@ namespace Tomate;
 [DebuggerDisplay("IsDefault: {IsDefault}, RefCounter: {RefCounter}, IsDisposed: {IsDisposed}, {MemorySegment}")]
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 [PublicAPI]
-public struct MemoryBlock : IRefCounted
+public struct MemoryBlock : IRefCounted, IEquatable<MemoryBlock>
 {
     #region Public APIs
 
@@ -56,7 +56,11 @@ public struct MemoryBlock : IRefCounted
             {
                 return 0;
             }
+#if DEBUGALLOC
+            var header = (BlockReferential.GenBlockHeader*)(MemorySegment.Address - DefaultMemoryManager.BlockMarginSize - sizeof(BlockReferential.GenBlockHeader));
+#else
             var header = (BlockReferential.GenBlockHeader*)(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+#endif
             return header->RefCounter;
         }
     }
@@ -65,8 +69,33 @@ public struct MemoryBlock : IRefCounted
 
     #region Methods
 
+    public static bool operator ==(MemoryBlock left, MemoryBlock right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(MemoryBlock left, MemoryBlock right)
+    {
+        return !left.Equals(right);
+    }
+
     public static implicit operator MemorySegment(MemoryBlock mb) => mb.MemorySegment;
     public static implicit operator MemoryBlock(MemorySegment seg) => new(seg);
+
+    public bool Equals(MemoryBlock other)
+    {
+        return MemorySegment.Equals(other.MemorySegment);
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is MemoryBlock other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return MemorySegment.GetHashCode();
+    }
 
     /// <summary>
     /// Extend the MemoryBlock lifetime by incrementing its Reference Counter.
@@ -78,7 +107,11 @@ public struct MemoryBlock : IRefCounted
     /// </remarks>
     public unsafe int AddRef()
     {
+#if DEBUGALLOC
+        var header = (BlockReferential.GenBlockHeader*)(MemorySegment.Address - DefaultMemoryManager.BlockMarginSize - sizeof(BlockReferential.GenBlockHeader));
+#else
         var header = (BlockReferential.GenBlockHeader*)(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+#endif
         return Interlocked.Increment(ref header->RefCounter);
     }
 
@@ -114,18 +147,6 @@ public struct MemoryBlock : IRefCounted
 
     #endregion
 
-    #region Fields
-
-    /// <summary>
-    /// The Memory Segment corresponding to the Memory Block
-    /// </summary>
-    /// <remarks>
-    /// There is also an implicit casting operator <see cref="op_Implicit(Tomate.MemoryBlock)"/> that has the same function.
-    /// </remarks>
-    public MemorySegment MemorySegment;
-
-    #endregion
-
     #region Constructors
 
     /// <summary>
@@ -144,6 +165,18 @@ public struct MemoryBlock : IRefCounted
     {
         MemorySegment = new MemorySegment(address, length, mmfId);
     }
+
+    #endregion
+
+    #region Fields
+
+    /// <summary>
+    /// The Memory Segment corresponding to the Memory Block
+    /// </summary>
+    /// <remarks>
+    /// There is also an implicit casting operator <see cref="op_Implicit(Tomate.MemoryBlock)"/> that has the same function.
+    /// </remarks>
+    public MemorySegment MemorySegment;
 
     #endregion
 }
@@ -172,7 +205,11 @@ public struct MemoryBlock<T> : IRefCounted where T : unmanaged
             {
                 return 0;
             }
+#if DEBUGALLOC
+            var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - DefaultMemoryManager.BlockMarginSize - sizeof(BlockReferential.GenBlockHeader));
+#else
             var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+#endif
             return header->RefCounter;
         }
     }
@@ -187,7 +224,11 @@ public struct MemoryBlock<T> : IRefCounted where T : unmanaged
 
     public unsafe int AddRef()
     {
-        var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+#if DEBUGALLOC
+        var header = (BlockReferential.GenBlockHeader*)((byte*)MemorySegment.Address - DefaultMemoryManager.BlockMarginSize - sizeof(BlockReferential.GenBlockHeader));
+#else
+        var header = (BlockReferential.GenBlockHeader*)(MemorySegment.Address - sizeof(BlockReferential.GenBlockHeader));
+#endif
         return Interlocked.Increment(ref header->RefCounter);
     }
 

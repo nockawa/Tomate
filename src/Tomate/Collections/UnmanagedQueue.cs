@@ -146,6 +146,12 @@ public unsafe struct UnmanagedQueue<T> : IUnmanagedCollection where T : unmanage
 
     #region Methods
 
+    public void RefreshFromMMF(MemoryBlock newData)
+    {
+        _memoryBlock = newData;
+        EnsureInternalState(true);
+    }
+
     public int AddRef() => _memoryBlock.AddRef();
 
     /// <summary>

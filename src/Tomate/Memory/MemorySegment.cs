@@ -400,7 +400,7 @@ public readonly unsafe struct MemorySegment<T> where T : unmanaged
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal MemorySegment(void* address, int length, int mmfId)
     {
-        Debug.Assert(length >= 0, $"Length must be null or positive");
+        Debug.Assert(length >= 0, $"Length must be null or positive, {length} was given.");
 
         if (mmfId == -1)
         {

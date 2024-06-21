@@ -177,6 +177,7 @@ public unsafe struct UnmanagedList<T> : IUnmanagedCollection where T : unmanaged
     #endregion
 
     #region Methods
+
     public static ref UnmanagedList<T> CreateInStore(IMemoryManager memoryManager, int initialCapacity, out UnmanagedDataStore.Handle<UnmanagedList<T>> handle)
     {
         memoryManager ??= DefaultMemoryManager.GlobalInstance;
@@ -195,6 +196,18 @@ public unsafe struct UnmanagedList<T> : IUnmanagedCollection where T : unmanaged
         return ref store.Get(handle);
     }
 
+    public static ref UnmanagedList<T> GetFromStore(IMemoryManager memoryManager, UnmanagedDataStore.Handle<UnmanagedList<T>> handle)
+    {
+        memoryManager ??= DefaultMemoryManager.GlobalInstance;
+        return ref memoryManager.Store.Get(handle);
+    }
+
+    public void RefreshFromMMF(MemoryBlock newData)
+    {
+        _memoryBlock = newData;
+        EnsureInternalState(true);
+    }
+
     public ref UnmanagedList<T> MoveToStore(IMemoryManager memoryManager, out UnmanagedDataStore.Handle<UnmanagedList<T>> handle)
     {
         memoryManager ??= DefaultMemoryManager.GlobalInstance;
@@ -202,13 +215,7 @@ public unsafe struct UnmanagedList<T> : IUnmanagedCollection where T : unmanaged
         Dispose();
         return ref memoryManager.Store.Get(handle);
     }
-    
-    public static ref UnmanagedList<T> GetFromStore(IMemoryManager memoryManager, UnmanagedDataStore.Handle<UnmanagedList<T>> handle)
-    {
-        memoryManager ??= DefaultMemoryManager.GlobalInstance;
-        return ref memoryManager.Store.Get(handle);
-    }
-    
+
     /// <summary>
     /// Add an item to the list
     /// </summary>
@@ -570,12 +577,12 @@ public unsafe struct UnmanagedList<T> : IUnmanagedCollection where T : unmanaged
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // 28 bytes data
     // DON'T REORDER THIS FIELDS DECLARATION
-    
+
     // The memory block must ALWAYS be the first field of every UnmanagedCollection types
     private MemoryBlock _memoryBlock;       // Offset  0, length 12
     private Header* _header;                // Offset 12, length 8
     private T* _items;                      // Offset 20, length 8
-    
+
     // 28 bytes data
     ///////////////////////////////////////////////////////////////////////////////////////////////
 

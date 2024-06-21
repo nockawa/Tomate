@@ -113,6 +113,18 @@ internal static class ThrowHelper
         throw new InvalidOperationException("Concurrent operation detected, this is not supported");
     }
     
+    private static ArgumentException GetAddingDuplicateWithKeyArgumentException(object key)
+    {
+        return new ArgumentException($"Can't add the item, the key {key} is already present in the dictionary");
+    }
+
+    [DoesNotReturn]
+    internal static void ThrowAddingDuplicateWithKeyArgumentException<T>(T key)
+    {
+        // Generic key to move the boxing to the right hand side of throw
+        throw GetAddingDuplicateWithKeyArgumentException(key);
+    }
+    
     [DoesNotReturn]
     internal static void AppendCollectionItemSetTooBig(int requestedSize, int maxAllowed)
     {

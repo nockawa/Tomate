@@ -54,7 +54,7 @@ public partial class DefaultMemoryManager
             FirstBlockId = _firstSmallBlockAllocator.BlockIndex;
         }
 
-        public bool IsDisposed => Owner == null;
+        private bool IsDisposed => Owner == null;
 
         public void Dispose()
         {
@@ -84,7 +84,7 @@ public partial class DefaultMemoryManager
         public MemoryBlock Allocate(ref MemoryBlockInfo info)
         {
             var size = info.Size;
-            if (size > MemorySegmentMaxSizeForSmallBlock)
+            if (size > SmallBlockAllocator.SegmentHeader.MaxSegmentSize)
             {
                 var firstBlock = _firstLargeBlockAllocator;
                 var curBlock = firstBlock;

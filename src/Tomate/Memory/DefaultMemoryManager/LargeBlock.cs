@@ -13,7 +13,11 @@ public partial class DefaultMemoryManager
         [StructLayout(LayoutKind.Sequential, Pack = 2)]
         public struct SegmentHeader
         {
+#if DEBUGALLOC
+            public static readonly int MaxSegmentSize = 0x7FFFFFFF - 64 - (BlockMarginSize * 2);
+#else
             public static readonly int MaxSegmentSize = 0x7FFFFFFF - 64;
+#endif
 
             // 0-8
             public TwoWaysLinkedList.Link Link;
@@ -297,6 +301,7 @@ public partial class DefaultMemoryManager
             Debug.Assert((segId << 4) + size <= data.Length);
 
             // Setup of free segment
+            header.GenHeader.Clear();
             header.GenHeader.IsFree = true;
             header.GenHeader.BlockIndex = _blockId;
             header.SegmentSize = size;
@@ -414,6 +419,7 @@ public partial class DefaultMemoryManager
 
                         var allocatedSegId = (uint)(curSegId + (remainingSize >> 4));
                         ref var allocatedSegHeader = ref SegmentHeaderAccessor(allocatedSegId);
+                        allocatedSegHeader.GenHeader.Clear();
                         allocatedSegHeader.GenHeader.BlockIndex = curSegHeader.GenHeader.BlockIndex;
                         allocatedSegHeader.SegmentSize = requiredSize;
                         allocatedSegHeader.GenHeader.IsFree = false;
@@ -518,7 +524,11 @@ public partial class DefaultMemoryManager
         // Must be executed under instance's lock
         public unsafe bool Free(MemoryBlock block)
         {
+#if DEBUGALLOC
+            ref var lbh = ref Unsafe.AsRef<SegmentHeader>(block.MemorySegment.Address - BlockMarginSize - sizeof(SegmentHeader));
+#else
             ref var lbh = ref Unsafe.AsRef<SegmentHeader>(block.MemorySegment.Address - sizeof(SegmentHeader));
+#endif
             return Free(ref lbh);
         }
 

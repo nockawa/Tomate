@@ -205,13 +205,14 @@ public class UnmanagedDataStoreTests
         ref var l2 = ref UnmanagedList<int>.CreateInStore(allocator, uds, 4, out handles[2]);
         ref var l3 = ref UnmanagedList<int>.CreateInStore(allocator, uds, 4, out handles[3]);
 
+        var l2MemoryBlock = l2.MemoryBlock;
         l2.AddRef();
         
         uds.Dispose();
         
         Assert.That(l0.MemoryBlock.IsDefault, Is.True);
         Assert.That(l1.MemoryBlock.IsDefault, Is.True);
-        Assert.That(l2.MemoryBlock.IsDefault, Is.False);
+        Assert.That(l2MemoryBlock.IsDefault, Is.False);
         Assert.That(l3.MemoryBlock.IsDefault, Is.True);
         
         l2.Dispose();

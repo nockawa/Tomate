@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using JetBrains.Annotations;
 
 namespace Tomate;
@@ -52,7 +53,7 @@ public unsafe struct UnmanagedDataStore : IDisposable
     public bool IsDefault => _allocator == null;
 
     /// <summary>
-    /// Returns <c>true</c> if the instance is disposed (or defaut, there's no distinction), <c>false</c> if it's a valid one.
+    /// Returns <c>true</c> if the instance is disposed (or default, there's no distinction), <c>false</c> if it's a valid one.
     /// </summary>
     public bool IsDisposed => _allocator == null;
 
@@ -76,17 +77,33 @@ public unsafe struct UnmanagedDataStore : IDisposable
     public static (int requiredSize, (int PageCount, int EntryCountPerPage)[] pageCountPerLevel) ComputeStorageSize(IPageAllocator allocator, 
         int maxEntryCountPerLevel)
     {
+        var isMMF = allocator is MemoryManagerOverMMF;
         var pageSize = allocator.PageSize;
         var size = sizeof(StoreHeader) + sizeof(LevelHeader) * MaxLevelCount;
         var pageInfos = new (int PageCount, int EntryCountPerPage)[MaxLevelCount];
         var curEntrySize = 16;
-        for (var i = 0; i < MaxLevelCount; i++, curEntrySize += 16)
+
+        if (isMMF)
         {
-            var entryCountPerPage = ComputeEntryCountPerPage(pageSize, curEntrySize);
+            // For MMF storage, as we don't store the instances inside the MMF, every level has the same specifications
+            var entryCountPerPage = ComputeEntryCountPerPage(pageSize, sizeof(MMFEntry));
             var pageCount = (int)Math.Ceiling(maxEntryCountPerLevel / (double)(entryCountPerPage));
-            size += pageCount * sizeof(PageInfo);
-            pageInfos[i].PageCount = pageCount;
-            pageInfos[i].EntryCountPerPage = entryCountPerPage;
+            for (int i = 0; i < MaxLevelCount; i++)
+            {
+                pageInfos[i].PageCount = pageCount;
+                pageInfos[i].EntryCountPerPage = entryCountPerPage;
+            }
+        }
+        else
+        {
+            for (var i = 0; i < MaxLevelCount; i++, curEntrySize += 16)
+            {
+                var entryCountPerPage = ComputeEntryCountPerPage(pageSize, curEntrySize);
+                var pageCount = (int)Math.Ceiling(maxEntryCountPerLevel / (double)(entryCountPerPage));
+                size += pageCount * sizeof(PageInfo);
+                pageInfos[i].PageCount = pageCount;
+                pageInfos[i].EntryCountPerPage = entryCountPerPage;
+            }
         }
 
         return (size, pageInfos);
@@ -182,7 +199,7 @@ public unsafe struct UnmanagedDataStore : IDisposable
         Epilogue:
         Debug.Assert(fullIndex != -1);
         
-        var entry = GetEntry(ref levelInfo, fullIndex);
+        var (entry, mmfEntrySegment) = GetEntry(ref levelInfo, fullIndex);
         
         // Take ownership of the memory block
         instance.MemoryBlock.AddRef();
@@ -195,6 +212,14 @@ public unsafe struct UnmanagedDataStore : IDisposable
         var entryHeader = entry.Slice(-4).Cast<ushort>();
         entryHeader[0] = typeInfo.TypeIndex;
         entryHeader[1]++;
+
+        if (_isMMF)
+        {
+            ref var mmfEntry = ref mmfEntrySegment[0];
+            mmfEntry.TypeId = typeInfo.TypeIndex;
+            mmfEntry.Generation = entryHeader[1];
+            mmfEntry.InstanceMemoryBlock = instance.MemoryBlock;
+        }
         
         return new Handle<T>(fullIndex, entryHeader[1], typeInfo.TypeIndex, (byte)typeInfo.StorageIndex);
     }
@@ -217,10 +242,30 @@ public unsafe struct UnmanagedDataStore : IDisposable
         var index = handle.Index;
         ref var levelInfo = ref _levelInfos[handle.StoreIndex];
         
-        var entrySegment = GetEntry(ref levelInfo, index);
-        var entryHeader = entrySegment.Slice(-4).Cast<ushort>();
-        var entryType = entryHeader[0];
-        var entryGeneration = entryHeader[1];
+        var (entrySegment, mmfEntrySegment) = GetEntry(ref levelInfo, index);
+        
+        ushort entryType;
+        ushort entryGeneration;
+
+        if (_isMMF)
+        {
+            ref var mmfEntry = ref mmfEntrySegment[0];
+            entryType = mmfEntry.TypeId;
+            entryGeneration = mmfEntry.Generation;
+
+            // Check if the instance is out of sync with the MemoryBlock stored in the MMF
+            if (mmfEntry.InstanceMemoryBlock != entrySegment.Cast<MemoryBlock>()[0])
+            {
+                ref var inst = ref Unsafe.AsRef<T>(entrySegment.Address);
+                inst.RefreshFromMMF(mmfEntry.InstanceMemoryBlock);
+            }
+        }
+        else
+        {
+            var entryHeader = entrySegment.Slice(-4).Cast<ushort>();
+            entryType = entryHeader[0];
+            entryGeneration = entryHeader[1];
+        }
 
         if (entryGeneration != handle.Generation)
         {
@@ -250,10 +295,30 @@ public unsafe struct UnmanagedDataStore : IDisposable
         var index = handle.Index;
         ref var levelInfo = ref _levelInfos[handle.StoreIndex];
         
-        var entrySegment = GetEntry(ref levelInfo, index);
-        var entryHeader = entrySegment.Slice(-4).Cast<ushort>();
-        var entryType = entryHeader[0];
-        var entryGeneration = entryHeader[1];
+        var (entrySegment, mmfEntrySegment) = GetEntry(ref levelInfo, index);
+        ushort entryType;
+        ushort entryGeneration;
+
+        if (_isMMF)
+        {
+            ref var mmfEntry = ref mmfEntrySegment[0];
+            entryType = mmfEntry.TypeId;
+            entryGeneration = mmfEntry.Generation;
+
+            // Check if the instance is out of sync with the MemoryBlock stored in the MMF
+            if (mmfEntry.InstanceMemoryBlock != entrySegment.Cast<MemoryBlock>()[0])
+            {
+                ref var inst = ref Unsafe.AsRef<T>(entrySegment.Address);
+                inst.RefreshFromMMF(mmfEntry.InstanceMemoryBlock);
+            }
+        }
+        else
+        {
+            var entryHeader = entrySegment.Slice(-4).Cast<ushort>();
+            entryType = entryHeader[0];
+            entryGeneration = entryHeader[1];
+        }
+
         if (entryGeneration != handle.Generation)
         {
             return ref Unsafe.NullRef<T>();
@@ -278,26 +343,48 @@ public unsafe struct UnmanagedDataStore : IDisposable
         ref var levelInfo = ref _levelInfos[typeInfo.StorageIndex];
         
         // Get the instance's entry
-        var entry = GetEntry(ref levelInfo, handle.Index, out var pageIndex, out var indexInPage);
-        var entryHeader = entry.Slice(-4).Cast<ushort>();
-        var generation = entryHeader[1];
+        var (entrySegment, mmfEntrySegment) = GetEntry(ref levelInfo, handle.Index, out var pageIndex, out var indexInPage);
+
+        ushort entryType;
+        ref var entryGeneration = ref Unsafe.NullRef<ushort>();
+
+        if (_isMMF)
+        {
+            ref var mmfEntry = ref mmfEntrySegment[0];
+            entryType = mmfEntry.TypeId;
+            entryGeneration = ref mmfEntry.Generation;
+        }
+        else
+        {
+            var entryHeader = entrySegment.Slice(-4).Cast<ushort>();
+            entryType = entryHeader[0];
+            entryGeneration = ref entryHeader[1];
+        }
         
         // Check if the handle is valid
-        if (generation != handle.Generation)
+        if (entryGeneration != handle.Generation)
         {
             ThrowHelper.InvalidHandle();
         }
+        Debug.Assert(handle.TypeId == entryType, "Handle has a different type than the entry");
     
         // Dispose the instance
-        ref var instance = ref Unsafe.AsRef<T>(entry.Address);
+        ref var instance = ref Unsafe.AsRef<T>(entrySegment.Address);
         var refCounter = instance.RefCounter;
         instance.Dispose();
 
-        // Clear the memory area where the instance as well as its type was stored, it's not mandatory (well except for the type), but cleaner this way
-        entry.Slice(0, -2).ToSpan<byte>().Clear();
+        // Clear the memory area where the instance as well as its type was stored
+        entrySegment.Slice(0, -2).ToSpan<byte>().Clear();
 
         // Increment the generation field, handles still existing will become invalid
-        entryHeader[1]++;
+        entryGeneration++;
+
+        if (_isMMF)
+        {
+            ref var mmfEntry = ref mmfEntrySegment[0];
+            mmfEntry.TypeId = 0;
+            mmfEntry.InstanceMemoryBlock = default;
+        }
 
         // Free the slot
         _pageInfos[levelInfo.IndexToFirstPageInfo + pageIndex].Bitmap.FreeBits(indexInPage, 1);
@@ -352,9 +439,15 @@ public unsafe struct UnmanagedDataStore : IDisposable
                 if (memoryBlock.IsDefault == false)
                 {
                     memoryBlock.Dispose();
+                    memoryBlock = default;
                 }
 
                 view.Skip(skipSize);
+            }
+
+            if (_isMMF)
+            {
+                new MemoryBlock(pageInfo.Entries).Dispose();
             }
             
             var pageSegment = allocator.FromBlockId(pageInfo.PageId);
@@ -373,8 +466,7 @@ public unsafe struct UnmanagedDataStore : IDisposable
 
     private UnmanagedDataStore(IPageAllocator pageAllocator, MemorySegment memorySegment, (int PageCount, int EntryCountPerPage)[] levelsInfo, bool create)
     {
-        var pageSize = pageAllocator.PageSize;
-        var isMMF = pageAllocator is MemoryManagerOverMMF;
+        _isMMF = pageAllocator is MemoryManagerOverMMF;
         
         if (create)
         {
@@ -417,11 +509,13 @@ public unsafe struct UnmanagedDataStore : IDisposable
         }
         else
         {
-            // // The given segment is split into two parts: the header and storing all the PageInfo we can on the remaining part
-            // var (headerSegment, pageInfosSegment) = memorySegment.Split<Header, PageInfo>(sizeof(Header));
-            // _header = headerSegment.Address;
-            // _pageInfos = pageInfosSegment.Address;
-            // _pageAllocatorId = pageAllocator.PageAllocatorId;
+            _pageAllocatorId = pageAllocator.PageAllocatorId;
+
+            var headerSegment = memorySegment.Cast<StoreHeader>().Slice(0, 1);
+            ref var header = ref headerSegment[0];
+            _storeHeader = headerSegment;
+            _levelInfos = header.LevelHeaders;
+            _pageInfos = header.PageInfos;
         }
     }
 
@@ -447,6 +541,7 @@ public unsafe struct UnmanagedDataStore : IDisposable
         return entryCountPerPage;
     }
 
+    private readonly bool _isMMF;
     private int _pageAllocatorId;
     private IPageAllocator _allocator => IPageAllocator.GetPageAllocator(_pageAllocatorId);
     private readonly MemorySegment<StoreHeader> _storeHeader;
@@ -480,10 +575,18 @@ public unsafe struct UnmanagedDataStore : IDisposable
             pageInfo.PageId = _allocator.ToBlockId(newPageSegment);
             pageInfo.EntrySize = levelInfo.EntrySize;
             pageInfo.Bitmap = ConcurrentBitmapL4.Create(levelInfo.EntryCountPerPageInfo, newPageSegment.Slice(0, levelInfo.PageInfoBitmapSize));
-            pageInfo.BaseIndex = curPageIndex * levelInfo.EntryCountPerPageInfo;
-            pageInfo.Entries = newPageSegment.Slice(levelInfo.PageInfoBitmapSize.Pad(levelInfo.EntrySize));
             pageInfo.BaseIndex = levelInfo.EntryCountPerPageInfo * curPageIndex;
-            Debug.Assert(pageInfo.Entries.Length >= levelInfo.EntryCountPerPageInfo * levelInfo.EntrySize, 
+            if (_isMMF)
+            {
+                pageInfo.Entries = DefaultMemoryManager.GlobalInstance.Allocate(levelInfo.EntryCountPerPageInfo * levelInfo.EntrySize);
+                pageInfo.MMFEntries = newPageSegment.Slice(levelInfo.PageInfoBitmapSize.Pad(sizeof(MMFEntry))).Cast<MMFEntry>();
+            }
+            else
+            {
+                pageInfo.Entries = newPageSegment.Slice(levelInfo.PageInfoBitmapSize.Pad(_isMMF ? sizeof(MMFEntry) : levelInfo.EntrySize));
+                
+            }
+            Debug.Assert(pageInfo.Entries.Length >= levelInfo.EntryCountPerPageInfo * (_isMMF ? sizeof(MMFEntry) : levelInfo.EntrySize), 
                 $"Can't store {levelInfo.EntryCountPerPageInfo} entries of size {levelInfo.EntrySize} in a page of size {newPageSegment.Length}, Check you use the appropriate allocator.");
             
             levelInfo.PageInfoCount++;
@@ -497,10 +600,10 @@ public unsafe struct UnmanagedDataStore : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private MemorySegment GetEntry(ref LevelHeader levelInfo, int index) => GetEntry(ref levelInfo, index, out _, out _);
+    private (MemorySegment, MemorySegment<MMFEntry>) GetEntry(ref LevelHeader levelInfo, int index) => GetEntry(ref levelInfo, index, out _, out _);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private MemorySegment GetEntry(ref LevelHeader levelInfo, int index, out int pageIndex, out int indexInPage)
+    private (MemorySegment, MemorySegment<MMFEntry>) GetEntry(ref LevelHeader levelInfo, int index, out int pageIndex, out int indexInPage)
     {
         Debug.Assert(index >= 0, $"Index can't be a negative number, {index} is incorrect.");
 
@@ -512,13 +615,17 @@ public unsafe struct UnmanagedDataStore : IDisposable
         {
             pageIndex = 0;
             indexInPage = index;
-            return pageInfos[levelInfo.IndexToFirstPageInfo].Entries.Slice(index * entrySize, entrySize);
+            ref var pageInfo = ref pageInfos[levelInfo.IndexToFirstPageInfo];
+            var memorySegment = pageInfo.Entries.Slice(index * entrySize, entrySize);
+            return _isMMF ? (memorySegment, pageInfo.MMFEntries.Slice(index, 1)) : (memorySegment, default);
         }
     
         {
             pageIndex = Math.DivRem(index, levelInfo.EntryCountPerPageInfo, out indexInPage);
             Debug.Assert(pageIndex < levelInfo.PageInfoCount, $"Requested item at index {index} is out of bounds");
-            return pageInfos[levelInfo.IndexToFirstPageInfo + pageIndex].Entries.Slice(indexInPage * entrySize, entrySize);
+            ref var pageInfo = ref pageInfos[levelInfo.IndexToFirstPageInfo + pageIndex];
+            var memorySegment = pageInfo.Entries.Slice(indexInPage * entrySize, entrySize);
+            return _isMMF ? (memorySegment, pageInfo.MMFEntries.Slice(index, 1)) : (memorySegment, default);
         }
     }
 
@@ -665,14 +772,50 @@ public unsafe struct UnmanagedDataStore : IDisposable
         #endregion
     }
 
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    private struct MMFEntry
+    {
+        public MemoryBlock InstanceMemoryBlock;
+        public ushort Generation;
+        public ushort TypeId;
+    }
     private struct PageInfo
     {
         #region Fields
 
+        /// <summary>
+        /// Each storage level has multiple pages, the index of the Handle is broken down to first locate the page, then the index in the page.
+        /// The BaseIndex is the index of the first entry in the page.
+        /// </summary>
         public int BaseIndex;
+
+        /// <summary>
+        /// ID of the page allocated
+        /// </summary>
         public int PageId;
+
+        /// <summary>
+        /// Bitmap to track all entries in this page
+        /// </summary>
         public ConcurrentBitmapL4 Bitmap;
+        
+        /// <summary>
+        /// Each entry is the instance, void (if necessary) and the header (typeId, generation) at the 4 last bytes
+        /// For non MMF, the segment is part of the page, alongside the Bitmap.
+        /// For MMF, the segment is allocated separately, with the Global MemoryManager because the data must be process dependent, note that even if there's
+        /// space for the header at the end, it's not used, the header is stored and used in the MMFEntry of MMFEntries.
+        /// </summary>
         public MemorySegment Entries;
+        
+        /// <summary>
+        /// Only used for MMF, the segment is part of the page, so stored in the MMF and contains the data that is process-independent, which is the
+        ///  MemoryBlock of the instance and the header (typeId, generation).
+        /// </summary>
+        public MemorySegment<MMFEntry> MMFEntries;
+        
+        /// <summary>
+        /// Size of one entry in <see cref="Entries"/>. Has enough room to store an instance and its header (4 bytes)
+        /// </summary>
         public int EntrySize;
 
         #endregion
@@ -688,6 +831,8 @@ internal static class InternalTypeManager
     private static readonly ConcurrentDictionary<Type, TypeInfo> IndexByType = new();
     private static readonly ConcurrentDictionary<int, TypeInfo> TypeByIndex = new();
 
+    private static readonly ConcurrentDictionary<ushort, Type> CollisionDetectionSet = new();
+    
     #endregion
 
     #region Internals
@@ -698,30 +843,41 @@ internal static class InternalTypeManager
         return type;
     }
 
+    private static ushort GetTypeHash(Type type)
+    {
+        var s = type.ToString();
+        var utf8 = Encoding.UTF8.GetBytes(s);
+        var value = MurmurHash2.Hash(utf8);
+        return (ushort)((value & 0xFFFF) ^ ((value >> 16) & 0xFFFF));
+    }
+
     internal static TypeInfo RegisterType<T>()
     {
-        Debug.Assert(_curIndex < ushort.MaxValue, $"there are too many (more than {ushort.MaxValue}) type registered");
-        return IndexByType.GetOrAdd(typeof(T), _ =>
+        var type = typeof(T);
+        return IndexByType.GetOrAdd(type, _ =>
         {
-            var index =  (ushort)Interlocked.Increment(ref _curIndex);
+            // The typeId may be stored in an MMF, so we need a determinist value, we compute a 16-bits hash from the type name
+            // I honestly don't know the odds of collisions, we track unique types in a HashSet to detect them
+            var typeHash = GetTypeHash(type);
 
+            // The lambda doesn't execute in a thread-safe way, multiple thread can execute it at the same time, we need to lock this part
+            // In the very unlikely event we get a collision, we try to find a new available hash value
+            if (CollisionDetectionSet.GetOrAdd(typeHash, type) != type)
+            {
+                throw new InvalidOperationException($"Collision detected for type {type.Name}, please report this issue.");
+            }
+            
             // 4 is the size of the header for each entry (ushort generation, ushort typeId) 
             var typeSelfSize = Unsafe.SizeOf<T>();
             var typeSize = (typeSelfSize + 4).Pad16();
             var storageIndex = (ushort)((typeSize / 16) - 1);
 
-            var typeInfo = new TypeInfo(index, storageIndex, (ushort)typeSelfSize);
-            TypeByIndex.TryAdd(index, typeInfo);
+            var typeInfo = new TypeInfo(typeHash, storageIndex, (ushort)typeSelfSize);
+            TypeByIndex.TryAdd(typeHash, typeInfo);
 
             return typeInfo;
         });
     }
-
-    #endregion
-
-    #region Privates
-
-    private static int _curIndex = -1;
 
     #endregion
 

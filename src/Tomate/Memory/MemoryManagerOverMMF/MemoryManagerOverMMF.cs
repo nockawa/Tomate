@@ -38,6 +38,7 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
     #region Constants
 
     public static readonly int MinSegmentSize = 16;
+    public static readonly int StoreMaxEntryCount = 1024 * 1024;
 
     #endregion
 
@@ -383,8 +384,8 @@ public unsafe partial class MemoryManagerOverMMF : IMemoryManager, IPageAllocato
             var dataStoreSeg = AllocatePages(1);
             h.DataStorePageIndex = ToBlockId(dataStoreSeg);
 
-            // FIXME Store not implemented yet...
-            _resourceStore = UnmanagedDataStore.Create(this, dataStoreSeg, null);
+            var (dataStoreSegSize, levels) = UnmanagedDataStore.ComputeStorageSize(this, StoreMaxEntryCount);
+            _resourceStore = UnmanagedDataStore.Create(this, dataStoreSeg, levels);
 
             var dicSeg = AllocatePages(1);
             h.ResourceLocatorDictionaryIndex = ToBlockId(dicSeg);

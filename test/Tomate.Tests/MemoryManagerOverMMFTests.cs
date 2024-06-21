@@ -92,7 +92,6 @@ public class MemoryManagerOverMMFTests
                 // A first list as resource
                 var ul1 = new UnmanagedList<int>(mmf, listCapacity);
 
-                var mm = ul1.MemoryManager;
                 for (var i = 0; i < listCapacity; i++)
                 {
                     ul1.Add(100 + i);

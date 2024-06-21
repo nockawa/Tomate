@@ -33,7 +33,11 @@ public static class BlockReferential
         }
         
         Debug.Assert(block.MemorySegment.Address != null, "Can't free empty MemoryBlock");
+#if DEBUGALLOC
+        ref var header = ref Unsafe.AsRef<GenBlockHeader>(block.MemorySegment.Address - DefaultMemoryManager.BlockMarginSize - sizeof(GenBlockHeader));
+#else
         ref var header = ref Unsafe.AsRef<GenBlockHeader>(block.MemorySegment.Address - sizeof(GenBlockHeader));
+#endif
 
         // Most significant bit to one mean the MemoryBlock is from a MMF, the encoded value is different as MMF are interprocess, thus address independent
         if (header.IsFromMMF)
@@ -64,7 +68,11 @@ public static class BlockReferential
         {
             return null;
         }
+#if DEBUGALLOC
+        ref var header = ref Unsafe.AsRef<GenBlockHeader>(block.MemorySegment.Address - DefaultMemoryManager.BlockMarginSize - sizeof(GenBlockHeader));
+#else
         ref var header = ref Unsafe.AsRef<GenBlockHeader>(block.MemorySegment.Address - sizeof(GenBlockHeader));
+#endif
 
         // Most significant bit to one mean the MemoryBlock is from a MMF, the encoded value is different as MMF are interprocess, thus address independent
         if (header.IsFromMMF)
@@ -202,9 +210,9 @@ public static class BlockReferential
     {
         #region Constants
 
-        private const uint BlockIndexMask = 0x3FFFFFFF;
-        private const uint FreeFlag = 0x80000000;                 // If set, the segment is free
-        private const uint MMFFlag  = 0x40000000;                 // If set, the segment is from an MMF
+        private const uint BlockIndexMask   = 0x3FFFFFFF;
+        private const uint FreeFlag         = 0x80000000;                 // If set, the segment is free
+        private const uint MMFFlag          = 0x40000000;                 // If set, the segment is from an MMF
 
         #endregion
 
@@ -234,6 +242,12 @@ public static class BlockReferential
 
         #endregion
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Clear()
+        {
+            _data = 0;
+            RefCounter = 0;
+        }
         #region Fields
 
         /// <summary>

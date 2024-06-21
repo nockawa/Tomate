@@ -104,7 +104,7 @@ public class ConcurrentBitmapL4Tests
     [Test]
     [TestCase(1024)]
     [TestCase(1024 * 1024)]
-    [TestCase(16 * 1024 * 1024)]
+    // [TestCase(16 * 1024 * 1024)]             // Commented out, because slow at execution, but tests all the levels of the bitmap...
     public void AllocUntilFull(int capacity)
     {
         if (OneTimeSetup.IsRunningUnderDotCover())

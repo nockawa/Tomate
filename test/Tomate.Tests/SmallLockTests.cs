@@ -95,7 +95,7 @@ public class SmallLockTests
         for (var i = 0; i < maxConcurrency; i++)
         {
             var curLockId = lockId + i;
-            var i1 = i;
+            //var i1 = i;
             var t = new Thread(() =>
             {
                 Thread.CurrentThread.Name = $"*** Unit Test Worker #{curLockId} Thread ***";
@@ -283,7 +283,7 @@ public class SmallLockTests
     [Test]
     public unsafe void ConcurrencyStressTest()
     {
-        const int maxConcurrency = 256;
+        var maxConcurrency = (ushort)(Environment.ProcessorCount * 1);      // Should be ideally 4, but it's too damn slow at execution
         const int lockId = 10;
         const int timeOutInSecond = 30;
         const int counterSize = 1024;

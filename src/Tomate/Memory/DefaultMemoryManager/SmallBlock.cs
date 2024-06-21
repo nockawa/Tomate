@@ -297,9 +297,11 @@ public partial class DefaultMemoryManager
                 Debug.Assert((curOffset & 0xF) == 0);
                 var segId = (ushort)(curOffset >> 4);
                 ref var header = ref SegmentHeaderAccessor(segId);
+                
                 var size = Math.Min(remainingLength, SegmentHeader.MaxSegmentSize);
                 Debug.Assert((segId << 4) + size <= data.Length);
 
+                header.GenHeader.Clear();
                 header.GenHeader.IsFree = true;
                 header.GenHeader.BlockIndex = _blockId;
                 header.SegmentSize = (ushort)size;
@@ -415,6 +417,7 @@ public partial class DefaultMemoryManager
 
                         var allocatedSegId = (ushort)(curSegId + (remainingSize >> 4));
                         ref var allocatedSegHeader = ref SegmentHeaderAccessor(allocatedSegId);
+                        allocatedSegHeader.GenHeader.Clear();
                         allocatedSegHeader.GenHeader.BlockIndex = curSegHeader.GenHeader.BlockIndex;
                         allocatedSegHeader.SegmentSize = (ushort)requiredSize;
                         allocatedSegHeader.GenHeader.IsFree = false;
@@ -518,7 +521,11 @@ public partial class DefaultMemoryManager
 
         public unsafe bool Free(MemoryBlock block)
         {
+#if DEBUGALLOC
+            ref var sbh = ref Unsafe.AsRef<SegmentHeader>(block.MemorySegment.Address - BlockMarginSize - sizeof(SegmentHeader));
+#else
             ref var sbh = ref Unsafe.AsRef<SegmentHeader>(block.MemorySegment.Address - sizeof(SegmentHeader));
+#endif
             return Free(ref sbh);
         }
 

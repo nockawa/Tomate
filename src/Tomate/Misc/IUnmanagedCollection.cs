@@ -19,5 +19,11 @@ public interface IUnmanagedCollection : IRefCounted
 
     #endregion
 
+    #region Methods
+
+    void RefreshFromMMF(MemoryBlock newData);
+
+    #endregion
+
     #endregion
 }

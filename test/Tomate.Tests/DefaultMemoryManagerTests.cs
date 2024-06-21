@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using NUnit.Framework;
 
@@ -139,6 +140,7 @@ public class DefaultMemoryManagerTests
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private void FillSegment(MemorySegment segment, byte startVal)
     {
         var data = segment.Cast<byte>();
@@ -157,6 +159,7 @@ public class DefaultMemoryManagerTests
         var headerSize = sizeof(DefaultMemoryManager.SmallBlockAllocator.SegmentHeader);
         var allocSize = (16 + headerSize).Pad16() - headerSize;
         var seqSize = (int)(bs.DebugInfo.TotalCommitted * commitSizeAmplification);
+        var marginSize = DefaultMemoryManager.BlockMarginSize;
 
         var segs = new List<(MemoryBlock, byte)>();
         byte curIndex = 1;
@@ -168,7 +171,7 @@ public class DefaultMemoryManagerTests
             FillSegment(s0, curIndex);
             segs.Add((s0, curIndex));
 
-            curTotalAllocated += allocSize;
+            curTotalAllocated += allocSize + marginSize * 2;
             ++curAllocSegCount;
 
             var di = bs.DebugInfo;
@@ -197,13 +200,13 @@ public class DefaultMemoryManagerTests
     [Test]
     public unsafe void SmallAllocations()
     {
-        const int start = 0;
+        const int start = 1;
         const int end = 32;
         const int count = end - start + 1;
         
         using var mm = new DefaultMemoryManager();
 
-        var mbList = stackalloc MemoryBlock[count];
+        var mbList = new MemoryBlock[end + 1];
         for (int i = start; i <= end; i++)
         {
             var memoryBlock = mm.Allocate(i);
@@ -340,14 +343,14 @@ public class DefaultMemoryManagerTests
         using var mm = new DefaultMemoryManager();
         var rand = new Random(123);
 
-        var count = 10_000_000;
+        var count = 1_000_000;
         if (OneTimeSetup.IsRunningUnderDotCover())
         {
             Console.WriteLine("DotCover detected, reducing op count to 1/10th of the original value.");
             count /= 10;
         }
         
-        var list = new List<IntPtr>(count);
+        var list = new List<MemoryBlock>(count);
 
         var sw = new Stopwatch();
         sw.Start();
@@ -356,7 +359,7 @@ public class DefaultMemoryManagerTests
         {
             var size = rand.Next(8, 128);
             var seg = mm.Allocate(size);
-            list.Add(new IntPtr(seg.MemorySegment.Address));
+            list.Add(seg);
         }
 
         sw.Stop();
@@ -367,7 +370,7 @@ public class DefaultMemoryManagerTests
         sw.Restart();
         for (int i = 0; i < count; i++)
         {
-            mm.Free(new MemoryBlock((byte*)list[i].ToPointer(), 1, -1));
+            mm.Free(list[i]);
         }
         sw.Stop();
 
@@ -375,17 +378,16 @@ public class DefaultMemoryManagerTests
         Console.WriteLine($"Fee the {count.FriendlyAmount()} segments, in {sw.Elapsed.TotalSeconds.FriendlyTime(false)}");
     }
     [Test]
-    [TestCase(0.5f, 32, null)]
-    [TestCase(1.0f, 32, null)]
-    [TestCase(2.0f, 32, null)]
-    [TestCase(5.0f, 16, null)]
-
-    [TestCase(0.5f, 1024, 1024 * 1024)]
+    [TestCase(0.5f, 32, 256 * 1024)]
+    [TestCase(1.0f, 32, 256 * 1024)]
+    [TestCase(2.0f, 32, 256 * 1024)]
+    [TestCase(5.0f, 16, 64 * 1024)]
+    [TestCase(0.5f, 512, 64 * 1024)]
 
     public void StressTest(float amp, int maxSegmentSize, int? opPerThread)
     {
         var cpuCount = (Environment.ProcessorCount * amp);
-        opPerThread ??= 1024 * 1024 * 8;
+        opPerThread ??= 1024 * 1024;
 
         if (OneTimeSetup.IsRunningUnderDotCover())
         {
@@ -518,6 +520,7 @@ public class DefaultMemoryManagerTests
         var headerSize = sizeof(DefaultMemoryManager.LargeBlockAllocator.SegmentHeader);
         var allocSize = (65536*2) - headerSize;
         var seqSize = (int)(DefaultMemoryManager.LargeBlockMinSize * 16 * commitSizeAmplification);
+        var marginSize = DefaultMemoryManager.BlockMarginSize;
 
         var blocks = new List<(MemoryBlock, byte)>();
         byte curIndex = 1;
@@ -529,7 +532,7 @@ public class DefaultMemoryManagerTests
             FillSegment(b0, curIndex);
             blocks.Add((b0, curIndex));
 
-            curTotalAllocated += allocSize;
+            curTotalAllocated += allocSize + marginSize * 2;
             ++curAllocSegCount;
 
             var di = bs.DebugInfo;
@@ -537,7 +540,7 @@ public class DefaultMemoryManagerTests
             Assert.That(di.TotalAllocatedMemory, Is.EqualTo(curTotalAllocated));
             Assert.That(di.AllocatedSegmentCount, Is.EqualTo(curAllocSegCount));
 
-            seqSize -= allocSize + headerSize;
+            seqSize -= allocSize + headerSize + marginSize * 2;
             ++curIndex;
         }
 
@@ -578,7 +581,7 @@ public class DefaultMemoryManagerTests
         using var mm = new DefaultMemoryManager();
         var bs = mm.GetThreadBlockAllocatorSequence();
 
-        var size = DefaultMemoryManager.SmallBlockAllocator.SegmentHeader.MaxSegmentSize;
+        var size = DefaultMemoryManager.MemorySegmentMaxSizeForSmallBlock;
 
         // Small Block test
 

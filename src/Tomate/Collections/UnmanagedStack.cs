@@ -166,6 +166,12 @@ public unsafe struct UnmanagedStack<T> : IUnmanagedCollection where T : unmanage
 
     #region Methods
 
+    public void RefreshFromMMF(MemoryBlock newData)
+    {
+        _memoryBlock = newData;
+        EnsureInternalState(true);
+    }
+
     public int AddRef() => _memoryBlock.AddRef();
 
     /// <summary>

@@ -105,6 +105,12 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
     /// <returns>The created instance</returns>
     public static UnmanagedDictionary<TKey, TValue> Create(IMemoryManager memoryManager=null, int capacity = 11) => new(memoryManager, capacity);
 
+    public void RefreshFromMMF(MemoryBlock newData)
+    {
+        _memoryBlock = newData;
+        EnsureInternalState(true);
+    }
+
     public int AddRef() => _memoryBlock.AddRef();
 
     /// <summary>
@@ -115,6 +121,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
     /// </remarks>
     public void Dispose()
     {
+        EnsureInternalState();
         if (IsDefault || IsDisposed)
         {
             return;
@@ -123,6 +130,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
         if (_memoryBlock.IsDisposed)
         {
             _memoryBlock = default;
+            EnsureInternalState(true);
         }
     }
 
@@ -133,8 +141,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
     {
         if (capacity < 0)
         {
-            //TODO Exception
-            //ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.capacity);
+            ThrowHelper.OutOfRange($"The capacity can't be negative: {capacity}");
         }
 
         var currentCapacity = _entries.Length;
@@ -179,6 +186,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
     /// <returns></returns>
     public bool Remove(TKey key, out TValue value, IEqualityComparer<TKey> comparer = null)
     {
+        EnsureInternalState();
         if (_buckets.IsDefault)
         {
             value = default;
@@ -223,10 +231,9 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
             collisionCount++;
             if (collisionCount > (uint)entries.Length)
             {
-                //TODO Exception
                 // The chain of entries forms a loop; which means a concurrent update has happened.
                 // Break out of the loop and throw, rather than looping forever.
-                //ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
+                ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
             }
         }
 
@@ -315,7 +322,6 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
         var (b, e) = m.Split(_header->Size * sizeof(int));
         _buckets = b.Cast<int>();
         _entries = e.Cast<Entry>();
-        
     }
 
     #endregion
@@ -324,6 +330,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
 
     internal TValue FindValue(TKey key, IEqualityComparer<TKey> comparer, out bool found)
     {
+        EnsureInternalState();
         ref var entry = ref Unsafe.NullRef<Entry>();
         if (_buckets.IsDefault == false)
         {
@@ -401,6 +408,7 @@ ReturnNotFound:
 
     internal TValue TryInsert(TKey key, TValue value, InsertionBehavior behavior, IEqualityComparer<TKey> comparer, out bool result)
     {
+        EnsureInternalState();
         var entries = _entries.ToSpan();
 
         var hashCode = (uint)(comparer?.GetHashCode(key) ?? key.GetHashCode());
@@ -484,8 +492,7 @@ ReturnNotFound:
 
                     if (behavior == InsertionBehavior.ThrowOnExisting)
                     {
-                        //TODO Exception
-                        //ThrowHelper.ThrowAddingDuplicateWithKeyArgumentException(key);
+                        ThrowHelper.ThrowAddingDuplicateWithKeyArgumentException(key);
                     }
 
                     result = false;
@@ -497,10 +504,9 @@ ReturnNotFound:
                 collisionCount++;
                 if (collisionCount > (uint)entries.Length)
                 {
-                    //TODO Exception
                     // The chain of entries forms a loop; which means a concurrent update has happened.
                     // Break out of the loop and throw, rather than looping forever.
-                    //ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
+                    ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
                 }
             }
         }
@@ -539,6 +545,41 @@ ReturnNotFound:
     #endregion
 
     #region Privates
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private void EnsureInternalState(bool force = false)
+    {
+        // Non MMF means the cached addresses are always valid
+        // Note: maybe we could ignore this check in order to allow multiple instances of the same list to be used at the same time
+        if (force==false && _memoryBlock.MemorySegment.IsInMMF == false)
+        {
+            return;
+        }
+
+        // Check if the data we've precomputed is still valid
+        var header = (Header*)_memoryBlock.MemorySegment.Address;
+        if (force==false && _header == header)
+        {
+            return;
+        }
+        
+        var memoryBlock = _memoryBlock;
+
+        if (memoryBlock.IsDefault)
+        {
+            _header = null;
+            _buckets = default;
+            _entries = default;
+        }
+        else
+        {
+            var (_, m) = memoryBlock.MemorySegment.Split(sizeof(Header));
+            _header = header;
+            var (b, e) = m.Split(_header->Size * sizeof(int));
+            _buckets = b.Cast<int>();
+            _entries = e.Cast<Entry>();
+        }
+    }
 
     private void Resize() => Resize(PrimeHelpers.ExpandPrime(_header->Count));
 
