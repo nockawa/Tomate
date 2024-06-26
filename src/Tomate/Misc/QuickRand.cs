@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 
 namespace Tomate;
@@ -10,6 +11,7 @@ namespace Tomate;
 /// Also known as the Marsaglia's xor-shift generator, it's very fast and pretty decent for the distribution
 /// </remarks>
 [PublicAPI]
+[ExcludeFromCodeCoverage]
 public static class QuickRand
 {
     #region Public APIs

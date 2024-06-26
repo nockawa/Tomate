@@ -2,8 +2,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
-#pragma warning disable CS9087 // This returns a parameter by reference but it is not a ref parameter
-#pragma warning disable CS9084 // Struct member returns 'this' or other instance members by reference
+// #pragma warning disable CS9087 // This returns a parameter by reference but it is not a ref parameter
+// #pragma warning disable CS9084 // Struct member returns 'this' or other instance members by reference
 
 namespace Tomate;
 
@@ -40,23 +40,18 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
     /// If the key doesn't exist, the getter will throw an exception, the setter will add a new entry.
     /// It also will rely on the default comparer, if you need to use a custom one, you should use the <see cref="TryGetValue"/> and <see cref="TrySetValue"/>.
     /// </remarks>
-    public TValue this[TKey key]
+    public ref TValue this[TKey key]
     {
         get
         {
-            var value = FindValue(key, null, out var res);
+            ref var value = ref FindValue(key, null, out var res);
             if (res)
             {
-                return value;
+                return ref value;
             }
 
             ThrowHelper.KeyNotFound(key);
-            return default;
-        }
-        set
-        {
-            TryInsert(key, value, InsertionBehavior.OverwriteExisting, null, out var modified);
-            Debug.Assert(modified);
+            return ref Unsafe.NullRef<TValue>();
         }
     }
 
@@ -175,7 +170,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
     /// <returns>
     /// The value of the element corresponding to the given key
     /// </returns>
-    public TValue GetOrAdd(TKey key, out bool found, IEqualityComparer<TKey> comparer = null) => TryInsert(key, default, InsertionBehavior.GetExisting, comparer, out found);
+    public ref TValue GetOrAdd(TKey key, out bool found, IEqualityComparer<TKey> comparer = null) => ref TryInsert(key, default, InsertionBehavior.GetExisting, comparer, out found);
 
     /// <summary>
     /// Remove the entry of the given key from the dictionary
@@ -265,10 +260,9 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
     /// <returns>
     /// Will return <c>true</c> if the element was found, <c>false</c> otherwise.
     /// </returns>
-    public bool TryGetValue(TKey key, out TValue value, IEqualityComparer<TKey> comparer = null)
+    public ref TValue TryGetValue(TKey key, out bool found, IEqualityComparer<TKey> comparer = null)
     {
-        value = FindValue(key, comparer, out var res);
-        return res;
+        return ref FindValue(key, comparer, out found);
     }
 
     /// <summary>
@@ -328,7 +322,7 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
 
     #region Internals
 
-    internal TValue FindValue(TKey key, IEqualityComparer<TKey> comparer, out bool found)
+    internal ref TValue FindValue(TKey key, IEqualityComparer<TKey> comparer, out bool found)
     {
         EnsureInternalState();
         ref var entry = ref Unsafe.NullRef<Entry>();
@@ -393,20 +387,26 @@ public unsafe struct UnmanagedDictionary<TKey, TValue> : IUnmanagedCollection wh
 
                     collisionCount++;
                 } while (collisionCount <= (uint)entries.Length);
+
+                // The chain of entries forms a loop; which means a concurrent update has happened.
+                // Break out of the loop and throw, rather than looping forever.
+                goto ConcurrentOperation;
             }
         }
 
         goto ReturnNotFound;
 
+ConcurrentOperation:
+        ThrowHelper.ThrowInvalidOperationException_ConcurrentOperationsNotSupported();
 ReturnFound:
         found = true;
-        return entry.KeyValuePair.Value;
+        return ref entry.KeyValuePair.Value;
 ReturnNotFound:
         found = false;
-        return default;
+        return ref Unsafe.NullRef<TValue>();
     }
 
-    internal TValue TryInsert(TKey key, TValue value, InsertionBehavior behavior, IEqualityComparer<TKey> comparer, out bool result)
+    internal ref TValue TryInsert(TKey key, TValue value, InsertionBehavior behavior, IEqualityComparer<TKey> comparer, out bool result)
     {
         EnsureInternalState();
         var entries = _entries.ToSpan();
@@ -435,13 +435,13 @@ ReturnNotFound:
                     {
                         entries[i].KeyValuePair.Value = value;
                         result = true;
-                        return entries[i].KeyValuePair.Value;
+                        return ref entries[i].KeyValuePair.Value;
                     }
 
                     if (behavior == InsertionBehavior.GetExisting)
                     {
                         result = true;
-                        return entries[i].KeyValuePair.Value;
+                        return ref entries[i].KeyValuePair.Value;
                     }
 
                     if (behavior == InsertionBehavior.ThrowOnExisting)
@@ -450,7 +450,7 @@ ReturnNotFound:
                     }
 
                     result = false;
-                    return default;
+                    return ref Unsafe.NullRef<TValue>();
                 }
 
                 i = entries[i].Next;
@@ -481,13 +481,13 @@ ReturnNotFound:
                     {
                         entries[i].KeyValuePair.Value = value;
                         result = true;
-                        return entries[i].KeyValuePair.Value;
+                        return ref entries[i].KeyValuePair.Value;
                     }
 
                     if (behavior == InsertionBehavior.GetExisting)
                     {
                         result = true;
-                        return entries[i].KeyValuePair.Value;
+                        return ref entries[i].KeyValuePair.Value;
                     }
 
                     if (behavior == InsertionBehavior.ThrowOnExisting)
@@ -496,7 +496,7 @@ ReturnNotFound:
                     }
 
                     result = false;
-                    return default;
+                    return ref Unsafe.NullRef<TValue>();
                 }
 
                 i = entries[i].Next;
@@ -539,7 +539,7 @@ ReturnNotFound:
         bucket = index + 1; // Value in _buckets is 1-based
 
         result = behavior != InsertionBehavior.GetExisting;
-        return entry.KeyValuePair.Value;
+        return ref entry.KeyValuePair.Value;
     }
 
     #endregion

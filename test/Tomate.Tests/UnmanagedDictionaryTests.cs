@@ -87,7 +87,8 @@ public class UnmanagedDictionaryTests
         
         Assert.That(dic.Count, Is.EqualTo(3));
 
-        Assert.That(dic.TryGetValue("KEY1", out var v, String64IgnoreCaseComparer.Default), Is.True);
+        ref var val = ref dic.TryGetValue("KEY1", out var res, String64IgnoreCaseComparer.Default);
+        Assert.That(res, Is.True);
     }
         
     [Test]

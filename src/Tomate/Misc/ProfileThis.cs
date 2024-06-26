@@ -1,10 +1,12 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 
 namespace Tomate;
 
 [PublicAPI]
+[ExcludeFromCodeCoverage]
 public struct ProfileThis
 {
     #region Public APIs

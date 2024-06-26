@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Tomate;
 
+[ExcludeFromCodeCoverage]
 public class WindowsProcessProvider : IProcessProvider
 {
     #region Public APIs

@@ -3,9 +3,12 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
+using BenchmarkDotNet.Toolchains.InProcess.Emit;
+using BenchmarkDotNet.Toolchains.InProcess.NoEmit;
 using Tomate;
 using Tomate.Tests;
 
@@ -23,12 +26,22 @@ public class Program
 {
     public static unsafe void Main(string[] args)
     {
-        Console.WriteLine("Let's start");
+        BenchmarkRunner.Run<ListBenchmark>();
+        //Console.ReadKey();
 
-        var t = new UnmanagedListTests();
-        t.PerfTest();
+        // Console.WriteLine("Let's start");
+        // var lb = new ListBenchmark();
+        // lb.UnmanagedListAdd();
+        //
+        // Console.WriteLine("Done");
+        //
 
-        Console.WriteLine("done");
+        // Console.WriteLine("Let's start");
+        //
+        // var t = new UnmanagedListTests();
+        // t.PerfTest();
+        //
+        // Console.WriteLine("done");
 
         //var t = new DefaultMemoryManagerTests();
         //t.StressTest(0.5f, 32, null);
@@ -74,7 +87,15 @@ public class Program
         //
         // return;
         // //BenchmarkRunner.Run<BenchmarkSegmentAccess>();
-        // BenchmarkRunner.Run<BitBenchark>();
+        // BenchmarkRunner.Run<BitBenchmark>();
+    }
+}
+
+public class AntiVirusFriendlyConfig : ManualConfig
+{
+    public AntiVirusFriendlyConfig()
+    {
+        AddJob(Job.ShortRun.WithToolchain(InProcessEmitToolchain.Instance));
     }
 }
 
@@ -156,10 +177,85 @@ public class TestClass
     }
 }
 
-[SimpleJob(RunStrategy.Throughput, RuntimeMoniker.Net60, 1, 2, 5)]
+[SimpleJob(RunStrategy.Throughput, RuntimeMoniker.Net80, 1, 2, 5)]
 [DisassemblyDiagnoser(printSource: true)]
 [MemoryDiagnoser]
-public unsafe class BitBenchark
+public class ListBenchmark
+{
+    private DefaultMemoryManager _allocator;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        _allocator = new DefaultMemoryManager();
+    }
+
+    [GlobalCleanup]
+    public void Cleanup()
+    {
+        try
+        {
+            _allocator.Dispose();
+        }
+        catch(Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+    
+    [Benchmark(Baseline = true, OperationsPerInvoke = 262144)]
+    public void ListAdd()
+    {
+        try
+        {
+            var list = new List<int>();
+            for (int i = 0; i < 262144; i+=8)
+            {
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    [Benchmark(OperationsPerInvoke = 262144)]
+    public void UnmanagedListAdd()
+    {
+        try
+        {
+            using var list = new UnmanagedList<int>(_allocator);
+            for (int i = 0; i < 262144; i+=8)
+            {
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+                list.Add(i);
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+}
+
+[SimpleJob(RunStrategy.Throughput, RuntimeMoniker.Net80, 1, 2, 5)]
+[DisassemblyDiagnoser(printSource: true)]
+[MemoryDiagnoser]
+public unsafe class BitBenchmark
 {
     private const int bitLength = 1024 * 1024;
     private const int innerSize = 1024;
@@ -247,8 +343,8 @@ public unsafe class BitBenchark
     }
 }
 
-[SimpleJob(RunStrategy.Throughput, RuntimeMoniker.Net60, 1, 2, 5)]
-public unsafe class InterlockedBenchark
+[SimpleJob(RunStrategy.Throughput, RuntimeMoniker.Net80, 1, 2, 5)]
+public unsafe class InterlockedBenchmark
 {
     private int[] _values;
 
@@ -326,7 +422,7 @@ public unsafe class InterlockedBenchark
     }
 }
 
-[SimpleJob(RunStrategy.Throughput, RuntimeMoniker.Net60, 1, 2, 5)]
+[SimpleJob(RunStrategy.Throughput, RuntimeMoniker.Net80, 1, 2, 5)]
 public unsafe class BenchmarkSegmentAccess
 {
     const int BlockSize = 64;

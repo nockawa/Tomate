@@ -202,7 +202,7 @@ public class DefaultMemoryManagerTests
     {
         const int start = 1;
         const int end = 32;
-        const int count = end - start + 1;
+        //const int count = end - start + 1;
         
         using var mm = new DefaultMemoryManager();
 

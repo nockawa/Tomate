@@ -620,7 +620,7 @@ public class UnmanagedListTests
         //GC.Collect();
 
         ts = Stopwatch.GetTimestamp();
-        var list = new List<int>();
+        var list = new List<int>(count);
         for (int i = 0; i < count; i += 8)
         {
             list.Add(i);
@@ -642,22 +642,10 @@ public class UnmanagedListTests
 
     private static int GenUnmanagedList(DefaultMemoryManager mm, int count, out long ts)
     {
-        UnmanagedList<UnmanagedDataStore.Handle<UnmanagedList<int>>> globalList = new();
-        {
-            ref var childList = ref UnmanagedList<int>.CreateInStore(null, 8, out var handle);
-            childList.Add(10);
-            globalList.Add(handle);
-        }
-
-        {
-            ref var childList = ref UnmanagedList<int>.GetFromStore(null, globalList[0]);
-            Assert.That(childList[0], Is.EqualTo(10));
-        }
-        
         //GC.Collect();
 
         ts = Stopwatch.GetTimestamp();
-        using var ul = new UnmanagedList<int>(mm);
+        using var ul = new UnmanagedList<int>(mm, count);
 
         for (int i = 0; i < count; i+=8)
         {

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 // ReSharper disable RedundantUsingDirective
@@ -36,6 +37,7 @@ namespace Tomate;
 /// </para>
 /// </remarks>
 [Obsolete("Use DefaultMemoryManager instead")]
+[ExcludeFromCodeCoverage]
 [PublicAPI]
 public unsafe class MemoryManager : IMemoryManager, IDisposable
 {

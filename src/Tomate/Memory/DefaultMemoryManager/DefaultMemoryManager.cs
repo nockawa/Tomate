@@ -39,13 +39,16 @@ public class BlockOverrunException : Exception
 /// <remarks>
 /// <para>
 /// Purpose
+/// 
 /// Thread-safe, general purpose allocation of memory block of any size (up to almost 2Gb).
 /// This implementation was not meant to be very fast and memory efficient, I've just tried to find a good balance between speed, memory overhead
 /// and complexity.
+/// 
 /// I do think though it's quite fast, should behave correctly regarding contention and is definitely more than acceptable regarding fragmentation.
 /// </para>
 /// <para>
 /// Design and implementation
+/// 
 /// Being thread-safe impose a lot of special care to behave correctly regarding perf and contention. 
 ///
 /// The MemoryManager has several sub-types :
@@ -83,7 +86,7 @@ public partial class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAl
     private readonly bool _blockOverrunDetection;
     private readonly Vector256<byte> _blockCheckPattern;
 #else
-    internal static readonly int BlockMarginSize = 0;                       // MUST BE A MULTIPLE OF 32 BYTES !!!
+    internal static readonly int BlockMarginSize;                            // MUST BE A MULTIPLE OF 32 BYTES !!!
 #endif
 
     internal static readonly int BlockInitialCount = Environment.ProcessorCount * 4;
