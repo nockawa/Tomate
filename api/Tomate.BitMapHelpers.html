@@ -1,0 +1,545 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class BitMapHelpers | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class BitMapHelpers | Tomate ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/new/dev/apiSpec/new?filename=Tomate_BitMapHelpers.md&amp;value=---%0Auid%3A%20Tomate.BitMapHelpers%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Tomate.BitMapHelpers">
+
+
+
+  <h1 id="Tomate_BitMapHelpers" data-uid="Tomate.BitMapHelpers" class="text-break">
+Class BitMapHelpers  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L7"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Tomate.html">Tomate</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Tomate.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">[PublicAPI]
+public static class BitMapHelpers</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">BitMapHelpers</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Tomate_BitMapHelpers_ClearBitConcurrent_" data-uid="Tomate.BitMapHelpers.ClearBitConcurrent*"></a>
+
+  <h3 id="Tomate_BitMapHelpers_ClearBitConcurrent_System_Span_System_UInt64__System_Int32_" data-uid="Tomate.BitMapHelpers.ClearBitConcurrent(System.Span{System.UInt64},System.Int32)">
+  ClearBitConcurrent(Span&lt;ulong&gt;, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L14"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool ClearBitConcurrent(this Span&lt;ulong&gt; map, int index)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>map</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_BitMapHelpers_ClearBitsConcurrent_" data-uid="Tomate.BitMapHelpers.ClearBitsConcurrent*"></a>
+
+  <h3 id="Tomate_BitMapHelpers_ClearBitsConcurrent_System_Span_System_UInt64__System_Int32_System_Int32_" data-uid="Tomate.BitMapHelpers.ClearBitsConcurrent(System.Span{System.UInt64},System.Int32,System.Int32)">
+  ClearBitsConcurrent(Span&lt;ulong&gt;, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L23"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool ClearBitsConcurrent(this Span&lt;ulong&gt; map, int index, int bitLength)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>map</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>bitLength</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_BitMapHelpers_FindFreeBitConcurrent_" data-uid="Tomate.BitMapHelpers.FindFreeBitConcurrent*"></a>
+
+  <h3 id="Tomate_BitMapHelpers_FindFreeBitConcurrent_System_Span_System_UInt64__" data-uid="Tomate.BitMapHelpers.FindFreeBitConcurrent(System.Span{System.UInt64})">
+  FindFreeBitConcurrent(Span&lt;ulong&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L74"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int FindFreeBitConcurrent(this Span&lt;ulong&gt; map)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>map</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_BitMapHelpers_FindFreeBitsConcurrent_" data-uid="Tomate.BitMapHelpers.FindFreeBitsConcurrent*"></a>
+
+  <h3 id="Tomate_BitMapHelpers_FindFreeBitsConcurrent_System_Span_System_UInt64__System_Int32_" data-uid="Tomate.BitMapHelpers.FindFreeBitsConcurrent(System.Span{System.UInt64},System.Int32)">
+  FindFreeBitsConcurrent(Span&lt;ulong&gt;, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L95"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int FindFreeBitsConcurrent(this Span&lt;ulong&gt; map, int bitLength)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>map</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>bitLength</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_BitMapHelpers_FindMaxBitSet_" data-uid="Tomate.BitMapHelpers.FindMaxBitSet*"></a>
+
+  <h3 id="Tomate_BitMapHelpers_FindMaxBitSet_System_Span_System_UInt64__" data-uid="Tomate.BitMapHelpers.FindMaxBitSet(System.Span{System.UInt64})">
+  FindMaxBitSet(Span&lt;ulong&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L129"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int FindMaxBitSet(this Span&lt;ulong&gt; map)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>map</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_BitMapHelpers_FindSetBitConcurrent_" data-uid="Tomate.BitMapHelpers.FindSetBitConcurrent*"></a>
+
+  <h3 id="Tomate_BitMapHelpers_FindSetBitConcurrent_System_Span_System_UInt64__System_Int32__" data-uid="Tomate.BitMapHelpers.FindSetBitConcurrent(System.Span{System.UInt64},System.Int32@)">
+  FindSetBitConcurrent(Span&lt;ulong&gt;, ref int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L50"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Find the first bit set starting after the given index</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool FindSetBitConcurrent(this Span&lt;ulong&gt; map, ref int index)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>map</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>&gt;</dt>
+    <dd><p>The bitfield map</p>
+</dd>
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The previous index of a bit found, must be -1 for the first call.
+Upon return, will contain the index of the found set bit or -1 if there was none (and the method will return <code>false</code>).</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Returns <code>true</code> if the search was successful and a set bit was found, or <code>false</code>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_BitMapHelpers_IsBitSet_" data-uid="Tomate.BitMapHelpers.IsBitSet*"></a>
+
+  <h3 id="Tomate_BitMapHelpers_IsBitSet_System_Span_System_UInt64__System_Int32_" data-uid="Tomate.BitMapHelpers.IsBitSet(System.Span{System.UInt64},System.Int32)">
+  IsBitSet(Span&lt;ulong&gt;, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L32"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool IsBitSet(this Span&lt;ulong&gt; map, int index)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>map</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>&gt;</dt>
+    <dd></dd>
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_BitMapHelpers_SetBitConcurrent_" data-uid="Tomate.BitMapHelpers.SetBitConcurrent*"></a>
+
+  <h3 id="Tomate_BitMapHelpers_SetBitConcurrent_System_Span_System_UInt64__System_Int32_" data-uid="Tomate.BitMapHelpers.SetBitConcurrent(System.Span{System.UInt64},System.Int32)">
+  SetBitConcurrent(Span&lt;ulong&gt;, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L155"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Switch a bit from 0 to 1, concurrent friendly.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool SetBitConcurrent(this Span&lt;ulong&gt; map, int index)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>map</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>&gt;</dt>
+    <dd><p>The bitmap storing the bits</p>
+</dd>
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The index of the bit to set</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the bit was successfully set, or <code>false</code> if another thread beat us to set this bit.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_BitMapHelpers_SetBitConcurrent_System_Span_System_UInt64__System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>For performance sake, there is no exception being thrown, but Debug.Assert fill fire for incorrect calls.</p>
+</div>
+
+
+
+
+  <a id="Tomate_BitMapHelpers_SetBitsConcurrent_" data-uid="Tomate.BitMapHelpers.SetBitsConcurrent*"></a>
+
+  <h3 id="Tomate_BitMapHelpers_SetBitsConcurrent_System_Span_System_UInt64__System_Int32_System_Int32_" data-uid="Tomate.BitMapHelpers.SetBitsConcurrent(System.Span{System.UInt64},System.Int32,System.Int32)">
+  SetBitsConcurrent(Span&lt;ulong&gt;, int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L178"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Switch several contiguous (all stored in the same ulong) bits from 0 to 1, concurrent friendly.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool SetBitsConcurrent(this Span&lt;ulong&gt; map, int index, int bitLength)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>map</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a>&gt;</dt>
+    <dd><p>The bitmap storing the bits</p>
+</dd>
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The index of the first bit to set</p>
+</dd>
+    <dt><code>bitLength</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The length, must be at least 1 and no more than 64.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the bits was successfully set, or <code>false</code> if another thread beat us to set at least one bit.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_BitMapHelpers_SetBitsConcurrent_System_Span_System_UInt64__System_Int32_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>As this is a concurrent friendly operation, only one ulong can be changed at a time, so the bits to change must be stored in the same ulong.
+For instance an index of 62 with a bitLength of 3 will generate a Debug Assert as it is addressing more than one ulong.
+For performance sake, there is no exception being thrown, but several Debug.Assert</p>
+</div>
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Misc/BitMapHelpers.cs/#L7" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

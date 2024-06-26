@@ -1,0 +1,154 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Synchronization overview | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Synchronization overview | Tomate ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/blob/dev/doc/doc/synchronization.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="synchronization-overview">
+<h1 id="synchronization-overview">Synchronization overview</h1>
+
+<h2 id="why">Why?</h2>
+<p>The OS and .NET offer many mechanisms to take care about synchronization between threads and processes.
+The traditional <code>lock</code> of .net implemented by the <a href="https://learn.microsoft.com/en-us/dotnet/api/system.threading.monitor">monitor</a> class is doing a very good job but is general purpose.</p>
+<p>🍅 implements custom types with specific features to allows very low latency synchronization between threads and/or processes.
+These types are also designed to take full advantage of multi-core CPU and very short locking span.</p>
+<h2 id="accesscontrol">AccessControl</h2>
+<p>The <a class="xref" href="../api/Tomate.AccessControl.html">AccessControl</a> type allows processes/threads to control the usage of a particular resource. Multiple concurrent access are supported through the <em>shared</em> mode, one concurrent access is supported through the <em>exclusive</em> mode.</p>
+<p>This type is very small in size (8bytes) and is supported interprocess communication, that is, not only the thread is stored for synchronization but also the process id.</p>
+<h2 id="burnbabyburn">BurnBabyBurn</h2>
+<p>The <a class="xref" href="../api/Tomate.BurnBabyBurn.html">BurnBabyBurn</a> is a simple type that spins the calling thread for a given time span.</p>
+<p>It allows to attempt an operation for a given time span, until the operation succeed or the time span is reached.</p>
+<p>For instance the implementation the <a class="xref" href="../api/Tomate.ExclusiveAccessControl.html#Tomate_ExclusiveAccessControl_TakeControl_System_Nullable_System_TimeSpan__">ExclusiveAccessControl.TakeControl()</a> method.</p>
+<pre><code class="lang-csharp">public bool TakeControl(TimeSpan? wait)
+{
+    var tid = Environment.CurrentManagedThreadId;
+    if (Interlocked.CompareExchange(ref _data, tid, 0) == 0)
+    {
+        return true;
+    }
+
+    var bbb = new BurnBabyBurn(wait);
+    while (bbb.Wait())
+    {
+        if (Interlocked.CompareExchange(ref _data, tid, 0) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+</code></pre>
+<h2 id="exclusiveaccesscontrol">ExclusiveAccessControl</h2>
+<p>The <a class="xref" href="../api/Tomate.ExclusiveAccessControl.html">Tomate.ExclusiveAccessControl</a> is a very lightweight access control type (4 bytes), that only works for the calling process (can't be stored in a Memory Mapped File) and supporting only an exclusive access.</p>
+<p>This type allows many threads to compete for the exclusive access of a given resource, avoiding concurrent usage.</p>
+<h2 id="smalllock">SmallLock</h2>
+<p>The <a class="xref" href="../api/Tomate.SmallLock.html">SmallLock</a> implements an interprocess lock mechanism. By storing an instance of this type on a Memory Mapped File you can control the concurrent accesses of a given resource.</p>
+<p>At construction, the <code>SmallLock</code>'s instance asks for a maximum concurrency level, this number can't be exceeding during usage.
+For instance if the level is 4 and you end up having more than 4 process/thread during concurrent operation at a given time, and exception will throw.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/doc/doc/synchronization.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,172 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Memory Management Overview | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Memory Management Overview | Tomate ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/blob/dev/doc/doc/memory-management.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="memory-management-overview">
+<h1 id="memory-management-overview">Memory Management Overview</h1>
+
+<p>There is only one way to avoid GC in .net when you're manipulating data with a indeterminate lifecycle: a custom memory Manager.</p>
+<p>That's right, you trade ease of use against performance, which is not unusual.
+The responsibility of the memory lifecycle shift on your side, some features and helpers ease things for you, but still, it's your job now.</p>
+<h2 id="memory-manager-and-friends">Memory Manager and friends</h2>
+<h3 id="imemorymanager">IMemoryManager</h3>
+<p>Tomate declare the <a class="xref" href="../api/Tomate.IMemoryManager.html"><code>IMemoryManager</code></a> interface which has two implementations so far:</p>
+<ol>
+<li><a class="xref" href="../api/Tomate.DefaultMemoryManager.html"><code>DefaultMemoryManager</code></a>: which is the default memory manager for in-process memory allocation.</li>
+<li><a class="xref" href="../api/Tomate.MemoryManagerOverMMF.html"><code>MemoryManagerOverMMF</code></a>: which is the memory manager that maps a memory-mapped-file (MMF) for interprocess communication/processing and/or persistent data storage.</li>
+</ol>
+<p>The purpose of a Memory Manager is to allocate, resize and free memory blocks while being thread-safe.</p>
+<h3 id="ipageallocator">IPageAllocator</h3>
+<p>A simpler kind of allocator can be implemented through the <a class="xref" href="../api/Tomate.IPageAllocator.html"><code>IPageAllocator</code></a> interface, it allows to allocate fixed-size memory segment.</p>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>Page allocators don't deal with <code>MemoryBlock</code> but only with <code>MemorySegment</code> and BlockId (which is simply an <code>int</code>).</p>
+</div>
+<h3 id="memory-block">Memory Block</h3>
+<p>The memory manager is used to allocated linear segments of memory, each one has a fixed address and is represented by the <a class="xref" href="../api/Tomate.MemoryBlock.html"><code>MemoryBlock</code></a> type.</p>
+<p>From an instance of <a class="xref" href="../api/Tomate.MemoryBlock.html"><code>MemoryBlock</code></a> you can:</p>
+<ol>
+<li>Extend the lifecycle by calling <a class="xref" href="../api/Tomate.MemoryBlock.html#Tomate_MemoryBlock_AddRef"><code>AddRef()</code></a>.</li>
+<li>Resize the block, which will allocate a new one, copying the content of the existing and release it. So your instance will point to a new address.</li>
+<li>Release/Dispose the memory block. Every block stores a reference to the Memory Manager that &quot;owns&quot; it and then can be released without &quot;knowing&quot; the manager per se.</li>
+<li>Accessing the underlying <a class="xref" href="../api/Tomate.MemorySegment.html"><code>MemorySegment</code></a>.</li>
+</ol>
+<div class="NOTE">
+<h5>Note</h5>
+<p>The lifecycle of a block is handled by a reference counter.</p>
+<p>When you allocate the block, the counter equals to 1.</p>
+<p>You can <em>extend</em> the lifetime of a block by calling <a class="xref" href="../api/Tomate.MemoryBlock.html#Tomate_MemoryBlock_AddRef"><code>AddRef()</code></a>. But <strong>always call</strong> a corresponding <a class="xref" href="../api/Tomate.MemoryBlock.html#Tomate_MemoryBlock_Dispose"><code>Dispose()</code></a> to <em>release</em> the hold you have on this block.</p>
+<p>If the reference counter was 1 before <code>Dispose()</code> is called, then the memory block will be deallocated and its corresponding memory area no longer usable.</p>
+</div>
+<h3 id="memory-segment">Memory Segment</h3>
+<p><a class="xref" href="../api/Tomate.MemorySegment.html"><code>MemorySegment</code></a> a struct that simply describes a linear segment of memory data, it's made of an address and a length.</p>
+<p>A MemoryBlock can be seen as a MemorySegment, but the reverse is not necessarily true. You can for instance split a segment in two, the second one won't be a valid MemoryBlock.</p>
+<p>You can convert a MemorySegment into a <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1"><code>Span&lt;T&gt;</code></a> and use the .net APIs relying on it for safe memory access.</p>
+<p>Note that while doing this you should ensure the <strong>lifetime of the underlying memory block is adequate.</strong></p>
+<h2 id="default-memory-manager">Default Memory Manager</h2>
+<p>The implementation of <a class="xref" href="../api/Tomate.DefaultMemoryManager.html"><code>DefaultMemoryManager</code></a> was deliberately kept aside from being too complex, but still with the goal of achieving overall decent performances.</p>
+<p>You can have multiple instance of this type, but you are encourage to use the default one, accessible from the static property of its type.</p>
+<div class="TIP">
+<h5>Tip</h5>
+<p>Use the <a class="xref" href="../api/Tomate.DefaultMemoryManager.html#Tomate_DefaultMemoryManager_GlobalInstance">GlobalInstance</a> static property of <code>DefaultMemoryManager</code> which is enough for most scenarios.</p>
+</div>
+<div class="TIP">
+<h5>Tip</h5>
+<p>If you pass <code>null</code> to methods taking an <code>IMemoryManager</code> as parameter the <a class="xref" href="../api/Tomate.DefaultMemoryManager.html#Tomate_DefaultMemoryManager_GlobalInstance">GlobalInstance</a> memory manager will be used.</p>
+</div>
+<h2 id="memory-manager-over-a-memory-mapped-file">Memory Manager over a Memory Mapped File</h2>
+<p>A memory mapped file (MMF for short) serves two purpose:</p>
+<ol>
+<li>Acts as a medium for interprocess communication, data exchange.</li>
+<li>Stores persistent data that can be consumed, processed directly through .net instances.</li>
+</ol>
+<p>The <a class="xref" href="../api/Tomate.MemoryManagerOverMMF.html"><code>MemoryManagerOverMMF</code></a> type allows to interact with a MMF through a Memory Manager.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/doc/doc/memory-management.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

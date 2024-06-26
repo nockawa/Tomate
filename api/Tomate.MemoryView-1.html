@@ -1,0 +1,857 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct MemoryView&lt;T&gt; | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct MemoryView&lt;T&gt; | Tomate ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/new/dev/apiSpec/new?filename=Tomate_MemoryView_1.md&amp;value=---%0Auid%3A%20Tomate.MemoryView%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Tomate.MemoryView`1">
+
+
+
+  <h1 id="Tomate_MemoryView_1" data-uid="Tomate.MemoryView`1" class="text-break">
+Struct MemoryView&lt;T&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L7"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Tomate.html">Tomate</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Tomate.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">[PublicAPI]
+public struct MemoryView&lt;T&gt; where T : unmanaged</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>T</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+  <dl class="typelist extensionMethods">
+    <dt>Extension Methods</dt>
+    <dd>
+  <div>
+      <a class="xref" href="Tomate.DisposeExtensions.html#Tomate_DisposeExtensions_DisposeAndNull__1_System_Object___0__">DisposeExtensions.DisposeAndNull&lt;T&gt;(object, ref T)</a>
+  </div>
+  </dd></dl>
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="Tomate_MemoryView_1__ctor_" data-uid="Tomate.MemoryView`1.#ctor*"></a>
+
+  <h3 id="Tomate_MemoryView_1__ctor_Tomate_MemorySegment__0__" data-uid="Tomate.MemoryView`1.#ctor(Tomate.MemorySegment{`0})">
+  MemoryView(MemorySegment&lt;T&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L214"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemoryView(MemorySegment&lt;T&gt; memorySegment)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>memorySegment</code> <a class="xref" href="Tomate.MemorySegment-1.html">MemorySegment</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="Tomate_MemoryView_1_MemorySegment" data-uid="Tomate.MemoryView`1.MemorySegment">
+  MemorySegment
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L206"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly MemorySegment&lt;T&gt; MemorySegment</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemorySegment-1.html">MemorySegment</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Tomate_MemoryView_1_IsDefault_" data-uid="Tomate.MemoryView`1.IsDefault*"></a>
+
+  <h3 id="Tomate_MemoryView_1_IsDefault" data-uid="Tomate.MemoryView`1.IsDefault">
+  IsDefault
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L14"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsDefault { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_IsEndReached_" data-uid="Tomate.MemoryView`1.IsEndReached*"></a>
+
+  <h3 id="Tomate_MemoryView_1_IsEndReached" data-uid="Tomate.MemoryView`1.IsEndReached">
+  IsEndReached
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L16"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsEndReached { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Item_" data-uid="Tomate.MemoryView`1.Item*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Item_System_Int32_" data-uid="Tomate.MemoryView`1.Item(System.Int32)">
+  this[int]
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L23"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Random access, doesn't change <a class="xref" href="Tomate.MemoryView-1.html#Tomate_MemoryView_1_Position">Position</a></p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref T this[int index] { get; }</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Index of the item to access</p>
+</dd>
+  </dl>
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">T</span></dt>
+    <dd><p>Reference to the item for read/write operations</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Length_" data-uid="Tomate.MemoryView`1.Length*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Length" data-uid="Tomate.MemoryView`1.Length">
+  Length
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L32"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Length { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Position_" data-uid="Tomate.MemoryView`1.Position*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Position" data-uid="Tomate.MemoryView`1.Position">
+  Position
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L40"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get/set the position</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Position { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Tomate_MemoryView_1_Position_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>There is no bound check, if the new position is out of bound then <a class="xref" href="Tomate.MemoryView-1.html#Tomate_MemoryView_1_IsEndReached">IsEndReached</a> will be return <code>true</code></p>
+</div>
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Tomate_MemoryView_1_BeginReserve_" data-uid="Tomate.MemoryView`1.BeginReserve*"></a>
+
+  <h3 id="Tomate_MemoryView_1_BeginReserve_System_Int32_System_Span__0___" data-uid="Tomate.MemoryView`1.BeginReserve(System.Int32,System.Span{`0}@)">
+  BeginReserve(int, out Span&lt;T&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L57"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool BeginReserve(int maxSizeRequired, out Span&lt;T&gt; storeArea)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>maxSizeRequired</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>storeArea</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_EndReserve_" data-uid="Tomate.MemoryView`1.EndReserve*"></a>
+
+  <h3 id="Tomate_MemoryView_1_EndReserve_System_Int32_" data-uid="Tomate.MemoryView`1.EndReserve(System.Int32)">
+  EndReserve(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L71"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void EndReserve(int writtenSize)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>writtenSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Fetch_" data-uid="Tomate.MemoryView`1.Fetch*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Fetch_System_Int32_Tomate_MemorySegment__0___" data-uid="Tomate.MemoryView`1.Fetch(System.Int32,Tomate.MemorySegment{`0}@)">
+  Fetch(int, out MemorySegment&lt;T&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L77"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Fetch(int length, out MemorySegment&lt;T&gt; readArea)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>readArea</code> <a class="xref" href="Tomate.MemorySegment-1.html">MemorySegment</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Fetch_" data-uid="Tomate.MemoryView`1.Fetch*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Fetch__1" data-uid="Tomate.MemoryView`1.Fetch``1">
+  Fetch&lt;TR&gt;()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L105"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref TR Fetch&lt;TR&gt;() where TR : unmanaged</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><span class="xref">TR</span></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TR</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Fetch_" data-uid="Tomate.MemoryView`1.Fetch*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Fetch__1_System_Int32_Tomate_MemorySegment___0___" data-uid="Tomate.MemoryView`1.Fetch``1(System.Int32,Tomate.MemorySegment{``0}@)">
+  Fetch&lt;TD&gt;(int, out MemorySegment&lt;TD&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L92"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Fetch&lt;TD&gt;(int length, out MemorySegment&lt;TD&gt; readArea) where TD : unmanaged</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>readArea</code> <a class="xref" href="Tomate.MemorySegment-1.html">MemorySegment</a>&lt;TD&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TD</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_GetReservedArea_" data-uid="Tomate.MemoryView`1.GetReservedArea*"></a>
+
+  <h3 id="Tomate_MemoryView_1_GetReservedArea_System_Int32_System_Span__0___" data-uid="Tomate.MemoryView`1.GetReservedArea(System.Int32,System.Span{`0}@)">
+  GetReservedArea(int, out Span&lt;T&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L115"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool GetReservedArea(int maxLength, out Span&lt;T&gt; area)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>maxLength</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>area</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Reserve_" data-uid="Tomate.MemoryView`1.Reserve*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Reserve_System_Int32_System_Int32__" data-uid="Tomate.MemoryView`1.Reserve(System.Int32,System.Int32@)">
+  Reserve(int, out int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L143"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Reserve(int length, out int index)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Reserve_" data-uid="Tomate.MemoryView`1.Reserve*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Reserve_System_Int32_System_Span__0___" data-uid="Tomate.MemoryView`1.Reserve(System.Int32,System.Span{`0}@)">
+  Reserve(int, out Span&lt;T&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L129"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Reserve(int length, out Span&lt;T&gt; storeArea)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>storeArea</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Reserve_" data-uid="Tomate.MemoryView`1.Reserve*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Reserve_System_Int32__" data-uid="Tomate.MemoryView`1.Reserve(System.Int32@)">
+  Reserve(out int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L157"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Reserve(out int index)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Reset_" data-uid="Tomate.MemoryView`1.Reset*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Reset" data-uid="Tomate.MemoryView`1.Reset">
+  Reset()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L171"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Reset()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Skip_" data-uid="Tomate.MemoryView`1.Skip*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Skip_System_Int32_" data-uid="Tomate.MemoryView`1.Skip(System.Int32)">
+  Skip(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L177"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Skip(int offset)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MemoryView_1_Store_" data-uid="Tomate.MemoryView`1.Store*"></a>
+
+  <h3 id="Tomate_MemoryView_1_Store_System_Span__0__" data-uid="Tomate.MemoryView`1.Store(System.Span{`0})">
+  Store(Span&lt;T&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L188"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Store(Span&lt;T&gt; data)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/MemoryView.cs/#L7" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

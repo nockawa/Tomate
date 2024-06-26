@@ -1,0 +1,1048 @@
+{
+  "source_base_path": "D:/a/Tomate/Tomate/doc",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.AccessControl.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.AccessControl.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.AlignmentExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.AlignmentExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.BinarySearchComp-3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.BinarySearchComp-3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.BitMapHelpers.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.BitMapHelpers.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.BlockOverrunException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.BlockOverrunException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.BlockReferential.GenBlockHeader.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.BlockReferential.GenBlockHeader.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.BlockReferential.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.BlockReferential.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.BurnBabyBurn.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.BurnBabyBurn.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.CapacityTooBigException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.CapacityTooBigException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.ConcurrentBitmapL3All.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.ConcurrentBitmapL3All.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.ConcurrentBitmapL4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.ConcurrentBitmapL4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.DefaultMemoryManager.DebugMemoryInit.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.DefaultMemoryManager.DebugMemoryInit.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.DefaultMemoryManager.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.DefaultMemoryManager.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.DisposeExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.DisposeExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.ExclusiveAccessControl.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.ExclusiveAccessControl.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.IMemoryManager.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.IMemoryManager.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.IPageAllocator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.IPageAllocator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.IProcessProvider.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.IProcessProvider.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.IRefCounted.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.IRefCounted.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.IUnmanagedCollection.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.IUnmanagedCollection.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.InvalidAllocationSizeException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.InvalidAllocationSizeException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.InvalidHandleException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.InvalidHandleException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.InvalidObjectException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.InvalidObjectException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.ItemMaxCapacityReachedException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.ItemMaxCapacityReachedException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.ItemSetTooBigException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.ItemSetTooBigException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.LogicalMemorySegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.LogicalMemorySegment.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedAppendCollection-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedAppendCollection-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedBlockingSimpleDictionary-2.Enumerator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedBlockingSimpleDictionary-2.Enumerator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedBlockingSimpleDictionary-2.KeyValuePair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedBlockingSimpleDictionary-2.KeyValuePair.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedBlockingSimpleDictionary-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedBlockingSimpleDictionary-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedConcurrentChunkBasedCircularBuffer.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedConcurrentChunkBasedCircularBuffer.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedConcurrentChunkBasedQueue.DequeueHandle.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedConcurrentChunkBasedQueue.DequeueHandle.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedConcurrentChunkBasedQueue.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedConcurrentChunkBasedQueue.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedExclusiveAccessControl.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedExclusiveAccessControl.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MappedStringTable.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MappedStringTable.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MathExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MathExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryBlock-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryBlock-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryBlock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryBlock.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryManager.ScopedMemorySegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryManager.ScopedMemorySegment.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryManager.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryManager.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryManagerOverMMF.CreateSettings.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryManagerOverMMF.CreateSettings.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryManagerOverMMF.SegmentHeader.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryManagerOverMMF.SegmentHeader.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryManagerOverMMF.TwoWaysLinkedList.Link.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryManagerOverMMF.TwoWaysLinkedList.Link.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryManagerOverMMF.TwoWaysLinkedList.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryManagerOverMMF.TwoWaysLinkedList.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryManagerOverMMF.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryManagerOverMMF.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryManagerOverMMFCreateException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryManagerOverMMFCreateException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemorySegment-1.Enumerator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemorySegment-1.Enumerator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemorySegment-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemorySegment-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemorySegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemorySegment.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemorySegments-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemorySegments-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemorySegments-3.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemorySegments-3.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemorySegments-4.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemorySegments-4.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemorySegments-5.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemorySegments-5.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MemoryView-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MemoryView-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MiscExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MiscExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MockProcessProvider.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MockProcessProvider.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.MurmurHash2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.MurmurHash2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.PackExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.PackExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.PaddingExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.PaddingExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.PageAllocator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.PageAllocator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.ProfileThis.Handle.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.ProfileThis.Handle.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.ProfileThis.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.ProfileThis.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.QuickRand.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.QuickRand.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.RewriteMemoryView.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.RewriteMemoryView.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.SegmentConstructException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.SegmentConstructException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.SmallLock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.SmallLock.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.SmallLockConcurrencyExceededException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.SmallLockConcurrencyExceededException.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.StoreInExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.StoreInExtensions.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.String256.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.String256.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.String64.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.String64.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.TimeSegment.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.TimeSegment.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.TwoWaysLinkedList-1.Accessor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.TwoWaysLinkedList-1.Accessor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.TwoWaysLinkedList-1.Link.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.TwoWaysLinkedList-1.Link.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.TwoWaysLinkedList-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.TwoWaysLinkedList-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedDataStore.Handle-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedDataStore.Handle-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedDataStore.Handle.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedDataStore.Handle.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedDataStore.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedDataStore.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedDictionary-2.Enumerator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedDictionary-2.Enumerator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedDictionary-2.KeyValuePair.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedDictionary-2.KeyValuePair.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedDictionary-2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedDictionary-2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedList-1.Enumerator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedList-1.Enumerator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedList-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedList-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedQueue-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedQueue-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.UnmanagedStack-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.UnmanagedStack-1.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.WindowsProcessProvider.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.WindowsProcessProvider.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Tomate.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Tomate.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "api/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/toc.html"
+        },
+        ".json": {
+          "relative_path": "api/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "doc/bitmaps.md",
+      "output": {
+        ".html": {
+          "relative_path": "doc/bitmaps.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "doc/collections.md",
+      "output": {
+        ".html": {
+          "relative_path": "doc/collections.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "doc/lifetime-instances.md",
+      "output": {
+        ".html": {
+          "relative_path": "doc/lifetime-instances.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "doc/memory-management.md",
+      "output": {
+        ".html": {
+          "relative_path": "doc/memory-management.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "doc/murmurhash2.md",
+      "output": {
+        ".html": {
+          "relative_path": "doc/murmurhash2.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "doc/quickrand.md",
+      "output": {
+        ".html": {
+          "relative_path": "doc/quickrand.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "doc/string64.md",
+      "output": {
+        ".html": {
+          "relative_path": "doc/string64.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "doc/synchronization.md",
+      "output": {
+        ".html": {
+          "relative_path": "doc/synchronization.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "doc/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "doc/toc.html"
+        },
+        ".json": {
+          "relative_path": "doc/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/favicon.ico",
+      "output": {
+        "resource": {
+          "relative_path": "images/favicon.ico"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/tomate.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/tomate.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/tomate.svg",
+      "output": {
+        "resource": {
+          "relative_path": "images/tomate.svg"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "toc.html"
+        },
+        ".json": {
+          "relative_path": "toc.json"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}

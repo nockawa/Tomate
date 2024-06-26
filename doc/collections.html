@@ -1,0 +1,254 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Collections overview | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Collections overview | Tomate ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/blob/dev/doc/doc/collections.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="collections-overview">
+<h1 id="collections-overview">Collections overview</h1>
+
+<h2 id="unmanaged-collections-overview">Unmanaged* collections overview</h2>
+<p>Each collection type starting with <code>Unmanaged</code> applies to this section, the most simple and notable one being <a class="xref" href="../api/Tomate.UnmanagedList-1.html"><code>UnmanagedList&lt;T&gt;</code></a>.</p>
+<h3 id="implementation-overview">Implementation overview</h3>
+<p>Unmanaged collections are <code>struct</code> based types that rely on a <a class="xref" href="../api/Tomate.IMemoryManager.html"><code>IMemoryManager</code></a> to store the collection's data.</p>
+<p>Most of the time, the struct in itself stores:</p>
+<ul>
+<li>A <a class="xref" href="../api/Tomate.MemoryBlock.html"><code>MemoryBlock</code></a> that points to the allocated memory segment which contains a header (e.g.: storing capacity, count) and the items stored in the collection.</li>
+<li>Other fields present to manage the collection more efficiently (cached pointers, see below).</li>
+</ul>
+<p>Data stored in the MemoryBlock must be process-independent, because Unmanaged Collection are designed to be used along with a <a class="xref" href="../api/Tomate.MemoryManagerOverMMF.html"><code>MemoryManagerOverMMF</code></a> which allows the collection to be stored in a Memory Mapped File and be shared between processes. So it means, no addresses, no pointers, no references, only offsets.</p>
+<p>The Unmanaged collection wraps the MemoryBlock and provides the API to interact with the data, it also contains process-dependent fields like pointer to the header, pointer to the items, etc. to boost performances of the operations. Each API call check these accelerations fields are up-to-date, and refresh them if needed.</p>
+<h3 id="usage-overview">Usage overview</h3>
+<p>Working with value types imposes specific constraints, the purpose of 🍅 is to make it as easy as possible for the user.
+Two cases are to be considered:</p>
+<h4 id="short-lived-single-user-instances">Short-lived, single user instances</h4>
+<p>Using an instance bound by a defined scope:</p>
+<pre><code class="lang-csharp">
+{
+    // Create the list instance
+    using var myList = new UnmanagedList&lt;int&gt;();
+    
+    // Add 10 items with values from 0 to 9
+    for (int i=0; i&lt;10; i++)
+        myList.Add(i);
+    
+    PrintContent(ref myList);
+}                           // myList is disposed here, the MemoryBlock allocated is released  
+
+// Here the list could be passed by copy instead of by reference, it would work in this case because the list is not
+//  mutated by this method and we know the caller doesn't too. But it's a dangerous practice and should be avoided.
+void PrintContent(ref UnmanagedList&lt;int&gt; list)
+{
+    // this will print the content of the list
+    foreach (var val in list)
+        Console.WriteLine(val);
+}
+</code></pre>
+<h4 id="bound-to-a-custom-type">Bound to a custom type</h4>
+<p>Using an instance as a field of a custom type:</p>
+<pre><code class="lang-csharp">public class MyType : IDisposable
+{
+    public MyType()
+    {
+        _myList = new UnmanagedList&lt;int&gt;();
+    }
+
+    // Provide a ref access to the list, which allow the caller to mutate its content safely
+    public ref UnmanagedList&lt;int&gt; List =&gt; ref _myList;
+    
+    public void Add(int val)
+    {
+        _myList.Add(val);
+    }
+
+    public void PrintContent()
+    {
+        foreach (var val in _myList)
+            Console.WriteLine(val);
+    }
+
+    public void Dispose()
+    {
+        if (IsDisposed)
+            return;
+        _myList.Dispose();
+        _myList = default;
+        GC.SuppressFinalize(this);
+    }
+
+    public bool IsDisposed =&gt; _myList.IsDefault;
+
+    // Not mandatory, but if the user ever forget to call Dispose, the memory of the list will be released during 
+    //  GC collection.
+    // The type could also not implement IDisposable and we would only rely on the destructor to free the memory.
+    ~MyType()
+    {
+        Dispose();
+    }
+
+    private UnmanagedList&lt;int&gt; _myList;
+}
+</code></pre>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>Note that users have access to the List through a <code>ref</code> property, which allows them to use the very same instance as the class itself.</p>
+<p>Again, using a copy of the list instance would work fine in very specific cases, you still &quot;share&quot; the content with the initial instance, but if one or the other instance mutates the list and that triggers a reallocation of the MemoryBlock, the other instance will be left with a corrupted instance pointing to a memory block that no longer exists and without the possibility to know it no longer does.</p>
+</div>
+<h4 id="sharing-instances-through-a-store">Sharing instances through a store</h4>
+<p>If you need to share an instance through multiple users for a controlled lifetime, you can use a <a class="xref" href="../api/Tomate.UnmanagedDataStore.html"><code>UnmanagedDataStore</code></a>.</p>
+<p>As we established the safest way to manipulate the unmanaged collections is through a <code>ref</code> access, there are a set of limitations arising, the main one being it's not possible to declare a <code>ref</code> field in a type (unless the type is a ref type itself, but the limitations are just escalated). which make it very hard to <em>point</em> to a given instance from multiple places.</p>
+<p>The store offers a place where the instances are stored for a lifetime you control, each instance is identified and accessed by a <a class="xref" href="../api/Tomate.UnmanagedDataStore.Handle.html"><code>handle</code></a> which is safe to store anywhere (even in a MemoryMappedFile).
+This handle also is safe to use because it knows if the instance it points to is still valid or no longer. Using a handle is lifetime safe, type safe and its size is not bigger than a 64-bit pointer.</p>
+<p>For convenience, each implementation of <a class="xref" href="../api/Tomate.IMemoryManager.html"><code>IMemoryManager</code></a> has a corresponding <a class="xref" href="../api/Tomate.IMemoryManager.html#Tomate_IMemoryManager_Store"><code>store</code></a>, so you can use it directly or create your own, if needed.</p>
+<p>You can also, for instance, create list of lists, for example:</p>
+<pre><code class="lang-csharp">// Create the main list, not stored in the store for the sake of the example, but should be
+UnmanagedList&lt;UnmanagedDataStore.Handle&lt;UnmanagedList&lt;int&gt;&gt;&gt; globalList = new();
+
+{
+    // Create a list that will be directly stored in the store
+    ref var childList = ref UnmanagedList&lt;int&gt;.CreateInStore(null, 8, out var handle);
+    childList.Add(10);
+    
+    // Add the childList to the globalList
+    globalList.Add(handle);
+}
+// ... later on
+{
+    // Retrieve the childList from the globalList through the store
+    ref var childList = ref UnmanagedList&lt;int&gt;.GetFromStore(null, globalList[0]);
+    Assert.That(childList[0], Is.EqualTo(10));
+}
+</code></pre>
+<h3 id="tldr"><strong>TL;DR</strong></h3>
+<p>Three levels:</p>
+<ol>
+<li>The plain data, stored in a MemoryBlock, that is process-independent and can be stored inside a MemoryMappedFile. The user is not supposed to interact with it directly.</li>
+<li>The Unmanaged Collection, a struct that wraps the MemoryBlock and provides the API to interact with the data. The user can interact with it in multiple ways, depending on the use case. You should always work with it through a <code>ref</code> access, pass it/return it as a <code>ref</code>.</li>
+<li>As working with <code>ref</code> of struct implies restrictions, you can rely on the <a class="xref" href="../api/Tomate.UnmanagedDataStore.html"><code>UnmanagedDataStore</code></a> to safely store, access and share instances.</li>
+</ol>
+<h3 id="lifecycle">Lifecycle</h3>
+<p>These collection have a <a class="xref" href="../api/Tomate.UnmanagedList-1.html#Tomate_UnmanagedList_1_IsDefault"><code>IsDefault</code></a> and <a class="xref" href="../api/Tomate.UnmanagedList-1.html#Tomate_UnmanagedList_1_IsDisposed"><code>IsDisposed</code></a> properties for you to know if the instance is valid (<code>IsDefault == false</code>) or no longer usable because it's disposed (<code>IsDisposed == true</code>).</p>
+<p>You can also <em>share</em> a given instance through multiple users, each with their own lifetime by calling <a class="xref" href="../api/Tomate.UnmanagedList-1.html#Tomate_UnmanagedList_1_AddRef_"><code>AddRef()</code></a> to extend and a corresponding <a class="xref" href="../api/Tomate.UnmanagedList-1.html#Tomate_UnmanagedList_1_Dispose_"><code>Dispose()</code></a> to release usage for this particular user.</p>
+<h3 id="enumeration-of-items">Enumeration of items</h3>
+<p>While these collections don't implement the <a href="https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1"><code>IEnumerable&lt;T&gt;</code></a> interface, enumeration of their items is still possible as you would expect because they implement the <code>GetEnumerator()</code> method (more details <a href="https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/iteration-statements?redirectedfrom=MSDN#the-foreach-statement">here</a>.</p>
+<p>The enumerator also expose the item as a <code>ref T</code> which allows you to iterate on the actual value and not a copy of it.</p>
+<pre><code class="lang-csharp">// Create the list instance
+using var myList = new UnmanagedList&lt;int&gt;();
+
+// Add 10 items with values from 0 to 9
+for (int i=0; i&lt;10; i++)
+    myList.Add(i);
+
+// this will add 100 to each item in the list as val is passed by ref
+foreach (ref int val in myList)
+    val += 100;         
+</code></pre>
+<h2 id="mapped-collections-overview">Mapped* collections overview</h2>
+<p>Not written yet...</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/doc/doc/collections.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

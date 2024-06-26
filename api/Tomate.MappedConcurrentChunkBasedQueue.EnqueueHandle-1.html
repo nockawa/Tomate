@@ -1,0 +1,358 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct MappedConcurrentChunkBasedQueue.EnqueueHandle&lt;T&gt; | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct MappedConcurrentChunkBasedQueue.EnqueueHandle&lt;T&gt; | Tomate ">
+      
+      <meta name="description" content="Enqueue handle used to set the queued chunk&#39;s data">
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/new/dev/apiSpec/new?filename=Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1.md&amp;value=---%0Auid%3A%20Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1">
+
+
+
+  <h1 id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1" class="text-break">
+Struct MappedConcurrentChunkBasedQueue.EnqueueHandle&lt;T&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedConcurrentChunkBasedQueue.cs/#L364"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Tomate.html">Tomate</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Tomate.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Enqueue handle used to set the queued chunk's data</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">[PublicAPI]
+public readonly struct MappedConcurrentChunkBasedQueue.EnqueueHandle&lt;T&gt; : IDisposable where T : unmanaged</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>T</code></dt>
+    <dd><p>The type of data to store</p>
+</dd>
+  </dl>
+
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.idisposable">IDisposable</a></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+  <dl class="typelist extensionMethods">
+    <dt>Extension Methods</dt>
+    <dd>
+  <div>
+      <a class="xref" href="Tomate.DisposeExtensions.html#Tomate_DisposeExtensions_DisposeAndNull__1_System_Object___0__">DisposeExtensions.DisposeAndNull&lt;T&gt;(object, ref T)</a>
+  </div>
+  </dd></dl>
+
+
+
+  <h2 id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>DON'T FORGET TO CALL <a class="xref" href="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle-1.html#Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_Dispose">Dispose()</a> when you've stored the data, otherwise the queue will likely fail at some point to enqueue more items</p>
+</div>
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_ChunkData_" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.ChunkData*"></a>
+
+  <h3 id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_ChunkData" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.ChunkData">
+  ChunkData
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedConcurrentChunkBasedQueue.cs/#L379"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>The memory segment spanning the chunk's data</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemorySegment&lt;T&gt; ChunkData { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemorySegment-1.html">MemorySegment</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_IsDefault_" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.IsDefault*"></a>
+
+  <h3 id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_IsDefault" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.IsDefault">
+  IsDefault
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedConcurrentChunkBasedQueue.cs/#L384"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Will be <code>true</code> if the chunk failed to be enqueued</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsDefault { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_Item_" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.Item*"></a>
+
+  <h3 id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_Item_System_Int32_" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.Item(System.Int32)">
+  this[int]
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedConcurrentChunkBasedQueue.cs/#L374"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Indexer accessor to the chunk's data</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref T this[int i] { get; }</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>i</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">T</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_Value_" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.Value*"></a>
+
+  <h3 id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_Value" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.Value">
+  Value
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedConcurrentChunkBasedQueue.cs/#L389"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>First item of the chunk</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref T Value { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">T</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_Dispose_" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.Dispose*"></a>
+
+  <h3 id="Tomate_MappedConcurrentChunkBasedQueue_EnqueueHandle_1_Dispose" data-uid="Tomate.MappedConcurrentChunkBasedQueue.EnqueueHandle`1.Dispose">
+  Dispose()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedConcurrentChunkBasedQueue.cs/#L398"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Dispose the handle, make the item ready for dequeue</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedConcurrentChunkBasedQueue.cs/#L364" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

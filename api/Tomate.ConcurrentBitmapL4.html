@@ -1,0 +1,628 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct ConcurrentBitmapL4 | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct ConcurrentBitmapL4 | Tomate ">
+      
+      <meta name="description" content="This type allows to Allocate/Free bits in a bitmap in a concurrent friendly and scalable fashion. It is possible to allocate from 1 to 64 consecutive bits.">
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/new/dev/apiSpec/new?filename=Tomate_ConcurrentBitmapL4.md&amp;value=---%0Auid%3A%20Tomate.ConcurrentBitmapL4%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Tomate.ConcurrentBitmapL4">
+
+
+
+  <h1 id="Tomate_ConcurrentBitmapL4" data-uid="Tomate.ConcurrentBitmapL4" class="text-break">
+Struct ConcurrentBitmapL4  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L41"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Tomate.html">Tomate</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Tomate.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>This type allows to Allocate/Free bits in a bitmap in a concurrent friendly and scalable fashion.
+It is possible to allocate from 1 to 64 consecutive bits.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">[PublicAPI]
+public struct ConcurrentBitmapL4</code></pre>
+  </div>
+
+
+
+
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+  <dl class="typelist extensionMethods">
+    <dt>Extension Methods</dt>
+    <dd>
+  <div>
+      <a class="xref" href="Tomate.DisposeExtensions.html#Tomate_DisposeExtensions_DisposeAndNull__1_System_Object___0__">DisposeExtensions.DisposeAndNull&lt;T&gt;(object, ref T)</a>
+  </div>
+  </dd></dl>
+
+
+
+  <h2 id="Tomate_ConcurrentBitmapL4_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>Thread Safety: safe, designed for concurrent use.</p>
+<p>
+Usage:
+Typically designed to implement an occupancy map, size can be in million range.
+The required size to store n-bits can be known by calling <a class="xref" href="Tomate.ConcurrentBitmapL4.html#Tomate_ConcurrentBitmapL4_ComputeRequiredSize_System_Int32_">ComputeRequiredSize(int)</a>.
+You have a Memory Block that can store x elements and you want to reserve/free these elements in a concurrent fashion.
+The user will call <a class="xref" href="Tomate.ConcurrentBitmapL4.html#Tomate_ConcurrentBitmapL4_AllocateBits_System_Int32_">AllocateBits(int)</a> to allocate x consecutive elements and <a class="xref" href="Tomate.ConcurrentBitmapL4.html#Tomate_ConcurrentBitmapL4_FreeBits_System_Int32_System_Int32_">FreeBits(int, int)</a> to free them.
+If allocation fails, the user can decide to wait/retry or give up, based on the concurrent usage of the instance.
+</p>
+<p>
+Implementation:
+There are four levels:
+ - The L0 stores the bits, packed by 64-bits long.
+ - The L1 stores for each L0 long the size of the biggest free segment the long store. (e.g. 0xFFF000FFFFFFF00F would be 12)
+ - The L2 and L3 stores for each entry the max free segment of the 64 entries of the previous level. (e.g. 12 in L2[0] would mean that the biggest free
+   segment found in the L1[0-63] would be 12.
+This allows us to skip 64, 4096, 262144 entries per test when looking for a free segment to allocate.
+L0/L1 are always used, but L2/L3 are activated based on the bitmap size.
+When you allocate 64bits, we are looking for an empty long in L0, as this type is concurrent friendly, setting the bits has to be an atomic operation so
+we can't allocate bits that overlap multiple longs. (e.g. 0xFFFFFFFF00000000 0x00000000FFFFFFFF, can't be used to allocate 64 bits). This is important to
+understand as allocating big sizes can lead to fragmentation and may not succeed because of it (fragmentation).
+</p>
+</div>
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Tomate_ConcurrentBitmapL4_Capacity_" data-uid="Tomate.ConcurrentBitmapL4.Capacity*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_Capacity" data-uid="Tomate.ConcurrentBitmapL4.Capacity">
+  Capacity
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L66"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Capacity of the bitmap, in bits.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Capacity { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_IsFull_" data-uid="Tomate.ConcurrentBitmapL4.IsFull*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_IsFull" data-uid="Tomate.ConcurrentBitmapL4.IsFull">
+  IsFull
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L74"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p><code>true</code> if the map is full, <code>false</code> if there are free bits.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsFull { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Tomate_ConcurrentBitmapL4_IsFull_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>A non full map doesn't mean you will succeed to allocate, unless you are requested a bit size of 1.</p>
+</div>
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_LookupCount_" data-uid="Tomate.ConcurrentBitmapL4.LookupCount*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_LookupCount" data-uid="Tomate.ConcurrentBitmapL4.LookupCount">
+  LookupCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L76"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int LookupCount { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_LookupIterationCount_" data-uid="Tomate.ConcurrentBitmapL4.LookupIterationCount*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_LookupIterationCount" data-uid="Tomate.ConcurrentBitmapL4.LookupIterationCount">
+  LookupIterationCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L78"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int LookupIterationCount { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_TotalBitSet_" data-uid="Tomate.ConcurrentBitmapL4.TotalBitSet*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_TotalBitSet" data-uid="Tomate.ConcurrentBitmapL4.TotalBitSet">
+  TotalBitSet
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L83"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get the total count of bit set to one.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int TotalBitSet { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Tomate_ConcurrentBitmapL4_AllocateBits_" data-uid="Tomate.ConcurrentBitmapL4.AllocateBits*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_AllocateBits_System_Int32_" data-uid="Tomate.ConcurrentBitmapL4.AllocateBits(System.Int32)">
+  AllocateBits(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L133"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int AllocateBits(int requestedLength)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>requestedLength</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_ComputeMaxFreeSegment_" data-uid="Tomate.ConcurrentBitmapL4.ComputeMaxFreeSegment*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_ComputeMaxFreeSegment_System_UInt64_" data-uid="Tomate.ConcurrentBitmapL4.ComputeMaxFreeSegment(System.UInt64)">
+  ComputeMaxFreeSegment(ulong)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L89"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int ComputeMaxFreeSegment(ulong n)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>n</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_ComputeRequiredSize_" data-uid="Tomate.ConcurrentBitmapL4.ComputeRequiredSize*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_ComputeRequiredSize_System_Int32_" data-uid="Tomate.ConcurrentBitmapL4.ComputeRequiredSize(System.Int32)">
+  ComputeRequiredSize(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L124"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compute the size in byte, required to store a bitmap of the given size.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int ComputeRequiredSize(int bitCount)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bitCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The bit count to compute the size from</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The size in byte.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_ConcurrentBitmapL4_ComputeRequiredSize_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>L0/L1 levels are always used, L2/L3 will be activated based on the requested size.</p>
+</div>
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_Create_" data-uid="Tomate.ConcurrentBitmapL4.Create*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_Create_System_Int32_Tomate_MemorySegment_" data-uid="Tomate.ConcurrentBitmapL4.Create(System.Int32,Tomate.MemorySegment)">
+  Create(int, MemorySegment)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L130"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ConcurrentBitmapL4 Create(int bitCount, MemorySegment storage)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bitCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>storage</code> <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.ConcurrentBitmapL4.html">ConcurrentBitmapL4</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_FreeBits_" data-uid="Tomate.ConcurrentBitmapL4.FreeBits*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_FreeBits_System_Int32_System_Int32_" data-uid="Tomate.ConcurrentBitmapL4.FreeBits(System.Int32,System.Int32)">
+  FreeBits(int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L250"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void FreeBits(int index, int requestedLength)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>requestedLength</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_Map_" data-uid="Tomate.ConcurrentBitmapL4.Map*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_Map_System_Int32_Tomate_MemorySegment_" data-uid="Tomate.ConcurrentBitmapL4.Map(System.Int32,Tomate.MemorySegment)">
+  Map(int, MemorySegment)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L131"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ConcurrentBitmapL4 Map(int bitCount, MemorySegment storage)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bitCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>storage</code> <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.ConcurrentBitmapL4.html">ConcurrentBitmapL4</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_ConcurrentBitmapL4_SanityCheck_" data-uid="Tomate.ConcurrentBitmapL4.SanityCheck*"></a>
+
+  <h3 id="Tomate_ConcurrentBitmapL4_SanityCheck_System_String__" data-uid="Tomate.ConcurrentBitmapL4.SanityCheck(System.String@)">
+  SanityCheck(out string)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L255"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool SanityCheck(out string error)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>error</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Bitmaps/ConcurrentBitmapL4.cs/#L41" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,223 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Lifetime of unmanaged struct-based instances | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Lifetime of unmanaged struct-based instances | Tomate ">
+      
+      
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/blob/dev/doc/doc/lifetime-instances.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="lifetime-instances-overview">
+<h1 id="lifetime-of-unmanaged-struct-based-instances">Lifetime of unmanaged struct-based instances</h1>
+
+<p>.net features two kinds of types: classes and structs.</p>
+<ul>
+<li>Instances of classes (aka reference types) have their lifetime tracked by the references to each of them, the garbage collector takes care of releasing the memory of instances that are no longer reachable. It couldn't be easier for the user and it's as safe as it can be.</li>
+<li>Instances of struct (aka value types) are...different. Initially in .net a struct was only passed through method calls and/or instances' field by <strong>copy only</strong>. Things got more complex when microsoft introduced the concept of <a href="https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/ref-struct">ref struct</a>.</li>
+</ul>
+<h2 id="unmanaged-struct-and-gc-free-long-term-storage">Unmanaged struct and GC-free &quot;long-term&quot; storage</h2>
+<p>Struct based types can be split into two kinds:</p>
+<ul>
+<li>A struct that declares some of its fields using the class type.</li>
+<li>A struct that answers to a set of criteria which makes it an <a href="https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/unmanaged-types">unmanaged struct</a>.</li>
+</ul>
+<p>Unmanaged structs are very interesting because they have absolutely <strong>no tie</strong> with the GC, and this is what 🍅 is about.</p>
+<p>Another <em>trick</em> is to rely on the <a href="https://learn.microsoft.com/en-us/dotnet/api/system.runtime.compilerservices.unsafe.asref#system-runtime-compilerservices-unsafe-asref-1(system-void*)">Unsafe.AsRef<t>(void*)</t></a> API to conveniently represent an area of memory of <strong>any kind</strong> as a ref struct instance.</p>
+<p>So, it is possible in .net to <a href="https://learn.microsoft.com/en-us/dotnet/api/system.gc.allocateuninitializedarray">allocate</a> a big memory block (of managed memory), to <a href="https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.marshal.unsafeaddrofpinnedarrayelement#system-runtime-interopservices-marshal-unsafeaddrofpinnedarrayelement(system-array-system-int32)">pin</a> this block (to make sure its address won't change, which is equivalent to a <em>native</em> memory block) and use it the way we would in C/C++.</p>
+<p>Example:</p>
+<pre><code class="lang-csharp">var array = GC.AllocateUninitializedArray&lt;byte&gt;(64 * 1024 * 1024, true);
+var baseAddress = (byte*)Marshal.UnsafeAddrOfPinnedArrayElement(array, 0).ToPointer();
+</code></pre>
+<p>From this point, we can store any data we want in this memory block and expose its content as <code>ref struct</code> instances of unmanaged type.</p>
+<p>But anything has a cost, pros/cons, in our case the lifetime of <em>things</em> is not as safe as classic .net would be, we must make sure everything is taken care of correctly to ensure we won't access a <code>ref struct</code> instance of a memory block we just freed!</p>
+<p>One of the purpose of 🍅 is to ensure the lifetime is taken care of for you, with the minimal impact on the way you code. It will be more complex than <em>classic</em> .net programming, but performances will be better too.</p>
+<h2 id="reference-counting-to-the-rescue">Reference counting to the rescue</h2>
+<p>It's a popular, simple and proven mechanic that allows multiple <em>virtual</em> users to share the usage of a given instance.</p>
+<p>In 🍅, it is the <a class="xref" href="../api/Tomate.IRefCounted.html">IRefCounted</a> interface that takes care of this. Any type implementing this interface has its lifetime controlled by a reference counter.</p>
+<p>Each logical user calls <a class="xref" href="../api/Tomate.IRefCounted.html#Tomate_IRefCounted_AddRef">AddRef()</a> to extend the lifetime of the instance as long as it need.</p>
+<div class="NOTE">
+<h5>Note</h5>
+<p><code>IRefCounted</code> derives from <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.idisposable">IDisposable</a>, calling <code>Dispose()</code> acts as decrementing the reference counter, if it is reaching <code>0</code>, then the instance is disposed, otherwise the instance is still alive, because still being used by others.</p>
+</div>
+<h3 id="typical-usage-scenario">Typical usage scenario</h3>
+<p>Each instance is created by a logical user, we will call this user the <strong>owner</strong>. The owner has its own agenda concerning the lifetime of the instance, when it's done with it, <code>Dispose()</code> is called.</p>
+<p>In the meantime, if another logical user comes into play, for instance:</p>
+<ol>
+<li>User <code>A</code> creates instance <code>Z</code>.</li>
+<li>User <code>A</code> call a method of user <code>B</code>, passing <code>Z</code> as parameter.</li>
+<li><code>B</code> needs to store <code>Z</code> and keep it for a indefinite amount of time.</li>
+<li><code>A</code> no longer needs <code>Z</code>.</li>
+<li><code>B</code> still is using <code>Z</code>.</li>
+<li><code>B</code> no longer needs <code>Z</code>.</li>
+</ol>
+<p>It is crucial to understand that:</p>
+<ul>
+<li>In step 3, <code>B</code> needs to call <code>Z.AddRef()</code> to extend its lifetime, setting the reference counter to <code>2</code>.</li>
+<li>In step 4, <code>A</code> will call <code>Z.Dispose()</code>, but <code>Z</code> will still exists (<a class="xref" href="../api/Tomate.IRefCounted.html#Tomate_IRefCounted_IsDisposed">Z.IsDisposed</a> is <code>false</code>) because it had a reference counter of <code>2</code> and <code>Dispose()</code> decremented down to <code>1</code>.</li>
+<li>In step 6, <code>B</code> needs to call <code>Z.Dispose()</code>, which will set the reference counter to <code>0</code>, which will trigger a disposing of the object (<a class="xref" href="../api/Tomate.IRefCounted.html#Tomate_IRefCounted_IsDisposed">Z.IsDisposed</a> is <code>true</code>).</li>
+</ul>
+<h2 id="recap-of-the-lifetime-for-struct-collection-irefcounted-based-types">Recap of the lifetime for struct, collection, <code>IRefCounted</code> based types</h2>
+<h3 id="struct">struct</h3>
+<p>A struct instance's lifetime is bound by the component that <strong>stores it</strong>. So in itself there is no point to make a struct type implementing <code>IRefCounted</code>.</p>
+<p><strong>Unless</strong> your struct is more a handle than storing data, which is the case for the <code>Unmanaged*</code> collections, the struct is simply a handle, concretely it stores a <a class="xref" href="../api/Tomate.MemoryBlock.html"><code>MemoryBlock</code></a> that contains the actual data, and other fields specific to the implementation of the type itself.<br>
+The <code>MemoryBlock</code> stores all the data for the collection (a header + the actual items).<br>
+The <code>IRefCounted</code> interface of <code>UnmanagedList&lt;T&gt;</code> defers to the underlying <code>MemoryBlock</code> which support reference counting.</p>
+<p><strong>TL;DR</strong></p>
+<ul>
+<li><a class="xref" href="../api/Tomate.IRefCounted.html"><code>IRefCounted</code></a> allows to <strong>share</strong> an instance.</li>
+<li><a class="xref" href="../api/Tomate.MemoryBlock.html"><code>MemoryBlock</code></a> implemented <code>IRefCounted</code> and can be shared.</li>
+<li>A struct's instance can't be shared, unless the instance is more a handle/facade and the data in itself is stored to a location that can be shared.</li>
+<li><code>Unmanaged*</code> collections can be shared for the reason cited above (see more <a class="xref" href="collections.html#unmanaged-collections-overview">here</a>)</li>
+</ul>
+<h2 id="beware-of-undesired-copies">Beware of undesired copies!</h2>
+<p>One could say and argue there is a design flaw in C# because it is very easy to copy an instance of a struct instead of using a reference of it.</p>
+<p>C/C++ languages have the notion of pointer (then address), which is semantically different from the instance itself. It's either your pass the instance (and it's a copy) or you pass a pointer of the instance (and you copy the pointer itself, not the instance).</p>
+<p>In C#, it's <em>easy</em> to do things the wrong way because you can have a method that returns a ref to struct and yet, if you don't pay attention and do the &quot;usual stuff&quot;, you will end up copying this returned instance.</p>
+<p>Example:</p>
+<pre><code class="lang-csharp">public ref UnmanagedList&lt;int&gt; GetList() { ref return myList; }
+
+...
+
+// The wrong way   
+var theList = GetList();            // here `theList`is a copy of `myList`
+
+// The right way
+ref var theList2 = ref GetList();   // here `theList2` is the same instance as `myList`
+</code></pre>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>Both invocations of <code>GetList()</code> are compiling, and that's where things are dangerous and could be considered a design flaw.</p>
+<p>One could argue that a method doing a ref return is, by designed, expected the caller to get a reference of the returned instance and not copying it.</p>
+<p>People being working with class based instance &gt;90% of the time and being not familiar with <code>ref return</code> and <code>ref var</code> could easily get it wrong.</p>
+</div>
+<div class="NOTE">
+<h5>Note</h5>
+<p>Back to our example above, if you do the first call, ending up copying the <code>UnmanagedList</code>, in appearances and concretely, you can use the list just fine... as long as you are not calling a method that will result in resizing the list's content (or the original owner of the list also does it).</p>
+<p>But it's clearly risky and should be avoided at all cost, but the fact that it won't lead to an unexpected behavior right way makes it very treacherous.</p>
+</div>
+<h2 id="beware-of-ref-access">Beware of ref access</h2>
+<p>Consider this example:</p>
+<pre><code class="lang-csharp">using var ul = new UnmanagedList&lt;int&gt;();
+
+ul.Add(0);
+ul.Add(1);
+ul.Add(2);
+
+ref var i1 = ref ul[1];             // Reference to the 2dn item of the list
+Assert.That(i1, Is.EqualTo(1));     // So far so good
+
+ul.RemoveAt(0);                     // Now we remove the first element, all subsequent shift one slot to the left.
+Assert.That(i1, Is.EqualTo(1));     // It fails because i1 is pointing to the second location which now is 2. 
+                                    // 0, [1], 2 before RemoveAt(). 0, [2] after.
+</code></pre>
+<p>The subscript (i.e. <code>[]</code>) operator is really convenient in its <code>ref return</code> form, but you have to be aware of what it really represents and its true scope of usage.<br>
+In the example above, <code>i1</code> represents the 2nd location of the list, it <strong>doesn't</strong> represent the item stored at this location.<br>
+Doing <code>var it1 = ul[1]</code> would have been getting a copy of the item.</p>
+<div class="WARNING">
+<h5>Warning</h5>
+<p>A <code>ref var</code> is an <strong>address</strong> always, treat it as a such.</p>
+</div>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/doc/doc/lifetime-instances.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,868 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct MappedBlockingSimpleDictionary&lt;TKey, TValue&gt; | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct MappedBlockingSimpleDictionary&lt;TKey, TValue&gt; | Tomate ">
+      
+      <meta name="description" content="Fixed size, not efficient dictionary, with concurrent operations made through a lock">
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/new/dev/apiSpec/new?filename=Tomate_MappedBlockingSimpleDictionary_2.md&amp;value=---%0Auid%3A%20Tomate.MappedBlockingSimpleDictionary%602%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Tomate.MappedBlockingSimpleDictionary`2">
+
+
+
+  <h1 id="Tomate_MappedBlockingSimpleDictionary_2" data-uid="Tomate.MappedBlockingSimpleDictionary`2" class="text-break">
+Struct MappedBlockingSimpleDictionary&lt;TKey, TValue&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L17"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Tomate.html">Tomate</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Tomate.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Fixed size, not efficient dictionary, with concurrent operations made through a lock</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">[PublicAPI]
+public struct MappedBlockingSimpleDictionary&lt;TKey, TValue&gt; where TKey : unmanaged where TValue : unmanaged</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TKey</code></dt>
+    <dd></dd>
+    <dt><code>TValue</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+  <dl class="typelist extensionMethods">
+    <dt>Extension Methods</dt>
+    <dd>
+  <div>
+      <a class="xref" href="Tomate.DisposeExtensions.html#Tomate_DisposeExtensions_DisposeAndNull__1_System_Object___0__">DisposeExtensions.DisposeAndNull&lt;T&gt;(object, ref T)</a>
+  </div>
+  </dd></dl>
+
+
+
+  <h2 id="Tomate_MappedBlockingSimpleDictionary_2_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>Designed to be simple, accesses are O(n), a key of value default(TKey) is not permitted as it's used to detect free entries.
+Read-only access operations are made through a shared lock, read-write through an exclusive one.
+There can be multiple concurrent RO operations, but any RW operation will be exclusive and block any other RO/RW operations.
+You can enumerate the dictionary content, but only to evaluate it. Any call to ro/rw operations would lead to a deadlock.</p>
+</div>
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_Capacity_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Capacity*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_Capacity" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Capacity">
+  Capacity
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L34"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Number of KVP items the dictionary can hold</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Capacity { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_Count_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Count*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_Count" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Count">
+  Count
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L39"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Actual count of items stored</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Count { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_Item_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Item*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_Item__0_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Item(`0)">
+  this[TKey]
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L49"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get or add/update the value associated with the given key</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TValue this[TKey key] { get; set; }</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <span class="xref">TKey</span></dt>
+    <dd><p>The key</p>
+</dd>
+  </dl>
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">TValue</span></dt>
+    <dd><p>The value associated with the key or default(TValue) if the key doesn't exist in the dictionary</p>
+</dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Tomate_MappedBlockingSimpleDictionary_2_Item__0__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>The getter does a <a class="xref" href="Tomate.MappedBlockingSimpleDictionary-2.html#Tomate_MappedBlockingSimpleDictionary_2_TryGet__0__1__">TryGet(TKey, out TValue)</a>. The setter does a <a class="xref" href="Tomate.MappedBlockingSimpleDictionary-2.html#Tomate_MappedBlockingSimpleDictionary_2_AddOrUpdate__0__1_">AddOrUpdate(TKey, TValue)</a>.</p>
+</div>
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_AddOrUpdate_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.AddOrUpdate*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_AddOrUpdate__0__1_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.AddOrUpdate(`0,`1)">
+  AddOrUpdate(TKey, TValue)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L90"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Add the given key/value pair or update the value of the given key if it's already present in the dictionary</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool AddOrUpdate(TKey key, TValue value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <span class="xref">TKey</span></dt>
+    <dd><p>The key</p>
+</dd>
+    <dt><code>value</code> <span class="xref">TValue</span></dt>
+    <dd><p>The value</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the operation succeeded, <code>false</code> if the key/value pair couldn't be added because the dictionary is full</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_Clear_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Clear*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_Clear" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Clear">
+  Clear()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L151"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Clear the whole dictionary</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Clear()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_ComputeItemCapacity_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.ComputeItemCapacity*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_ComputeItemCapacity_System_Int32_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.ComputeItemCapacity(System.Int32)">
+  ComputeItemCapacity(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L72"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compute the item capacity from a given storage size</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int ComputeItemCapacity(int storageSize)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>storageSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The storage size to compute the capacity from</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The item capacity</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_ComputeStorageSize_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.ComputeStorageSize*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_ComputeStorageSize_System_Int32_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.ComputeStorageSize(System.Int32)">
+  ComputeStorageSize(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L79"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Compute the memory size taken to store a given amount of items</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int ComputeStorageSize(int itemCount)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>itemCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Item count to compute the storage size from</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The required size, a <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a> of this size would store the request amount of items</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_Contains_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Contains*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_Contains__0_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Contains(`0)">
+  Contains(TKey)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L165"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Check if there's a key of the given value stored in the dictionary</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Contains(TKey key)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <span class="xref">TKey</span></dt>
+    <dd><p>The key</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the dictionary stores the requested key, <code>false</code> otherwise.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_MappedBlockingSimpleDictionary_2_Contains__0__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This operation relies on a shared access.</p>
+</div>
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_Create_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Create*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_Create_Tomate_MemorySegment_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Create(Tomate.MemorySegment)">
+  Create(MemorySegment)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L81"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static MappedBlockingSimpleDictionary&lt;TKey, TValue&gt; Create(MemorySegment segment)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>segment</code> <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MappedBlockingSimpleDictionary-2.html">MappedBlockingSimpleDictionary</a>&lt;TKey, TValue&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_GetEnumerator_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.GetEnumerator*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_GetEnumerator" data-uid="Tomate.MappedBlockingSimpleDictionary`2.GetEnumerator">
+  GetEnumerator()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L202"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets an enumerator for this dictionary</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MappedBlockingSimpleDictionary&lt;TKey, TValue&gt;.Enumerator GetEnumerator()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MappedBlockingSimpleDictionary-2.html">MappedBlockingSimpleDictionary</a>&lt;TKey, TValue&gt;.<a class="xref" href="Tomate.MappedBlockingSimpleDictionary-2.Enumerator.html">Enumerator</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_MappedBlockingSimpleDictionary_2_GetEnumerator_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>A shared lock will be created before enumeration and released at the end.
+The enumeration is not meant to change the content of the dictionary.
+Don't call any operation on the dictionary that leads to a shared/exclusive access, it would lead to a dead-lock as locks are not re-entrant on this type.</p>
+</div>
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_GetOrAdd_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.GetOrAdd*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_GetOrAdd__0_System_Func__0__1__System_Boolean__System_Boolean__" data-uid="Tomate.MappedBlockingSimpleDictionary`2.GetOrAdd(`0,System.Func{`0,`1},System.Boolean@,System.Boolean@)">
+  GetOrAdd(TKey, Func&lt;TKey, TValue&gt;, out bool, out bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L215"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get a value associated with the given key or add a new key/value pair.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TValue GetOrAdd(TKey key, Func&lt;TKey, TValue&gt; valueFactory, out bool added, out bool success)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <span class="xref">TKey</span></dt>
+    <dd><p>The key</p>
+</dd>
+    <dt><code>valueFactory</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.func-2">Func</a>&lt;TKey, TValue&gt;</dt>
+    <dd><p>A factory that will be called to generated the value if the key was not present in the dictionary</p>
+</dd>
+    <dt><code>added</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the key/value pair was added, <code>false</code> if the key/value pair already exists in the dictionary</p>
+</dd>
+    <dt><code>success</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the operation succeeded, <code>false</code>if the dictionary is full and the key/value pair couldn't be added</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><span class="xref">TValue</span></dt>
+    <dd><p>The value associated with the given key</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_MappedBlockingSimpleDictionary_2_GetOrAdd__0_System_Func__0__1__System_Boolean__System_Boolean___remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This operation relies on an exclusive access.</p>
+</div>
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_Map_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Map*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_Map_Tomate_MemorySegment_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.Map(Tomate.MemorySegment)">
+  Map(MemorySegment)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L82"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static MappedBlockingSimpleDictionary&lt;TKey, TValue&gt; Map(MemorySegment segment)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>segment</code> <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MappedBlockingSimpleDictionary-2.html">MappedBlockingSimpleDictionary</a>&lt;TKey, TValue&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_ToArray_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.ToArray*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_ToArray" data-uid="Tomate.MappedBlockingSimpleDictionary`2.ToArray">
+  ToArray()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L285"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Project all the items of the dictionary to a KeyValuePair array</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MappedBlockingSimpleDictionary&lt;TKey, TValue&gt;.KeyValuePair[] ToArray()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MappedBlockingSimpleDictionary-2.KeyValuePair.html">KeyValuePair</a>[]</dt>
+    <dd><p>The array containing the items</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_MappedBlockingSimpleDictionary_2_ToArray_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This operation relies on a shared access.
+You would typically use this method over content enumeration if you want to hold the shared lock the shortest time possible.</p>
+</div>
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_TryAdd_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.TryAdd*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_TryAdd__0__1_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.TryAdd(`0,`1)">
+  TryAdd(TKey, TValue)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L323"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Try to add a key/value to the dictionary</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool TryAdd(TKey key, TValue value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <span class="xref">TKey</span></dt>
+    <dd><p>The key, can't be default(TKey).</p>
+</dd>
+    <dt><code>value</code> <span class="xref">TValue</span></dt>
+    <dd><p>The value.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the dictionary added the requested key/value, <code>false</code> if there were already a key with this value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_MappedBlockingSimpleDictionary_2_TryAdd__0__1__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This operation relies on an exclusive access.</p>
+</div>
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_TryGet_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.TryGet*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_TryGet__0__1__" data-uid="Tomate.MappedBlockingSimpleDictionary`2.TryGet(`0,`1@)">
+  TryGet(TKey, out TValue)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L389"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Try to get the value from a given key</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool TryGet(TKey key, out TValue value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <span class="xref">TKey</span></dt>
+    <dd><p>The key to use</p>
+</dd>
+    <dt><code>value</code> <span class="xref">TValue</span></dt>
+    <dd><p>The value corresponding</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the dictionary stores the requested key, <code>false</code> otherwise.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_MappedBlockingSimpleDictionary_2_TryGet__0__1___remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This operation relies on a shared access.</p>
+</div>
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_TryRemove_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.TryRemove*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_TryRemove__0__1__" data-uid="Tomate.MappedBlockingSimpleDictionary`2.TryRemove(`0,`1@)">
+  TryRemove(TKey, out TValue)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L432"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Remove a key/value from the dictionary</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool TryRemove(TKey key, out TValue value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <span class="xref">TKey</span></dt>
+    <dd><p>The key.</p>
+</dd>
+    <dt><code>value</code> <span class="xref">TValue</span></dt>
+    <dd><p>The value, is <code>default</code> if the call is unsuccessful.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the key/value were removed, <code>false</code> if there were no key of the given value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_MappedBlockingSimpleDictionary_2_TryRemove__0__1___remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This operation relies on an exclusive access.</p>
+</div>
+
+
+
+
+  <a id="Tomate_MappedBlockingSimpleDictionary_2_TryUpdateValue_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.TryUpdateValue*"></a>
+
+  <h3 id="Tomate_MappedBlockingSimpleDictionary_2_TryUpdateValue__0__1_" data-uid="Tomate.MappedBlockingSimpleDictionary`2.TryUpdateValue(`0,`1)">
+  TryUpdateValue(TKey, TValue)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L478"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Change the value associated with a given key</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool TryUpdateValue(TKey key, TValue newValue)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <span class="xref">TKey</span></dt>
+    <dd><p>The key.</p>
+</dd>
+    <dt><code>newValue</code> <span class="xref">TValue</span></dt>
+    <dd><p>The new value to set</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the value has been set, <code>false</code> if there were no key of the given value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_MappedBlockingSimpleDictionary_2_TryUpdateValue__0__1__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This operation relies on an exclusive access.</p>
+</div>
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedBlockingSimpleDictionary.cs/#L17" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,140 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>&#127813; Tomate &#127813; | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="&#127813; Tomate &#127813; | Tomate ">
+      
+      
+      <link rel="icon" href="images/favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="doc/toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/blob/dev/doc/index.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="-tomate-">🍅 Tomate 🍅</h1>
+
+<p>Low level library for concurrent, high performance, low GC impact data storing &amp; manipulation.</p>
+<p>Also allowing interprocess communication and real-time processing of persistent data through a set of collections and primitives that operate over a Memory Mapped File.</p>
+<h2 id="what-it-is-about">What it is about?</h2>
+<p>.net standard libraries are great, especially the collection ones, they allow one to write code very quickly/easily.</p>
+<p>But if you are looking to squeeze performances or working on very low latency code, you can't afford to create thousand of GC objects anymore.</p>
+<p>Suddenly all the collection types you know and love as well as working with class types all the time is no longer an option.</p>
+<p>This library introduces a new way for the user to deal with memory and includes collections and other utility types that are compliant with it. The latest versions of C# and .net allow us to be closer to the metal, this library attempts to get you closer to it.</p>
+<h2 id="what-this-library-targets">What this library targets?</h2>
+<h3 id="performance-first">Performance First</h3>
+<p>Nowadays, computers are really fast, but it is very hard for many to realize how many things you can do with them. If the programmer doesn't pay attention to performances, the result can quickly get 10x to several 100x times slower.</p>
+<p>For many, performances is not an issue, so why paying attention to it if your code runs fast enough? And it's fine.</p>
+<p>But if performances is on the top of your list, you know that you have to design you code and develop with a &quot;performance first&quot; mindset.</p>
+<h3 id="low-latency-code">Low latency code</h3>
+<p>If you are doing real-time programming for instance, you have to deal with a lot of things in just few milliseconds. Your territory is in the nanosecond or microsecond execution of your methods. You can't afford to spend you time allocating/releasing memory heaps, you have to pay attention to each data copy.</p>
+<h3 id="thread-safe-concurrent-friendly-code">Thread-safe, concurrent friendly code</h3>
+<p>Because our computers have more and more CPU cores, we can't rely on single-threaded code anymore. But multi-threaded code is far from easy and it doesn't get easier when we are targeting low latency code. A mutex lock/unlock is about 100ns, a thread context switch is in the mater of millisecond, so we have to avoid them as much as possible.</p>
+<p>This library provides thread-safe types, but not exclusively (because single-threaded will always be faster) to help you and ease things.</p>
+<h3 id="operating-over-a-memory-mapped-file">Operating over a Memory Mapped File</h3>
+<p><a href="https://learn.microsoft.com/en-us/dotnet/standard/io/memory-mapped-files">Memory Mapped File</a> (MMF for short) can be used in many scenarios:</p>
+<ul>
+<li><strong>Interprocess communication</strong> : multiple process exchanges data by writing and reading in a given MMF.</li>
+<li><strong>Streaming of very large data</strong> : a persistent MMF can store hundreds of gigabytes and be virtually completely accessible from memory.</li>
+</ul>
+<p>🍅 implements a set of collections and features for you to structure the data stored in an MMF and taking care of multi-thread, interprocess synchronization.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/doc/index.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

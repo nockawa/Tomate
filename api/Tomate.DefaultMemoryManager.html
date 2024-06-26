@@ -1,0 +1,1155 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class DefaultMemoryManager | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class DefaultMemoryManager | Tomate ">
+      
+      <meta name="description" content="General purpose Memory Manager">
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/new/dev/apiSpec/new?filename=Tomate_DefaultMemoryManager.md&amp;value=---%0Auid%3A%20Tomate.DefaultMemoryManager%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Tomate.DefaultMemoryManager">
+
+
+
+  <h1 id="Tomate_DefaultMemoryManager" data-uid="Tomate.DefaultMemoryManager" class="text-break">
+Class DefaultMemoryManager  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/SmallBlock.cs/#L11"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Tomate.html">Tomate</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Tomate.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>General purpose Memory Manager</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">[PublicAPI]
+public class DefaultMemoryManager : IDisposable, IMemoryManager, IPageAllocator</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">DefaultMemoryManager</span></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.idisposable">IDisposable</a></div>
+      <div><a class="xref" href="Tomate.IMemoryManager.html">IMemoryManager</a></div>
+      <div><a class="xref" href="Tomate.IPageAllocator.html">IPageAllocator</a></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+  <dl class="typelist extensionMethods">
+    <dt>Extension Methods</dt>
+    <dd>
+  <div>
+      <a class="xref" href="Tomate.DisposeExtensions.html#Tomate_DisposeExtensions_DisposeAndNull__1_System_Object___0__">DisposeExtensions.DisposeAndNull&lt;T&gt;(object, ref T)</a>
+  </div>
+  </dd></dl>
+
+
+
+  <h2 id="Tomate_DefaultMemoryManager_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>
+ Purpose
+<p>Thread-safe, general purpose allocation of memory block of any size (up to almost 2Gb).
+This implementation was not meant to be very fast and memory efficient, I've just tried to find a good balance between speed, memory overhead
+and complexity.</p>
+<p>I do think though it's quite fast, should behave correctly regarding contention and is definitely more than acceptable regarding fragmentation.</p>
+ 
+<p>
+ Design and implementation
+<p>Being thread-safe impose a lot of special care to behave correctly regarding perf and contention.</p>
+<p>The MemoryManager has several sub-types :</p>
+<ul>
+<li><a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.NativeBlockInfo</a> which is responsible of making OS level allocation, a given Native Block will then serve memory allocation
+requests for many <a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.SmallBlockAllocator</a> and or <a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.LargeBlockAllocator</a> instances.</li>
+<li><a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.BlockAllocatorSequence</a>, there are many instances of this type, the number is determined during the manager construction and depending
+on the CPU core number. Then each Thread is assigned a given instance (we assign them in round-robin fashion). The Block Sequence contains two chained
+lists, one for <a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.SmallBlockAllocator</a> and the other for <a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.LargeBlockAllocator</a>.</li>
+<li><a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.SmallBlockAllocator</a> is responsible of making small ( &gt;= 65526 bytes) <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a> allocations. It uses a slab of a
+given <a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.NativeBlockInfo</a> instance.
+Instances of <a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.SmallBlockAllocator</a> are operating concurrently: two different threads using different instance won't compete for Allocation/Free.</li>
+<li><a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.LargeBlockAllocator</a> take care of Allocations greater than 65526 bytes and will hold a Native Memory block of at least 64 MiB or sized with the
+next power of 2 of the allocation that triggered it.</li>
+</ul>
+<p>Allocated <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a> are guaranteed to be 16 bytes address-aligned. <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a> that was allocated by
+<a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.SmallBlockAllocator</a> have a 14 bytes header that precedes each instance, for <a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.LargeBlockAllocator</a> the header is 20 bytes. These are the
+only overhead that is dependent of each Segment allocation.</p>
+<p><a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.SmallBlockAllocator</a> and <a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.LargeBlockAllocator</a> have defragmentation routines that are called when free segment fragmentation is too high
+to merge adjacent free segments.</p>
+<p><a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager.BlockAllocatorSequence</a> will release empty Blocks (Small and Large), they will be added to a dedicated pool on the Memory Manager and reassigned
+when possible to other Block Sequence that are requested memory. Which means the allocated Native Memory is never released, but reused. If you want
+to release is, the only way is to call <a class="xref" href="Tomate.DefaultMemoryManager.html#Tomate_DefaultMemoryManager_Clear">Clear()</a>.</p>
+ 
+</div>
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="Tomate_DefaultMemoryManager__ctor_" data-uid="Tomate.DefaultMemoryManager.#ctor*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager__ctor_System_Int32_System_Int32_" data-uid="Tomate.DefaultMemoryManager.#ctor(System.Int32,System.Int32)">
+  DefaultMemoryManager(int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L222"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DefaultMemoryManager(int pageSize = 1048576, int maxPageCount = 1024)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pageSize</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>maxPageCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="fields">Fields
+</h2>
+
+
+
+  <h3 id="Tomate_DefaultMemoryManager_GlobalInstance" data-uid="Tomate.DefaultMemoryManager.GlobalInstance">
+  GlobalInstance
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L117"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Access to the global instance of the Memory Manager</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static readonly DefaultMemoryManager GlobalInstance</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+  <h4 class="section" id="Tomate_DefaultMemoryManager_GlobalInstance_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Most of the time you will want to rely on this instance. Note that you can't dispose it nor <a class="xref" href="Tomate.DefaultMemoryManager.html#Tomate_DefaultMemoryManager_Clear">Clear()</a> it as it is a shared instance.
+The memory will be freed when the process will exit.
+If you need control over the lifetime, create and use your own instance.</p>
+</div>
+
+
+
+
+
+  <h3 id="Tomate_DefaultMemoryManager_MaxMemorySegmentSize" data-uid="Tomate.DefaultMemoryManager.MaxMemorySegmentSize">
+  MaxMemorySegmentSize
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L103"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static readonly int MaxMemorySegmentSize</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="Tomate_DefaultMemoryManager_MinSegmentSize" data-uid="Tomate.DefaultMemoryManager.MinSegmentSize">
+  MinSegmentSize
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L97"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static readonly int MinSegmentSize</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="Tomate_DefaultMemoryManager_PageAllocatorMaxPageCount" data-uid="Tomate.DefaultMemoryManager.PageAllocatorMaxPageCount">
+  PageAllocatorMaxPageCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L106"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static readonly int PageAllocatorMaxPageCount</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="Tomate_DefaultMemoryManager_PageAllocatorPageSize" data-uid="Tomate.DefaultMemoryManager.PageAllocatorPageSize">
+  PageAllocatorPageSize
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L105"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static readonly int PageAllocatorPageSize</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h3 id="Tomate_DefaultMemoryManager_StoreMaxEntryCount" data-uid="Tomate.DefaultMemoryManager.StoreMaxEntryCount">
+  StoreMaxEntryCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L107"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static readonly int StoreMaxEntryCount</code></pre>
+  </div>
+
+
+
+
+  <h4 class="section">Field Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Tomate_DefaultMemoryManager_BaseAddress_" data-uid="Tomate.DefaultMemoryManager.BaseAddress*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_BaseAddress" data-uid="Tomate.DefaultMemoryManager.BaseAddress">
+  BaseAddress
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L716"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Return the base address of the linear memory block that old all the pages.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public byte* BaseAddress { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>*</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_IsDisposed_" data-uid="Tomate.DefaultMemoryManager.IsDisposed*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_IsDisposed" data-uid="Tomate.DefaultMemoryManager.IsDisposed">
+  IsDisposed
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L320"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Check if the instance is disposed or not.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsDisposed { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_MaxAllocationLength_" data-uid="Tomate.DefaultMemoryManager.MaxAllocationLength*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_MaxAllocationLength" data-uid="Tomate.DefaultMemoryManager.MaxAllocationLength">
+  MaxAllocationLength
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L321"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int MaxAllocationLength { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_MemoryBlockContentCleanup_" data-uid="Tomate.DefaultMemoryManager.MemoryBlockContentCleanup*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_MemoryBlockContentCleanup" data-uid="Tomate.DefaultMemoryManager.MemoryBlockContentCleanup">
+  MemoryBlockContentCleanup
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L202"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>This property only works in DEBUGALLOC mode, it is primarily used to change the content of a memory block being freed,
+for debugging/troubleshooting purposes.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DefaultMemoryManager.DebugMemoryInit MemoryBlockContentCleanup { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager</a>.<a class="xref" href="Tomate.DefaultMemoryManager.DebugMemoryInit.html">DebugMemoryInit</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_MemoryBlockContentInitialization_" data-uid="Tomate.DefaultMemoryManager.MemoryBlockContentInitialization*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_MemoryBlockContentInitialization" data-uid="Tomate.DefaultMemoryManager.MemoryBlockContentInitialization">
+  MemoryBlockContentInitialization
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L186"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>This property only works in DEBUGALLOC mode, it is primarily used to initialize the content of newly allocated block,
+for debugging/troubleshooting purposes.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DefaultMemoryManager.DebugMemoryInit MemoryBlockContentInitialization { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.DefaultMemoryManager.html">DefaultMemoryManager</a>.<a class="xref" href="Tomate.DefaultMemoryManager.DebugMemoryInit.html">DebugMemoryInit</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_MemoryManagerId_" data-uid="Tomate.DefaultMemoryManager.MemoryManagerId*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_MemoryManagerId" data-uid="Tomate.DefaultMemoryManager.MemoryManagerId">
+  MemoryManagerId
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L322"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int MemoryManagerId { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_PageAllocatorId_" data-uid="Tomate.DefaultMemoryManager.PageAllocatorId*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_PageAllocatorId" data-uid="Tomate.DefaultMemoryManager.PageAllocatorId">
+  PageAllocatorId
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L725"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int PageAllocatorId { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_PageSize_" data-uid="Tomate.DefaultMemoryManager.PageSize*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_PageSize" data-uid="Tomate.DefaultMemoryManager.PageSize">
+  PageSize
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L734"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Return the size of one given page</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int PageSize { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_Store_" data-uid="Tomate.DefaultMemoryManager.Store*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_Store" data-uid="Tomate.DefaultMemoryManager.Store">
+  Store
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L762"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref UnmanagedDataStore Store { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.UnmanagedDataStore.html">UnmanagedDataStore</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Tomate_DefaultMemoryManager_Allocate_" data-uid="Tomate.DefaultMemoryManager.Allocate*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_Allocate_System_Int32_" data-uid="Tomate.DefaultMemoryManager.Allocate(System.Int32)">
+  Allocate(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L393"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocate a Memory Block</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemoryBlock Allocate(int length)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Length of the block to allocate.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemoryBlock.html">MemoryBlock</a></dt>
+    <dd><p>The block or an exception will be fired if we couldn't allocate one.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_DefaultMemoryManager_Allocate_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>The block's address will always be aligned on at least 16 bytes.
+The block's address is fixed.</p>
+</div>
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.objectdisposedexception">ObjectDisposedException</a></dt>
+    <dd><p>Can't allocate because the object is disposed.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.outofmemoryexception">OutOfMemoryException</a></dt>
+    <dd><p>The requested size is too big.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="Tomate_DefaultMemoryManager_AllocatePages_" data-uid="Tomate.DefaultMemoryManager.AllocatePages*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_AllocatePages_System_Int32_" data-uid="Tomate.DefaultMemoryManager.AllocatePages(System.Int32)">
+  AllocatePages(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L736"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocate one or many consecutive pages</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemorySegment AllocatePages(int length)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Must be 1 to 64.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a></dt>
+    <dd><p>The returned memory segment will be <a class="xref" href="Tomate.IPageAllocator.html#Tomate_IPageAllocator_PageSize">PageSize</a>*<code class="paramref">length</code>.
+Return default if the allocation failed.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_Allocate_" data-uid="Tomate.DefaultMemoryManager.Allocate*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_Allocate__1_System_Int32_" data-uid="Tomate.DefaultMemoryManager.Allocate``1(System.Int32)">
+  Allocate&lt;T&gt;(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L457"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Allocate a Memory Block</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemoryBlock&lt;T&gt; Allocate&lt;T&gt;(int length) where T : unmanaged</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Length (in {T}) of the segment to allocate.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemoryBlock-1.html">MemoryBlock</a>&lt;T&gt;</dt>
+    <dd><p>The segment or an exception will be fired if we couldn't allocate one.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>T</code></dt>
+    <dd><p>The type of each item of the segment assigned to the block.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_DefaultMemoryManager_Allocate__1_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>The segment's address will always be aligned on 16 bytes, its size will also be padded on 16 bytes.
+The segment's address is fixed.</p>
+</div>
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.objectdisposedexception">ObjectDisposedException</a></dt>
+    <dd><p>Can't allocate because the object is disposed.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.outofmemoryexception">OutOfMemoryException</a></dt>
+    <dd><p>The requested size is too big.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="Tomate_DefaultMemoryManager_Clear_" data-uid="Tomate.DefaultMemoryManager.Clear*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_Clear" data-uid="Tomate.DefaultMemoryManager.Clear">
+  Clear()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L324"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Release all the allocated segments, free the memory allocated through .net.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Clear()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_Dispose_" data-uid="Tomate.DefaultMemoryManager.Dispose*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_Dispose" data-uid="Tomate.DefaultMemoryManager.Dispose">
+  Dispose()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L276"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_Free_" data-uid="Tomate.DefaultMemoryManager.Free*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_Free_Tomate_MemoryBlock_" data-uid="Tomate.DefaultMemoryManager.Free(Tomate.MemoryBlock)">
+  Free(MemoryBlock)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L493"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Free a previously allocated block</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Free(MemoryBlock block)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>block</code> <a class="xref" href="Tomate.MemoryBlock.html">MemoryBlock</a></dt>
+    <dd><p>The memory block to free</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the block was successfully released, <code>false</code> otherwise.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.objectdisposedexception">ObjectDisposedException</a></dt>
+    <dd><p>Can't free if the instance is disposed, all blocks have been released anyway.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="Tomate_DefaultMemoryManager_FreePages_" data-uid="Tomate.DefaultMemoryManager.FreePages*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_FreePages_Tomate_MemorySegment_" data-uid="Tomate.DefaultMemoryManager.FreePages(Tomate.MemorySegment)">
+  FreePages(MemorySegment)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L742"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Free the pages previously allocated corresponding to the given segment.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool FreePages(MemorySegment pages)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>pages</code> <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a></dt>
+    <dd><p>The memory segment spanning all the pages to free.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if the operation succeeded, <code>false</code> otherwise.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_Free_" data-uid="Tomate.DefaultMemoryManager.Free*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_Free__1_Tomate_MemoryBlock___0__" data-uid="Tomate.DefaultMemoryManager.Free``1(Tomate.MemoryBlock{``0})">
+  Free&lt;T&gt;(MemoryBlock&lt;T&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L511"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Free&lt;T&gt;(MemoryBlock&lt;T&gt; block) where T : unmanaged</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>block</code> <a class="xref" href="Tomate.MemoryBlock-1.html">MemoryBlock</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>T</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_FromBlockId_" data-uid="Tomate.DefaultMemoryManager.FromBlockId*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_FromBlockId_System_Int32_" data-uid="Tomate.DefaultMemoryManager.FromBlockId(System.Int32)">
+  FromBlockId(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L748"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Convert a BlockId to its corresponding MemorySegment</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemorySegment FromBlockId(int blockId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>blockId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The BlockId previously retrieved with <a class="xref" href="Tomate.IPageAllocator.html#Tomate_IPageAllocator_ToBlockId_Tomate_MemorySegment_">ToBlockId(MemorySegment)</a>.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a></dt>
+    <dd><p>The corresponding memory segment or default if it failed.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_DefaultMemoryManager_ToBlockId_" data-uid="Tomate.DefaultMemoryManager.ToBlockId*"></a>
+
+  <h3 id="Tomate_DefaultMemoryManager_ToBlockId_Tomate_MemorySegment_" data-uid="Tomate.DefaultMemoryManager.ToBlockId(Tomate.MemorySegment)">
+  ToBlockId(MemorySegment)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/DefaultMemoryManager.cs/#L755"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Convert the given segment's start address to the corresponding BlockId</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int ToBlockId(MemorySegment segment)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>segment</code> <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a></dt>
+    <dd><p>The segment to get the BlockId from</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The BlockId, an integer that contains the index of the block and its length encoded as two shorts.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Memory/DefaultMemoryManager/SmallBlock.cs/#L11" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

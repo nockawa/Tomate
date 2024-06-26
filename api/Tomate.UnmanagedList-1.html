@@ -1,0 +1,1178 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct UnmanagedList&lt;T&gt; | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct UnmanagedList&lt;T&gt; | Tomate ">
+      
+      <meta name="description" content="An unmanaged list of unmanaged items">
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/new/dev/apiSpec/new?filename=Tomate_UnmanagedList_1.md&amp;value=---%0Auid%3A%20Tomate.UnmanagedList%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Tomate.UnmanagedList`1">
+
+
+
+  <h1 id="Tomate_UnmanagedList_1" data-uid="Tomate.UnmanagedList`1" class="text-break">
+Struct UnmanagedList&lt;T&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L23"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Tomate.html">Tomate</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Tomate.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>An unmanaged list of unmanaged items</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">[PublicAPI]
+public struct UnmanagedList&lt;T&gt; : IUnmanagedCollection, IRefCounted, IDisposable where T : unmanaged</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>T</code></dt>
+    <dd><p>The type of items to store</p>
+</dd>
+  </dl>
+
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="Tomate.IUnmanagedCollection.html">IUnmanagedCollection</a></div>
+      <div><a class="xref" href="Tomate.IRefCounted.html">IRefCounted</a></div>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.idisposable">IDisposable</a></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+  <dl class="typelist extensionMethods">
+    <dt>Extension Methods</dt>
+    <dd>
+  <div>
+      <a class="xref" href="Tomate.DisposeExtensions.html#Tomate_DisposeExtensions_DisposeAndNull__1_System_Object___0__">DisposeExtensions.DisposeAndNull&lt;T&gt;(object, ref T)</a>
+  </div>
+  </dd></dl>
+
+
+
+  <h2 id="Tomate_UnmanagedList_1_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>Be sure to read the overview documentation to learn how to use this type.
+This type is MemoryMappedFile friendly, meaning you can allocate instances of this type with an <a class="xref" href="Tomate.MemoryManagerOverMMF.html">MemoryManagerOverMMF</a> as memory manager.</p>
+</div>
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="Tomate_UnmanagedList_1__ctor_" data-uid="Tomate.UnmanagedList`1.#ctor*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1__ctor" data-uid="Tomate.UnmanagedList`1.#ctor">
+  UnmanagedList()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L543"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Create an instance with the <a class="xref" href="Tomate.DefaultMemoryManager.html#Tomate_DefaultMemoryManager_GlobalInstance">GlobalInstance</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public UnmanagedList()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1__ctor_" data-uid="Tomate.UnmanagedList`1.#ctor*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1__ctor_Tomate_IMemoryManager_System_Int32_" data-uid="Tomate.UnmanagedList`1.#ctor(Tomate.IMemoryManager,System.Int32)">
+  UnmanagedList(IMemoryManager, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L553"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Create an instance of the UnmanagedList</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public UnmanagedList(IMemoryManager memoryManager = null, int initialCapacity = 4)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>memoryManager</code> <a class="xref" href="Tomate.IMemoryManager.html">IMemoryManager</a></dt>
+    <dd><p>The Memory Manager to use, if <code>null</code> the <a class="xref" href="Tomate.DefaultMemoryManager.html#Tomate_DefaultMemoryManager_GlobalInstance">GlobalInstance</a> will be used.</p>
+</dd>
+    <dt><code>initialCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Initial capacity of the list, the number of items it can hold without resizing.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Tomate_UnmanagedList_1_Capacity_" data-uid="Tomate.UnmanagedList`1.Capacity*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_Capacity" data-uid="Tomate.UnmanagedList`1.Capacity">
+  Capacity
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L146"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get/set the capacity of the list</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Capacity { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_Capacity_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Get accessor will return -1 if the list is disposed/default.
+Set accessor will throw an exception if the new capacity is less than the actual count.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_Content_" data-uid="Tomate.UnmanagedList`1.Content*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_Content" data-uid="Tomate.UnmanagedList`1.Content">
+  Content
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L74"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get a MemorySegment of the content of the list</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemorySegment&lt;T&gt; Content { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemorySegment-1.html">MemorySegment</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_Content_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This API will only assert in debug mode if you attempt to access the content of an uninitialized instance.
+BEWARE: the segment may no longer be valid if you perform an operation that will resize the list.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_Count_" data-uid="Tomate.UnmanagedList`1.Count*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_Count" data-uid="Tomate.UnmanagedList`1.Count">
+  Count
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L93"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get the item count</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Count { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The number of items in the list or -1 if the instance is invalid.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_IsDefault_" data-uid="Tomate.UnmanagedList`1.IsDefault*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_IsDefault" data-uid="Tomate.UnmanagedList`1.IsDefault">
+  IsDefault
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L113"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Check if the instance is the default (not constructed) one</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsDefault { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_IsDefault_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>A default instance can't be used, some APIs will assert in debug mode and crash in release mode, others will throw an exception or return -1.
+There is no distinction between a default instance and a disposed one.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_IsDisposed_" data-uid="Tomate.UnmanagedList`1.IsDisposed*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_IsDisposed" data-uid="Tomate.UnmanagedList`1.IsDisposed">
+  IsDisposed
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L122"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Check if the instance is disposed</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsDisposed { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_IsDisposed_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>A disposed instance can't be used, some APIs will assert in debug mode and crash in release mode, others will throw an exception or return -1.
+There is no distinction between a default instance and a disposed one.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_Item_" data-uid="Tomate.UnmanagedList`1.Item*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_Item_System_Int32_" data-uid="Tomate.UnmanagedList`1.Item(System.Int32)">
+  this[int]
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L47"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Subscript operator for random access to an item in the list</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref T this[int index] { get; }</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The index of the item to retrieve, must be within the range of [0..Count-1]</p>
+</dd>
+  </dl>
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><span class="xref">T</span></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_Item_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This API checks for the bounds and throws the index is incorrect.
+Will throw <a class="xref" href="Tomate.InvalidObjectException.html">InvalidObjectException</a> if the instance is default or disposed.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_MemoryBlock_" data-uid="Tomate.UnmanagedList`1.MemoryBlock*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_MemoryBlock" data-uid="Tomate.UnmanagedList`1.MemoryBlock">
+  MemoryBlock
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L127"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Access to the underlying MemoryBlock of the list, use with caution</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemoryBlock MemoryBlock { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemoryBlock.html">MemoryBlock</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_MemoryManager_" data-uid="Tomate.UnmanagedList`1.MemoryManager*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_MemoryManager" data-uid="Tomate.UnmanagedList`1.MemoryManager">
+  MemoryManager
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L132"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Access to the MemoryManager used by the list to allocate its content</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IMemoryManager MemoryManager { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.IMemoryManager.html">IMemoryManager</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_RefCounter_" data-uid="Tomate.UnmanagedList`1.RefCounter*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_RefCounter" data-uid="Tomate.UnmanagedList`1.RefCounter">
+  RefCounter
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L137"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get the reference counter of the instance, will return -1 if the instance is default/disposed</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int RefCounter { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Tomate_UnmanagedList_1_Add_" data-uid="Tomate.UnmanagedList`1.Add*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_Add__0_" data-uid="Tomate.UnmanagedList`1.Add(`0)">
+  Add(T)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L229"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Add an item to the list</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Add(T item)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>item</code> <span class="xref">T</span></dt>
+    <dd><p>The item to add</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The index of the added item</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_Add__0__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Will throw <a class="xref" href="Tomate.InvalidObjectException.html">InvalidObjectException</a> if the instance is default or disposed.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_AddInPlace_" data-uid="Tomate.UnmanagedList`1.AddInPlace*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_AddInPlace" data-uid="Tomate.UnmanagedList`1.AddInPlace">
+  AddInPlace()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L263"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Return the ref of the added element, beware, read remarks</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref T AddInPlace()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><span class="xref">T</span></dt>
+    <dd><p>The reference to the added element.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_AddInPlace_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>You must be sure any other operation on this list won't trigger a resize of its content for the time you use the ref. Otherwise the ref
+will point to a incorrect address and corruption will most likely to occur. Use this API with great caution.
+Will throw <a class="xref" href="Tomate.InvalidObjectException.html">InvalidObjectException</a> if the instance is default or disposed.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_AddRef_" data-uid="Tomate.UnmanagedList`1.AddRef*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_AddRef" data-uid="Tomate.UnmanagedList`1.AddRef">
+  AddRef()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L288"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Add a reference to the instance</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int AddRef()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The new value of the reference counter</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_AddRef_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>A matching call to <a class="xref" href="Tomate.UnmanagedList-1.html#Tomate_UnmanagedList_1_Dispose">Dispose()</a> will have to be made to release the reference.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_Clear_" data-uid="Tomate.UnmanagedList`1.Clear*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_Clear" data-uid="Tomate.UnmanagedList`1.Clear">
+  Clear()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L293"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Clear the content of the list</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Clear()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_CopyTo_" data-uid="Tomate.UnmanagedList`1.CopyTo*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_CopyTo__0___System_Int32_" data-uid="Tomate.UnmanagedList`1.CopyTo(`0[],System.Int32)">
+  CopyTo(T[], int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L307"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Copy the content of the list to an array, starting at the given index</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void CopyTo(T[] items, int i)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>items</code> T[]</dt>
+    <dd><p>The array that will receive the list's items</p>
+</dd>
+    <dt><code>i</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The index in the array to copy the first element</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_CopyTo__0___System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Will throw is the array's portion (delimited by <param name="i"> and its length) is too small to contain all the items.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_CreateInStore_" data-uid="Tomate.UnmanagedList`1.CreateInStore*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_CreateInStore_Tomate_IMemoryManager_System_Int32_Tomate_UnmanagedDataStore_Handle_Tomate_UnmanagedList__0____" data-uid="Tomate.UnmanagedList`1.CreateInStore(Tomate.IMemoryManager,System.Int32,Tomate.UnmanagedDataStore.Handle{Tomate.UnmanagedList{`0}}@)">
+  CreateInStore(IMemoryManager, int, out Handle&lt;UnmanagedList&lt;T&gt;&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L181"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref UnmanagedList&lt;T&gt; CreateInStore(IMemoryManager memoryManager, int initialCapacity, out UnmanagedDataStore.Handle&lt;UnmanagedList&lt;T&gt;&gt; handle)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>memoryManager</code> <a class="xref" href="Tomate.IMemoryManager.html">IMemoryManager</a></dt>
+    <dd></dd>
+    <dt><code>initialCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>handle</code> <a class="xref" href="Tomate.UnmanagedDataStore.html">UnmanagedDataStore</a>.<a class="xref" href="Tomate.UnmanagedDataStore.Handle-1.html">Handle</a>&lt;<a class="xref" href="Tomate.UnmanagedList-1.html">UnmanagedList</a>&lt;T&gt;&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.UnmanagedList-1.html">UnmanagedList</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_CreateInStore_" data-uid="Tomate.UnmanagedList`1.CreateInStore*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_CreateInStore_Tomate_IMemoryManager_Tomate_UnmanagedDataStore_System_Int32_Tomate_UnmanagedDataStore_Handle_Tomate_UnmanagedList__0____" data-uid="Tomate.UnmanagedList`1.CreateInStore(Tomate.IMemoryManager,Tomate.UnmanagedDataStore,System.Int32,Tomate.UnmanagedDataStore.Handle{Tomate.UnmanagedList{`0}}@)">
+  CreateInStore(IMemoryManager, UnmanagedDataStore, int, out Handle&lt;UnmanagedList&lt;T&gt;&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L190"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref UnmanagedList&lt;T&gt; CreateInStore(IMemoryManager memoryManager, UnmanagedDataStore store, int initialCapacity, out UnmanagedDataStore.Handle&lt;UnmanagedList&lt;T&gt;&gt; handle)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>memoryManager</code> <a class="xref" href="Tomate.IMemoryManager.html">IMemoryManager</a></dt>
+    <dd></dd>
+    <dt><code>store</code> <a class="xref" href="Tomate.UnmanagedDataStore.html">UnmanagedDataStore</a></dt>
+    <dd></dd>
+    <dt><code>initialCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>handle</code> <a class="xref" href="Tomate.UnmanagedDataStore.html">UnmanagedDataStore</a>.<a class="xref" href="Tomate.UnmanagedDataStore.Handle-1.html">Handle</a>&lt;<a class="xref" href="Tomate.UnmanagedList-1.html">UnmanagedList</a>&lt;T&gt;&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.UnmanagedList-1.html">UnmanagedList</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_Dispose_" data-uid="Tomate.UnmanagedList`1.Dispose*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_Dispose" data-uid="Tomate.UnmanagedList`1.Dispose">
+  Dispose()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L321"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Dispose the instance, see remarks</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_Dispose_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>This call will decrement the reference counter by 1 and the instance will effectively be disposed if it reaches 0, otherwise it will still be usable.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_GetEnumerator_" data-uid="Tomate.UnmanagedList`1.GetEnumerator*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_GetEnumerator" data-uid="Tomate.UnmanagedList`1.GetEnumerator">
+  GetEnumerator()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L341"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Enumerator access for <code>foreach</code></p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public UnmanagedList&lt;T&gt;.Enumerator GetEnumerator()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.UnmanagedList-1.html">UnmanagedList</a>&lt;T&gt;.<a class="xref" href="Tomate.UnmanagedList-1.Enumerator.html">Enumerator</a></dt>
+    <dd><p>The enumerator, an instance of the <a class="xref" href="Tomate.UnmanagedList-1.Enumerator.html">UnmanagedList&lt;T&gt;.Enumerator</a> type</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_GetFromStore_" data-uid="Tomate.UnmanagedList`1.GetFromStore*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_GetFromStore_Tomate_IMemoryManager_Tomate_UnmanagedDataStore_Handle_Tomate_UnmanagedList__0___" data-uid="Tomate.UnmanagedList`1.GetFromStore(Tomate.IMemoryManager,Tomate.UnmanagedDataStore.Handle{Tomate.UnmanagedList{`0}})">
+  GetFromStore(IMemoryManager, Handle&lt;UnmanagedList&lt;T&gt;&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L199"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static ref UnmanagedList&lt;T&gt; GetFromStore(IMemoryManager memoryManager, UnmanagedDataStore.Handle&lt;UnmanagedList&lt;T&gt;&gt; handle)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>memoryManager</code> <a class="xref" href="Tomate.IMemoryManager.html">IMemoryManager</a></dt>
+    <dd></dd>
+    <dt><code>handle</code> <a class="xref" href="Tomate.UnmanagedDataStore.html">UnmanagedDataStore</a>.<a class="xref" href="Tomate.UnmanagedDataStore.Handle-1.html">Handle</a>&lt;<a class="xref" href="Tomate.UnmanagedList-1.html">UnmanagedList</a>&lt;T&gt;&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.UnmanagedList-1.html">UnmanagedList</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_IndexOf_" data-uid="Tomate.UnmanagedList`1.IndexOf*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_IndexOf__0_" data-uid="Tomate.UnmanagedList`1.IndexOf(`0)">
+  IndexOf(T)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L351"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Return the index of the given item in the list</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int IndexOf(T item)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>item</code> <span class="xref">T</span></dt>
+    <dd><p>The item to look for.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The index or <code>-1</code> if there's no such item</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_IndexOf__0__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Will throw <a class="xref" href="Tomate.InvalidObjectException.html">InvalidObjectException</a> if the instance is default or disposed.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_Insert_" data-uid="Tomate.UnmanagedList`1.Insert*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_Insert_System_Int32__0_" data-uid="Tomate.UnmanagedList`1.Insert(System.Int32,`0)">
+  Insert(int, T)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L454"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Inserts an element into this list at a given index. The size of the list is increased by one. If required, the capacity of the list is doubled
+before inserting the new element.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Insert(int index, T item)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The index of the position to insert the given item</p>
+</dd>
+    <dt><code>item</code> <span class="xref">T</span></dt>
+    <dd><p>The item to insert</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_Insert_System_Int32__0__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Will throw <a class="xref" href="Tomate.InvalidObjectException.html">InvalidObjectException</a> if the instance is default or disposed.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_MoveToStore_" data-uid="Tomate.UnmanagedList`1.MoveToStore*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_MoveToStore_Tomate_IMemoryManager_Tomate_UnmanagedDataStore_Handle_Tomate_UnmanagedList__0____" data-uid="Tomate.UnmanagedList`1.MoveToStore(Tomate.IMemoryManager,Tomate.UnmanagedDataStore.Handle{Tomate.UnmanagedList{`0}}@)">
+  MoveToStore(IMemoryManager, out Handle&lt;UnmanagedList&lt;T&gt;&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L211"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref UnmanagedList&lt;T&gt; MoveToStore(IMemoryManager memoryManager, out UnmanagedDataStore.Handle&lt;UnmanagedList&lt;T&gt;&gt; handle)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>memoryManager</code> <a class="xref" href="Tomate.IMemoryManager.html">IMemoryManager</a></dt>
+    <dd></dd>
+    <dt><code>handle</code> <a class="xref" href="Tomate.UnmanagedDataStore.html">UnmanagedDataStore</a>.<a class="xref" href="Tomate.UnmanagedDataStore.Handle-1.html">Handle</a>&lt;<a class="xref" href="Tomate.UnmanagedList-1.html">UnmanagedList</a>&lt;T&gt;&gt;</dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.UnmanagedList-1.html">UnmanagedList</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_RefreshFromMMF_" data-uid="Tomate.UnmanagedList`1.RefreshFromMMF*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_RefreshFromMMF_Tomate_MemoryBlock_" data-uid="Tomate.UnmanagedList`1.RefreshFromMMF(Tomate.MemoryBlock)">
+  RefreshFromMMF(MemoryBlock)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L205"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void RefreshFromMMF(MemoryBlock newData)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>newData</code> <a class="xref" href="Tomate.MemoryBlock.html">MemoryBlock</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_Remove_" data-uid="Tomate.UnmanagedList`1.Remove*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_Remove__0_" data-uid="Tomate.UnmanagedList`1.Remove(`0)">
+  Remove(T)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L494"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Remove the given item from the list</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Remove(T item)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>item</code> <span class="xref">T</span></dt>
+    <dd><p>The item to remove</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p><code>true</code> if there was such item, <code>false</code> if we couldn't find anything to remove</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_Remove__0__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Remove will only remove the first occurrence of the item in the list, the whole content succeeding the item will be shifted to fill the gap.
+Will throw <a class="xref" href="Tomate.InvalidObjectException.html">InvalidObjectException</a> if the instance is default or disposed.</p>
+</div>
+
+
+
+
+  <a id="Tomate_UnmanagedList_1_RemoveAt_" data-uid="Tomate.UnmanagedList`1.RemoveAt*"></a>
+
+  <h3 id="Tomate_UnmanagedList_1_RemoveAt_System_Int32_" data-uid="Tomate.UnmanagedList`1.RemoveAt(System.Int32)">
+  RemoveAt(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L513"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Remove the item at the given index</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void RemoveAt(int index)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>index</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The index to remove the item at, must be a valid range or <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.indexoutofrangeexception">IndexOutOfRangeException</a> will be thrown</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section" id="Tomate_UnmanagedList_1_RemoveAt_System_Int32__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>Will throw <a class="xref" href="Tomate.InvalidObjectException.html">InvalidObjectException</a> if the instance is default or disposed.</p>
+</div>
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/UnmanagedList.cs/#L23" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,663 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct MappedAppendCollection&lt;T&gt; | Tomate </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct MappedAppendCollection&lt;T&gt; | Tomate ">
+      
+      <meta name="description" content="Append-only collection on a Page Allocator">
+      <link rel="icon" href="../images/favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/nockawa/Tomate/new/dev/apiSpec/new?filename=Tomate_MappedAppendCollection_1.md&amp;value=---%0Auid%3A%20Tomate.MappedAppendCollection%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../images/tomate.svg" alt="Tomate">
+            Tomate
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled="" placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" style="margin-top: -.65em; margin-left: -.8em" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Tomate.MappedAppendCollection`1">
+
+
+
+  <h1 id="Tomate_MappedAppendCollection_1" data-uid="Tomate.MappedAppendCollection`1" class="text-break">
+Struct MappedAppendCollection&lt;T&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L33"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Tomate.html">Tomate</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Tomate.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Append-only collection on a Page Allocator</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">[PublicAPI]
+public struct MappedAppendCollection&lt;T&gt; : IDisposable where T : unmanaged</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>T</code></dt>
+    <dd><p>Type of each item of the collection</p>
+</dd>
+  </dl>
+
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.idisposable">IDisposable</a></div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+  <dl class="typelist extensionMethods">
+    <dt>Extension Methods</dt>
+    <dd>
+  <div>
+      <a class="xref" href="Tomate.DisposeExtensions.html#Tomate_DisposeExtensions_DisposeAndNull__1_System_Object___0__">DisposeExtensions.DisposeAndNull&lt;T&gt;(object, ref T)</a>
+  </div>
+  </dd></dl>
+
+
+
+  <h2 id="Tomate_MappedAppendCollection_1_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>
+Usage:
+ This is a pretty simple type: the user creates an instance by passing an allocator and a capacity (the maximum number of pages that
+ will be allocated). Each page can stores up to x items (<code>x = <a class="xref" href="Tomate.IPageAllocator.html#Tomate_IPageAllocator_PageSize">PageSize</a> / sizeof(T)</code>).
+The user then allocates a set of x items by calling <a class="xref" href="Tomate.MappedAppendCollection-1.html#Tomate_MappedAppendCollection_1_Reserve_System_Int32_System_Int32__">Reserve(int, out int)</a> an ID is returned and used for access to the <a class="xref" href="Tomate.MemorySegment.html">MemorySegment</a>
+ addressing these items later by calling <a class="xref" href="Tomate.MappedAppendCollection-1.html#Tomate_MappedAppendCollection_1_Get_System_Int32_System_Int32_">Get(int, int)</a>.
+Allocated items can't be freed: it's an append-only collection.
+</p>
+<p>
+Implementation:
+ The collection stores a Page Directory inside the first page, this directory contains for each page its offset from the base address of the allocator.
+ The ID returned by <a class="xref" href="Tomate.MappedAppendCollection-1.html#Tomate_MappedAppendCollection_1_Reserve_System_Int32_System_Int32__">Reserve(int, out int)</a> is a linear offset into the collection and we use the Page Directory to determine in which page is stored
+  the given set of items.
+ You can't allocate a set of item that exceed the number of items a given page can hold because each set is a contiguous space of data. If when calling
+<a class="xref" href="Tomate.MappedAppendCollection-1.html#Tomate_MappedAppendCollection_1_Reserve_System_Int32_System_Int32__">Reserve(int, out int)</a> the current page can't hold the requested number of items, the remaining space in this page is simply wasted and another one
+ is allocated. Which means you could end up with a big fragmentation and poor usage ratio if you always allocate sets of items that are bigger than half
+ of a <a class="xref" href="Tomate.IPageAllocator.html#Tomate_IPageAllocator_PageSize">PageSize</a>, so choose the Page Size of the allocator accordingly !
+This type can address a very big space of data, way above 4GiB.
+ The limit is <code><a class="xref" href="Tomate.IPageAllocator.html#Tomate_IPageAllocator_PageSize">PageSize</a> * <a class="xref" href="Tomate.MappedAppendCollection-1.html#Tomate_MappedAppendCollection_1_Capacity">Capacity</a> * sizeof(T)</code></p>
+</div>
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Tomate_MappedAppendCollection_1_AllocatedPageCount_" data-uid="Tomate.MappedAppendCollection`1.AllocatedPageCount*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_AllocatedPageCount" data-uid="Tomate.MappedAppendCollection`1.AllocatedPageCount">
+  AllocatedPageCount
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L40"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int AllocatedPageCount { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_AllocationStats_" data-uid="Tomate.MappedAppendCollection`1.AllocationStats*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_AllocationStats" data-uid="Tomate.MappedAppendCollection`1.AllocationStats">
+  AllocationStats
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L42"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public (long totalAllocatedByte, float efficiency) AllocationStats { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt>(<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.int64,system.single-.totalallocatedbyte">totalAllocatedByte</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.int64,system.single-.efficiency">efficiency</a>)</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_Capacity_" data-uid="Tomate.MappedAppendCollection`1.Capacity*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_Capacity" data-uid="Tomate.MappedAppendCollection`1.Capacity">
+  Capacity
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L51"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Capacity { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_MaxItemCountPerPage_" data-uid="Tomate.MappedAppendCollection`1.MaxItemCountPerPage*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_MaxItemCountPerPage" data-uid="Tomate.MappedAppendCollection`1.MaxItemCountPerPage">
+  MaxItemCountPerPage
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L52"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int MaxItemCountPerPage { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_PageSize_" data-uid="Tomate.MappedAppendCollection`1.PageSize*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_PageSize" data-uid="Tomate.MappedAppendCollection`1.PageSize">
+  PageSize
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L53"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int PageSize { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_RootPageId_" data-uid="Tomate.MappedAppendCollection`1.RootPageId*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_RootPageId" data-uid="Tomate.MappedAppendCollection`1.RootPageId">
+  RootPageId
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L55"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly int RootPageId { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Tomate_MappedAppendCollection_1_Create_" data-uid="Tomate.MappedAppendCollection`1.Create*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_Create_Tomate_IPageAllocator_System_Int32_" data-uid="Tomate.MappedAppendCollection`1.Create(Tomate.IPageAllocator,System.Int32)">
+  Create(IPageAllocator, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L61"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static MappedAppendCollection&lt;T&gt; Create(IPageAllocator allocator, int pageCapacity)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>allocator</code> <a class="xref" href="Tomate.IPageAllocator.html">IPageAllocator</a></dt>
+    <dd></dd>
+    <dt><code>pageCapacity</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MappedAppendCollection-1.html">MappedAppendCollection</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_Dispose_" data-uid="Tomate.MappedAppendCollection`1.Dispose*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_Dispose" data-uid="Tomate.MappedAppendCollection`1.Dispose">
+  Dispose()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L64"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_Get_" data-uid="Tomate.MappedAppendCollection`1.Get*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_Get_System_Int32_System_Int32_" data-uid="Tomate.MappedAppendCollection`1.Get(System.Int32,System.Int32)">
+  Get(int, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L69"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemorySegment&lt;T&gt; Get(int id, int length)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemorySegment-1.html">MemorySegment</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_Get_" data-uid="Tomate.MappedAppendCollection`1.Get*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_Get__1_System_Int32_" data-uid="Tomate.MappedAppendCollection`1.Get``1(System.Int32)">
+  Get&lt;TN&gt;(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L77"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref TN Get&lt;TN&gt;(int nodeId) where TN : unmanaged</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>nodeId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><span class="xref">TN</span></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TN</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_Map_" data-uid="Tomate.MappedAppendCollection`1.Map*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_Map_Tomate_IPageAllocator_System_Int32_" data-uid="Tomate.MappedAppendCollection`1.Map(Tomate.IPageAllocator,System.Int32)">
+  Map(IPageAllocator, int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L62"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static MappedAppendCollection&lt;T&gt; Map(IPageAllocator allocator, int rootPageId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>allocator</code> <a class="xref" href="Tomate.IPageAllocator.html">IPageAllocator</a></dt>
+    <dd></dd>
+    <dt><code>rootPageId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MappedAppendCollection-1.html">MappedAppendCollection</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_Reserve_" data-uid="Tomate.MappedAppendCollection`1.Reserve*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_Reserve_System_Int32_System_Int32__" data-uid="Tomate.MappedAppendCollection`1.Reserve(System.Int32,System.Int32@)">
+  Reserve(int, out int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L84"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public MemorySegment&lt;T&gt; Reserve(int length, out int id)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Tomate.MemorySegment-1.html">MemorySegment</a>&lt;T&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Tomate_MappedAppendCollection_1_Reserve_" data-uid="Tomate.MappedAppendCollection`1.Reserve*"></a>
+
+  <h3 id="Tomate_MappedAppendCollection_1_Reserve__1_System_Int32__" data-uid="Tomate.MappedAppendCollection`1.Reserve``1(System.Int32@)">
+  Reserve&lt;TN&gt;(out int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L114"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref TN Reserve&lt;TN&gt;(out int id) where TN : unmanaged</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><span class="xref">TN</span></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TN</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/nockawa/Tomate/blob/dev/src/Tomate/Collections/MappedAppendCollection.cs/#L33" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Copyright (c) Loïc Baumann
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
